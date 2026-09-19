@@ -486,10 +486,14 @@ function renderArbitrageTab() {
     const mcpRow = mcpData.find(item => {
         let d = item["Ημερομηνία"] || item["date"];
         if (!d) return false;
-        if (d instanceof Date) d = d.toISOString().split('T')[0];
-        return String(d).startsWith(selectedDate);
+        
+        // Αν είναι Date object, το κάνουμε string. Αν είναι ήδη string (όπως στο JSON), 
+        // κρατάμε μόνο τους πρώτους 10 χαρακτήρες (YYYY-MM-DD) για σιγουριά.
+        let dateStr = (d instanceof Date) ? d.toISOString().split('T')[0] : String(d).substring(0, 10);
+        
+        return dateStr === selectedDate;
     });
-
+    
     const chartLabels = [];
     
     for (let h = 1; h <= 24; h++) {
