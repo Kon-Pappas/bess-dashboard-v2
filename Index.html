@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="pageTitle">Daily Greek BESS Market Analytics</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen p-4 md:p-8 flex flex-col justify-between">
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 z-[9999] bg-slate-900 flex flex-col items-center justify-center transition-opacity duration-500 px-4">
+        <div class="w-16 h-16 border-4 border-slate-700 border-t-emerald-500 rounded-full animate-spin mb-6"></div>
+        <div class="text-white text-xl font-semibold text-center mb-2" id="loading-title">
+            Loading Market Data...
+        </div>
+        <div class="text-sm text-slate-400 text-center mb-6" id="loading-subtitle">
+            Reading data files...
+        </div>
+        
+        <!-- Progress Bar Container -->
+        <div class="w-full max-w-md bg-slate-800 rounded-full h-4 p-0.5 border border-slate-700 overflow-hidden shadow-inner">
+            <div id="loading-progress-bar" class="bg-emerald-500 h-full rounded-full transition-all duration-300" style="width: 15%;"></div>
+        </div>
+        <div class="text-emerald-400 text-sm font-mono font-bold mt-2" id="loading-percentage">15%</div>
+    </div>
+
+    <div class="max-w-7xl mx-auto space-y-6 w-full">
+        
+        <!-- Header -->
+        <header class="border-b border-slate-700 pb-4">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <div class="flex items-center gap-3">
+                        <h1 class="text-3xl font-bold text-emerald-400" id="mainTitle">Greek BESS Market Analytics</h1>
+                        <span id="scopeBadge" class="cursor-help text-xs bg-slate-800 text-slate-300 px-2 py-1 rounded-full border border-slate-700 hover:border-emerald-500 transition" title="">[?]</span>
+                    </div>
+                    <p class="text-slate-400 text-sm mt-1" id="dataSourceText">Data source: IPTO (ADMIE) official ISP & SCADA files</p>
+                    <div class="flex flex-wrap items-center gap-4 text-xs text-slate-400 mt-2">
+                        <div><span id="lastUpdateLabel">Last Update:</span> <strong id="lastUpdateVal" class="text-emerald-400">-</strong></div>
+                        <div><span id="nextUpdateLabel">Next Update:</span> <strong id="nextUpdateVal" class="text-blue-400">-</strong></div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <!-- Κουμπί Μεθοδολογίας -->
+                    <button onclick="openMethodologyModal()" class="flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-emerald-400 transition bg-slate-800/80 px-3 py-1.5 rounded border border-slate-700 hover:border-emerald-500 shadow-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <span id="btnMethodologyText">Methodology & Assumptions</span>
+                    </button>
+                    <!-- Γλώσσες (Το EN είναι πράσινο/ενεργό) -->
+                    <div class="flex gap-2 bg-slate-800 border border-slate-700 rounded-lg p-1 text-xs font-bold shadow-sm">
+                        <button onclick="setLang('el')" id="btnGr" class="px-2 py-1 rounded text-slate-400 hover:text-white transition">GR</button>
+                        <button onclick="setLang('en')" id="btnEn" class="px-2 py-1 rounded bg-emerald-600 text-white transition">EN</button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- TABS NAVIGATION -->
+        <div class="flex space-x-6 border-b border-slate-800 pb-2 overflow-x-auto">
+            <button id="tabBtnDaily" onclick="switchTab('daily')" class="text-emerald-400 font-bold border-b-2 border-emerald-400 pb-2 px-2 transition whitespace-nowrap">Daily Analytics</button>
+            <button id="tabBtnMonthly" onclick="switchTab('monthly')" class="text-slate-500 hover:text-emerald-300 pb-2 px-2 transition whitespace-nowrap">Monthly Impact</button>
+            <button id="tabBtnSurplus" onclick="switchTab('surplus')" class="text-slate-500 hover:text-emerald-300 pb-2 px-2 transition whitespace-nowrap">Surplus & Flexibility</button>
+            <button id="tabBtnArbitrage" onclick="switchTab('arbitrage')" class="text-slate-500 hover:text-emerald-300 pb-2 px-2 transition whitespace-nowrap">Arbitrage P&L</button>
+        </div>
+
+        <!-- VIEW 1: DAILY ANALYTICS -->
+        <div id="viewDaily" class="space-y-8 block">
+            <div class="flex justify-end">
+                <div class="flex items-center gap-2 bg-slate-800/50 p-2 rounded-xl border border-slate-700">
+                    <label class="text-xs text-slate-300" id="dateLabel">Date:</label>
+                    <select id="dateSelect" onchange="updateDashboard()" class="bg-slate-900 border border-slate-600 text-slate-200 text-sm rounded p-1 outline-none"></select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <div class="lg:col-span-3 bg-slate-800/40 p-6 rounded-xl border border-slate-700">
+                    <h2 class="text-lg font-semibold text-slate-200 mb-4" id="dischargeTitle">Discharge Per BESS Unit (MWh)</h2>
+                    <div class="relative h-80"><canvas id="dischargeChart"></canvas></div>
+                </div>
+                <div class="bg-slate-800/60 p-6 rounded-xl border border-slate-700 flex flex-col justify-center text-center">
+                    <h3 class="text-sm font-medium text-slate-400 mb-6 uppercase tracking-wider" id="totalDischargeLabel">Total Discharge</h3>
+                    <div class="space-y-6">
+                        <div>
+                            <span class="block text-xs text-slate-500 mb-1" id="lblDispIsp">SCHEDULED (ISP)</span>
+                            <span id="kpiDischargeIsp" class="text-4xl font-bold text-blue-400">0.00</span>
+                            <span class="text-sm text-slate-500 block mt-1">GWh</span>
+                        </div>
+                        <div class="border-t border-slate-700 w-1/2 mx-auto"></div>
+                        <div>
+                            <span class="block text-xs text-slate-500 mb-1" id="lblDispScada">ACTUAL (SCADA)</span>
+                            <span id="kpiDischargeScada" class="text-4xl font-bold text-emerald-400">0.00</span>
+                            <span class="text-sm text-slate-500 block mt-1">GWh</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <div class="lg:col-span-3 bg-slate-800/40 p-6 rounded-xl border border-slate-700">
+                    <h2 class="text-lg font-semibold text-slate-200 mb-4" id="chargeTitle">Charge Per BESS Unit (MWh)</h2>
+                    <div class="relative h-80"><canvas id="chargeChart"></canvas></div>
+                </div>
+                <div class="bg-slate-800/60 p-6 rounded-xl border border-slate-700 flex flex-col justify-center text-center">
+                    <h3 class="text-sm font-medium text-slate-400 mb-6 uppercase tracking-wider" id="totalChargeLabel">Total Charge</h3>
+                    <div class="space-y-6">
+                        <div>
+                            <span class="block text-xs text-slate-500 mb-1" id="lblChgIsp">SCHEDULED (ISP)</span>
+                            <span id="kpiChargeIsp" class="text-4xl font-bold text-purple-400">0.00</span>
+                            <span class="text-sm text-slate-500 block mt-1">GWh</span>
+                        </div>
+                        <div class="border-t border-slate-700 w-1/2 mx-auto"></div>
+                        <div>
+                            <span class="block text-xs text-slate-500 mb-1" id="lblChgScada">ACTUAL (SCADA)</span>
+                            <span id="kpiChargeScada" class="text-4xl font-bold text-orange-400">0.00</span>
+                            <span class="text-sm text-slate-500 block mt-1">GWh</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="max-w-2xl mx-auto bg-slate-800/60 p-6 rounded-xl border border-slate-700 text-center mt-4">
+                <h3 class="text-sm font-medium text-slate-400 mb-6 uppercase tracking-wider" id="rteLabel">Round Trip Efficiency (RTE - Total BESS)</h3>
+                <div class="flex justify-around items-center">
+                    <div>
+                        <span class="block text-xs text-slate-500 mb-1" id="lblRteIsp">ISP RTE</span>
+                        <span id="kpiRteIsp" class="text-3xl font-bold text-slate-200">0.00%</span>
+                    </div>
+                    <div class="h-12 w-px bg-slate-600"></div>
+                    <div>
+                        <span class="block text-xs text-slate-500 mb-1" id="lblRteScada">SCADA RTE</span>
+                        <span id="kpiRteScada" class="text-3xl font-bold text-emerald-400">0.00%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW 2: MONTHLY IMPACT -->
+        <div id="viewMonthly" class="space-y-8 hidden">
+            <div class="flex justify-end">
+                <div class="flex items-center gap-2 bg-slate-800/50 p-2 rounded-xl border border-slate-700">
+                    <label class="text-xs text-slate-300" id="monthLabel">Month:</label>
+                    <select id="monthSelect" onchange="updateMonthlyDashboard()" class="bg-slate-900 border border-slate-600 text-slate-200 text-sm rounded p-1 outline-none"></select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <div class="lg:col-span-3 bg-slate-800/40 p-6 rounded-xl border border-slate-700">
+                    <h2 class="text-lg font-semibold text-slate-200 mb-1" id="monthlyDischargeTitle">Potential Displaced Thermal Generation (Lignite/Gas) - (Cumulative Discharge)</h2>
+                    <p class="text-xs text-slate-400 mb-4" id="monthlyDischargeSub">SCADA Data - Avoided Thermal Generation</p>
+                    <div class="relative h-80"><canvas id="monthlyDischargeChart"></canvas></div>
+                </div>
+                <div class="bg-slate-800/60 p-6 rounded-xl border border-slate-700 flex flex-col justify-center text-center">
+                    <h3 class="text-sm font-medium text-slate-400 mb-4 uppercase tracking-wider" id="kpiLabelDisplaced">Monthly Displaced</h3>
+                    <span id="kpiMonthlyDischarge" class="text-4xl font-bold text-emerald-400">0.00</span>
+                    <span class="text-sm text-slate-500 block mt-1">GWh</span>
+                </div>
+
+                <div class="lg:col-span-3 bg-slate-800/40 p-6 rounded-xl border border-slate-700 mt-6 lg:mt-0">
+                    <h2 class="text-lg font-semibold text-slate-200 mb-1" id="monthlyChargeTitle">Potential Avoided RES Curtailment (Cumulative Charge)</h2>
+                    <p class="text-xs text-slate-400 mb-4" id="monthlyChargeSub">SCADA Data - Energy saved from curtailment</p>
+                    <div class="relative h-80"><canvas id="monthlyChargeChart"></canvas></div>
+                </div>
+                <div class="bg-slate-800/60 p-6 rounded-xl border border-slate-700 flex flex-col justify-center text-center mt-6 lg:mt-0">
+                    <h3 class="text-sm font-medium text-slate-400 mb-4 uppercase tracking-wider" id="kpiLabelAvoided">Monthly Avoided</h3>
+                    <span id="kpiMonthlyCharge" class="text-4xl font-bold text-orange-400">0.00</span>
+                    <span class="text-sm text-slate-500 block mt-1">GWh</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW 3: SURPLUS & FLEXIBILITY -->
+        <div id="viewSurplus" class="space-y-8 hidden">
+            <div class="flex justify-end">
+                <div class="flex items-center gap-2 bg-slate-800/50 p-2 rounded-xl border border-slate-700">
+                    <label class="text-xs text-slate-300" id="monthLabelSurp">Month:</label>
+                    <select id="monthSelectSurplus" onchange="updateSurplusDashboard()" class="bg-slate-900 border border-slate-600 text-slate-200 text-sm rounded p-1 outline-none"></select>
+                </div>
+            </div>
+
+            <!-- Absolute Stacked Bar Chart -->
+            <div class="bg-slate-800/40 p-6 rounded-xl border border-slate-700">
+                <div class="flex items-center gap-2 mb-1">
+                    <h2 class="text-lg font-semibold text-slate-200" id="surplusStackedTitle">Daily Energy Surplus & Flexibility Absorption (GWh)</h2>
+                    <span class="cursor-help text-xs bg-slate-800 text-slate-300 px-2 py-1 rounded-full border border-slate-700 hover:border-emerald-500 transition" id="surplusBadge" title="">[?]</span>
+                </div>
+                <p class="text-xs text-slate-400 mb-4" id="surplusStackedSub">Absolute values. Days with no red bar (Surplus = 0) indicate purely market-driven arbitrage charging.</p>
+                <div class="relative h-96"><canvas id="surplusStackedChart"></canvas></div>
+            </div>
+
+            <!-- Cumulative Line Chart -->
+            <div class="bg-slate-800/40 p-6 rounded-xl border border-slate-700">
+                <h2 class="text-lg font-semibold text-slate-200 mb-1" id="surplusCumulativeTitle">Cumulative Flexibility Evolution (BESS & PUMP vs Surplus)</h2>
+                <p class="text-xs text-slate-400 mb-4" id="surplusCumulativeSub">Comparison of cumulative SCADA charging (Batteries + Pumped Hydro) vs cumulative residual ISP Surplus</p>
+                <div class="relative h-80"><canvas id="surplusCumulativeChart"></canvas></div>
+            </div>
+        </div>
+
+        <!-- VIEW 4: ARBITRAGE P&L & HOURLY OPERATIONS -->
+        <div id="viewArbitrage" class="space-y-8 hidden">
+            <div class="flex justify-between items-center">
+                <h2 id="arbitrageMainTitle" class="text-xl font-bold text-emerald-400">Arbitrage P&L & Hourly Operation Profile</h2>
+                <div class="flex items-center gap-2 bg-slate-800/50 p-2 rounded-xl border border-slate-700">
+                    <label id="arbitrageDateLabel" class="text-xs text-slate-300">Date:</label>
+                    <select id="arbitrageDateSelect" onchange="renderArbitrageTab()" class="bg-slate-900 border border-slate-600 text-slate-200 text-sm rounded p-1 outline-none"></select>
+                </div>
+            </div>
+
+            <!-- Dual-Axis / Stacked Bar Chart -->
+            <div class="bg-slate-800/40 p-6 rounded-xl border border-slate-700">
+                <h3 id="arbitrageChartTitle" class="text-lg font-semibold text-slate-200 mb-1">Hourly BESS Operation per Unit (MWh)</h3>
+                <p id="arbitrageChartSub" class="text-xs text-slate-400 mb-4">Negative values = Charging, Positive values = Discharging</p>
+                <div class="relative h-96"><canvas id="arbitrageDualChart"></canvas></div>
+            </div>
+
+            <!-- Financial Performance Table -->
+            <div class="bg-slate-800/40 p-6 rounded-xl border border-slate-700">
+                <h3 id="arbitrageTableTitle" class="text-lg font-semibold text-slate-200 mb-4">Daily Financial Performance & Arbitrage</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm text-slate-300">
+                        <thead class="bg-slate-900 text-slate-400 uppercase text-xs">
+                            <tr>
+                                <th id="thUnit" class="p-3">BESS UNIT</th>
+                                <th id="thCharge" class="p-3">TOTAL CHARGE (MWH)</th>
+                                <th id="thDischarge" class="p-3">TOTAL DISCHARGE (MWH)</th>
+                                <th id="thRte" class="p-3">RTE (%)</th>
+                                <th id="thPnl" class="p-3">POTENTIAL DAILY P&L (€)</th>
+                                <th id="thProfit" class="p-3">UNIT PROFIT (€/MWH)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="arbitrageTableBody" class="divide-y divide-slate-700">
+                            <!-- Δυναμική φόρτωση γραμμών -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Footer -->
+    <footer class="text-center text-slate-500 text-xs border-t border-slate-800 pt-6 mt-12 space-y-1 pb-8">
+        <p class="font-semibold text-slate-400">Konstantinos Pappas | Energy Market Analyst</p>
+        <p>Business Operations & Risk Management | Data Insights on Energy Transition & Grid Stability</p>
+    </footer>
+
+    <!-- MODAL: METHODOLOGY & ASSUMPTIONS -->
+    <div id="methodologyModal" class="fixed inset-0 z-[10000] bg-black/80 hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300 backdrop-blur-sm">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-6 shadow-2xl transform scale-95 transition-transform duration-300" id="modalContent">
+            
+            <div class="flex justify-between items-center border-b border-slate-700 pb-4 mb-4">
+                <div class="flex items-center gap-3">
+                    <div class="bg-emerald-500/20 p-2 rounded-lg text-emerald-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                    </div>
+                    <h2 class="text-xl font-bold text-slate-100" id="modalTitle">Methodology & Core Assumptions</h2>
+                </div>
+                <button onclick="closeMethodologyModal()" class="text-slate-500 hover:text-rose-400 transition text-3xl leading-none">&times;</button>
+            </div>
+            
+            <div class="text-sm text-slate-300 leading-relaxed" id="modalBody"></div>
+            
+            <div class="mt-6 pt-4 border-t border-slate-800 text-right">
+                <button onclick="closeMethodologyModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded border border-slate-600 transition">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script για το Modal -->
+    <script>
+        function openMethodologyModal() {
+            const modal = document.getElementById('methodologyModal');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                document.getElementById('modalContent').classList.remove('scale-95');
+            }, 10);
+        }
+        function closeMethodologyModal() {
+            const modal = document.getElementById('methodologyModal');
+            modal.classList.add('opacity-0');
+            document.getElementById('modalContent').classList.add('scale-95');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        }
+    </script>
+
+    <script src="data.js" defer></script>
+    <script src="dashboard.js" defer></script>
+
+</body>
+</html>
