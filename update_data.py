@@ -8,9 +8,9 @@ from io import BytesIO
 # --- ΡΥΘΜΙΣΕΙΣ ---
 DATA_FILE = "data/historical.json"
 ADMIE_URL = "https://www.admie.gr/getOperationMarketFile"
-ENTSOE_TOKEN = os.environ.get("ENTSOE_TOKEN") # Θα διαβάζεται κρυφά από το GitHub Secrets
-HEADERS = {"User-Agent": "Mozilla/5.0"}
-DAYS_TO_FETCH = 5 # Self-healing για τις τελευταίες 5 ημέρες
+ENTSOE_TOKEN = os.environ.get("ENTSOE_TOKEN")
+HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
+DAYS_TO_FETCH = 5
 
 def load_existing_data():
     if os.path.exists(DATA_FILE):
@@ -43,47 +43,36 @@ def fetch_admie_excel(date_str, category):
         excel_res = requests.get(file_url, headers=HEADERS)
         if not excel_res.ok: return None
         return pd.read_excel(BytesIO(excel_res.content), header=None)
-    except Exception as e:
-        print(f"Σφάλμα κατά τη λήψη {category} για {date_str}: {e}")
+    except Exception:
         return None
 
 def process_admie_file(df, date_str, category, db):
     if df is None or df.empty: return
 
-    # 1. Εξαγωγή Surplus (ISP) ή Pumping (SCADA)
+    # 1. Εξαγωγή Surplus / Pumping
     if category == "ISP2ISPResults":
         surplus_val = 0.0
         surplus_row = df[df.apply(lambda r: r.astype(str).str.contains("Energy Surplus").any(), axis=1)]
-        
         if not surplus_row.empty:
             row_vals = surplus_row.iloc[0].dropna().values
-            try:
-                surplus_val = float(str(row_vals[-1]).replace(',', '.'))
-            except:
-                pass
-        
-        # Καθαρισμός παλιών εγγραφών της ίδιας μέρας
+            try: surplus_val = float(str(row_vals[-1]).replace(',', '.'))
+            except: pass
         db["surplus"] = [d for d in db["surplus"] if d.get("Ημερομηνία") != date_str]
         db["surplus"].append({"Ημερομηνία": date_str, "Daily Surplus (MWh)": surplus_val})
 
     elif category == "SystemRealizationSCADA":
         pump_val = 0.0
         pump_row = df[df.apply(lambda r: r.astype(str).str.upper().str.contains("TOTAL PUMPING").any(), axis=1)]
-        
         if not pump_row.empty:
             row_vals = pump_row.iloc[0].dropna().values
-            try:
-                pump_val = abs(float(str(row_vals[-1]).replace(',', '.')))
-            except:
-                pass
-                
+            try: pump_val = abs(float(str(row_vals[-1]).replace(',', '.')))
+            except: pass
         db["pump"] = [d for d in db["pump"] if d.get("Ημερομηνία") != date_str]
         db["pump"].append({"Ημερομηνία": date_str, "Daily Pumping (MWh)": pump_val})
 
     # 2. Εξαγωγή δεδομένων BESS
     target_agg = "isp" if category == "ISP2ISPResults" else "scada"
     db[target_agg] = [d for d in db[target_agg] if d.get("Ημερομηνία") != date_str]
-    
     if category == "SystemRealizationSCADA":
         db["bessHourly"] = [d for d in db["bessHourly"] if d.get("Ημερομηνία") != date_str]
 
@@ -107,15 +96,12 @@ def process_admie_file(df, date_str, category, db):
             
             numeric_vals = []
             for v in row_list[name_idx+1:]:
-                try:
-                    numeric_vals.append(float(str(v).replace(' ', '').replace(',', '.')))
-                except:
-                    pass
+                try: numeric_vals.append(float(str(v).replace(' ', '').replace(',', '.')))
+                except: pass
 
             charge_sum = sum(abs(v) for v in numeric_vals if v < 0)
             discharge_sum = sum(v for v in numeric_vals if v > 0)
             
-            # ISP factor (15min -> /4)
             factor = 4 if category == "ISP2ISPResults" and len(numeric_vals) > 90 else 1
             charge_sum = round(charge_sum / factor, 3)
             discharge_sum = round(discharge_sum / factor, 3)
@@ -133,7 +119,6 @@ def process_admie_file(df, date_str, category, db):
                 "RTE (%)": f"{rte:.2f}%"
             })
 
-            # Εξαγωγή Ωριαίων Δεδομένων μόνο από SCADA
             if category == "SystemRealizationSCADA" and unit_name != "TOTAL BESS":
                 hourly_entry = {"Ημερομηνία": date_str, "Μονάδα BESS": unit_name}
                 for h in range(1, 25):
@@ -152,14 +137,15 @@ def process_admie_file(df, date_str, category, db):
         })
 
 def fetch_entsoe(date_str, db):
+    print(f"[{date_str}] Ξεκινάει η λήψη ENTSO-E...")
+    
     if not ENTSOE_TOKEN:
-        print("Δεν βρέθηκε ENTSOE_TOKEN, παράβλεψη τιμών MCP.")
+        print(f"[{date_str}] ❌ ΔΕΝ βρέθηκε το ENTSOE_TOKEN! Το API key δεν πέρασε από το GitHub Secrets.")
         return
     
-    if any(d.get("Ημερομηνία") == date_str for d in db["mcpHourly"]): 
-        return
+    # Αφαιρούμε τις παλιές εγγραφές για να είμαστε σίγουροι ότι θα φέρει τα νέα 
+    db["mcpHourly"] = [d for d in db["mcpHourly"] if d.get("Ημερομηνία") != date_str]
     
-    # Timezone math για CET/CEST ακριβώς όπως το είχες στο Google Apps Script
     dt = datetime.strptime(date_str, "%Y-%m-%d")
     year = dt.year
     
@@ -180,14 +166,25 @@ def fetch_entsoe(date_str, db):
     )
     
     try:
-        res = requests.get(url)
-        if not res.ok or "<Reason>" in res.text: return
+        res = requests.get(url, headers=HEADERS)
+        if not res.ok:
+            print(f"[{date_str}] ❌ Σφάλμα HTTP {res.status_code}: {res.text[:150]}")
+            return
+            
+        if "<Reason>" in res.text:
+            import re
+            reason_text = re.search(r'<text>(.*?)</text>', res.text)
+            msg = reason_text.group(1) if reason_text else res.text[:150]
+            print(f"[{date_str}] ⚠️ Το ENTSO-E επέστρεψε μήνυμα Reason (κενά δεδομένα): {msg}")
+            return
         
         import xml.etree.ElementTree as ET
         root = ET.fromstring(res.text)
         ns = {'ns': root.tag.split('}')[0].strip('{')}
         
         prices = [0.0] * 96
+        points_found = 0
+        
         for ts in root.findall('ns:TimeSeries', ns):
             period = ts.find('ns:Period', ns)
             if period is None: continue
@@ -199,18 +196,23 @@ def fetch_entsoe(date_str, db):
                 
                 if resolution == "PT15M" and 1 <= pos <= 96:
                     prices[pos - 1] = price
+                    points_found += 1
                 elif resolution == "PT60M" and 1 <= pos <= 24:
                     start_idx = (pos - 1) * 4
                     for i in range(4): prices[start_idx + i] = price
+                    points_found += 4
 
-        mcp_entry = {"Ημερομηνία": date_str}
-        for i in range(96):
-            mcp_entry[f"T{i+1}"] = prices[i]
+        if points_found > 0:
+            mcp_entry = {"Ημερομηνία": date_str}
+            for i in range(96):
+                mcp_entry[f"T{i+1}"] = prices[i]
+            db["mcpHourly"].append(mcp_entry)
+            print(f"[{date_str}] ✔ Επιτυχία ENTSO-E! Βρέθηκαν {points_found} τιμές.")
+        else:
+            print(f"[{date_str}] ⚠️ Το XML κατέβηκε αλλά δεν είχε τιμές (points).")
             
-        db["mcpHourly"].append(mcp_entry)
-        print(f"✔ ENTSO-E MCP προστέθηκε για {date_str}")
     except Exception as e:
-        print(f"Σφάλμα κατά τη λήψη ENTSO-E: {e}")
+        print(f"[{date_str}] ❌ Σφάλμα κώδικα (Parsing) ENTSO-E: {e}")
 
 def main():
     db = load_existing_data()
@@ -219,7 +221,7 @@ def main():
     print("Εκκίνηση BESS Data Update...")
     for i in range(DAYS_TO_FETCH - 1, -1, -1):
         target_date = (today - timedelta(days=i)).strftime("%Y-%m-%d")
-        print(f"-> Επεξεργασία ημερομηνίας: {target_date}")
+        print(f"\n--- Επεξεργασία: {target_date} ---")
         
         df_isp = fetch_admie_excel(target_date, "ISP2ISPResults")
         process_admie_file(df_isp, target_date, "ISP2ISPResults", db)
@@ -230,7 +232,7 @@ def main():
         fetch_entsoe(target_date, db)
 
     save_data(db)
-    print("✔ Η ενημέρωση ολοκληρώθηκε επιτυχώς!")
+    print("\n✔ Η ενημέρωση ολοκληρώθηκε!")
 
 if __name__ == "__main__":
     main()
