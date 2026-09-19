@@ -20,8 +20,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip' # Επιταχύνει το script краτώντας τα libraries στη μνήμη
-
+        
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
