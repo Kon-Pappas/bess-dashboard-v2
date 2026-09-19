@@ -1,12 +1,116 @@
-// Pointing to the locally generated JSON file instead of Google Apps Script
+// Πλέον διαβάζουμε το τοπικό αρχείο που παράγει το Python script!
 const API_URL = "data/historical.json";
 
 let rawData = { isp: [], scada: [], surplus: [], pump: [], bessHourly: [], mcpHourly: [] };
 let currentLang = 'en';
 
 const i18n = {
-    // (Keep your existing i18n object exactly as it was. Omitted for brevity but DO NOT delete it in your actual file.)
-    // ... [Insert your exact i18n object here from the old data.js] ...
+    el: {
+        title: "Greek BESS Market Analytics",
+        source: "Πηγή δεδομένων: Επίσημα αρχεία ISP & SCADA - ΑΔΜΗΕ (IPTO)",
+        scopeTooltip: "Αφορά αποκλειστικά τις μονάδες BESS στο Σύστημα Μεταφοράς (ΑΔΜΗΕ). Δεν περιλαμβάνονται τα συστήματα στο Δίκτυο Διανομής (ΔΕΔΔΗΕ).",
+        lastUpdate: "Τελευταία Ενημέρωση:",
+        nextUpdate: "Επόμενη Ενημέρωση:",
+        dateLabel: "Ημερομηνία:",
+        monthLabel: "Μήνας:",
+        tabDaily: "Ημερήσια Ανάλυση",
+        tabMonthly: "Μηνιαίος Αντίκτυπος",
+        tabSurplus: "Πλεόνασμα & Ευελιξία",
+        tabArbitrage: "Arbitrage P&L",
+        btnMethodology: "Μεθοδολογία & Παραδοχές",
+        modalTitle: "Μεθοδολογία & Βασικές Παραδοχές",
+        modalBody: `
+            <p class="mb-3">Το παρόν Dashboard αποτελεί ένα ανεξάρτητο εργαλείο παρακολούθησης και ανάλυσης της δραστηριότητας των μονάδων Αποθήκευσης Ενέργειας (BESS) στην Ελληνική Αγορά, βασισμένο σε ανοιχτά δεδομένα.</p>
+            <ul class="list-disc pl-5 space-y-2 mb-4 text-slate-400">
+                <li><strong class="text-slate-200">Πηγές Δεδομένων:</strong> Τα δεδομένα αντλούνται καθημερινά από τα επίσημα αρχεία του ΑΔΜΗΕ (ISP Results & System Realization SCADA) και του ENTSO-E (Day-Ahead Market Prices).</li>
+                <li><strong class="text-slate-200">Οικονομικό Μοντέλο (P&L):</strong> Η εκτίμηση εσόδων (Arbitrage) αφορά <strong>αποκλειστικά τη λειτουργία στην Αγορά Επόμενης Ημέρας (DAM)</strong>. Ως price-takers, τα συστήματα θεωρείται ότι αγοράζουν και πωλούν στην Τιμή Εκκαθάρισης Αγοράς (MCP). <em>Δεν συμπεριλαμβάνονται</em> τα έσοδα από την Αγορά Εξισορρόπησης (Balancing Market), Επικουρικές Υπηρεσίες (FCR, aFRR) ή μηχανισμούς ισχύος.</li>
+                <li><strong class="text-slate-200">Απόδοση Κύκλου (RTE):</strong> Υπολογίζεται σε ημερήσια βάση (AC-to-AC) από τα δεδομένα SCADA. Ακραίες τιμές (π.χ. >92% ή <83%) οφείλονται συχνά στο φαινόμενο <em>Inter-day SoC Carryover</em>, όπου η μπαταρία διατηρεί απόθεμα ενέργειας για να το εγχύσει την επόμενη μέρα, εμφανίζοντας τεχνητά αλλοιωμένο ημερήσιο κλάσμα.</li>
+                <li><strong class="text-slate-200">Περιβαλλοντικός Αντίκτυπος:</strong> Οι μετρικές μηνιαίας υποκατάστασης είναι θεωρητικές. Βασίζονται στην υπόθεση ότι κάθε παραγόμενη MWh από BESS υποκαθιστά ακριβότερη και ρυπογόνο θερμική παραγωγή (Φυσικό Αέριο/Λιγνίτη), ενώ κάθε MWh φόρτισης αφορά δυνητική απορρόφηση πλεονάσματος ΑΠΕ που αλλιώς θα περικόπτονταν.</li>
+            </ul>
+        `,
+        dischargeTitle: "Αποφόρτιση (Discharge) Ανά Μονάδα BESS (MWh)",
+        totalDischarge: "Συνολική Αποφόρτιση",
+        chargeTitle: "Φόρτιση (Charge) Ανά Μονάδα BESS (MWh)",
+        totalCharge: "Συνολική Φόρτιση",
+        rte: "Round Trip Efficiency (RTE - Total BESS)",
+        schedIsp: "ΠΡΟΓΡΑΜΜΑΤΙΣΜΟΣ (ISP)",
+        actScada: "ΠΡΑΓΜΑΤΙΚΗ (SCADA)",
+        monthlyDischargeTitle: "Πιθανή Υποκατάσταση Θερμικών Μονάδων (Λιγνήτης ή/και Φ. Αέριο) - (Αθροιστική Αποφόρτιση)",
+        monthlyDischargeSub: "SCADA Data - Εξοικονόμηση θερμικής παραγωγής",
+        monthlyChargeTitle: "Πιθανή Αποφυγή Περικοπών ΑΠΕ (Αθροιστική Φόρτιση)",
+        monthlyChargeSub: "SCADA Data - Ενέργεια που αλλιώς θα περικόπτονταν (Curtailment)",
+        kpiLabelAvoided: "Μηνιαια Αποφυγη",
+        kpiLabelDisplaced: "Μηνιαια Υποκατασταση",
+        surplusStackedTitle: "Ημερήσιο Πλεόνασμα & Απορρόφηση Ευελιξίας (GWh)",
+        surplusStackedSub: "Απόλυτες τιμές. Τις μέρες χωρίς κόκκινη μπάρα (Surplus = 0) η φόρτιση αφορά καθαρά λειτουργία αγοράς (arbitrage).",
+        surplusBadgeTip: "Το % απορρόφησης υπολογίζεται επί του Θεωρητικού Αρχικού Πλεονάσματος (Surplus + BESS Charge + PUMP Charge)",
+        surplusCumulativeTitle: "Αθροιστική Εξέλιξη Ευελιξίας (Cumulative BESS & PUMP vs Surplus)",
+        surplusCumulativeSub: "Σύγκριση της αθροιστικής φόρτισης SCADA (Μπαταρίες + Αντλησιοταμίευση) με το αθροιστικό υπολειπόμενο ISP Surplus",
+        arbitrageMainTitle: "Arbitrage P&L & Ωριαίο Προφίλ Λειτουργίας",
+        arbitrageDateLabel: "Ημερομηνία:",
+        arbitrageChartTitle: "Ωριαία Κίνηση BESS ανά Μονάδα (MWh)",
+        arbitrageChartSub: "Αρνητικές τιμές = Φόρτιση, Θετικές τιμές = Αποφόρτιση",
+        arbitrageTableTitle: "Οικονομική Απόδοση & Arbitrage (Ημέρας)",
+        thUnit: "ΜΟΝΑΔΑ BESS",
+        thCharge: "ΣΥΝΟΛΙΚΗ ΦΟΡΤΙΣΗ (MWH)",
+        thDischarge: "ΣΥΝΟΛΙΚΗ ΑΠΟΦΟΡΤΙΣΗ (MWH)",
+        thRte: "RTE (%)",
+        thPnl: "ΠΙΘΑΝΟ DAILY P&L (€)",
+        thProfit: "UNIT PROFIT (€/MWH)"
+    },
+    en: {
+        title: "Greek BESS Market Analytics",
+        source: "Data source: IPTO (ADMIE) official ISP & SCADA files",
+        scopeTooltip: "Refers exclusively to BESS units connected to the Transmission System (IPTO/ADMIE). Excludes distributed systems on the Distribution Network (HEDNO).",
+        lastUpdate: "Last Update:",
+        nextUpdate: "Next Update:",
+        dateLabel: "Date:",
+        monthLabel: "Month:",
+        tabDaily: "Daily Analytics",
+        tabMonthly: "Monthly Impact",
+        tabSurplus: "Surplus & Flexibility",
+        tabArbitrage: "Arbitrage P&L",
+        btnMethodology: "Methodology & Assumptions",
+        modalTitle: "Methodology & Core Assumptions",
+        modalBody: `
+            <p class="mb-3">This Dashboard serves as an independent tool for monitoring and analyzing Battery Energy Storage Systems (BESS) activity in the Greek Energy Market, based entirely on open data.</p>
+            <ul class="list-disc pl-5 space-y-2 mb-4 text-slate-400">
+                <li><strong class="text-slate-200">Data Sources:</strong> Data is fetched daily from IPTO's (ADMIE) official reports (ISP Results & System Realization SCADA) and ENTSO-E (Day-Ahead Market Prices).</li>
+                <li><strong class="text-slate-200">Financial Model (P&L):</strong> The estimated Arbitrage revenue is based <strong>strictly on the Day-Ahead Market (DAM)</strong>. Assuming a price-taker behavior, units charge/discharge at the Market Clearing Price (MCP). <em>Revenues from the Balancing Market, Ancillary Services (FCR, aFRR), or Capacity Mechanisms are entirely excluded.</em></li>
+                <li><strong class="text-slate-200">Round Trip Efficiency (RTE):</strong> Calculated on a daily AC-to-AC basis from SCADA telemetry. Extreme outliers (e.g., >92% or <83%) are typically caused by the <em>Inter-day SoC Carryover</em> effect, where a battery holds state-of-charge to inject on a subsequent day, artificially skewing the daily ratio.</li>
+                <li><strong class="text-slate-200">Environmental Impact:</strong> Monthly displacement metrics are theoretical. They rely on the assumption that BESS discharge displaces expensive/polluting thermal generation (Gas/Lignite), while BESS charging absorbs surplus RES generation that would otherwise face curtailment.</li>
+            </ul>
+        `,
+        dischargeTitle: "Discharge Per BESS Unit (MWh)",
+        totalDischarge: "Total Discharge",
+        chargeTitle: "Charge Per BESS Unit (MWh)",
+        totalCharge: "Total Charge",
+        rte: "Round Trip Efficiency (RTE - Total BESS)",
+        schedIsp: "SCHEDULED (ISP)",
+        actScada: "ACTUAL (SCADA)",
+        monthlyDischargeTitle: "Potential Displaced Thermal Generation (Lignite/Gas) - (Cumulative Discharge)",
+        monthlyDischargeSub: "SCADA Data - Avoided Thermal Generation",
+        monthlyChargeTitle: "Potential Avoided RES Curtailment (Cumulative Charge)",
+        monthlyChargeSub: "SCADA Data - Energy saved from curtailment",
+        kpiLabelAvoided: "Monthly Avoided",
+        kpiLabelDisplaced: "Monthly Displaced",
+        surplusStackedTitle: "Daily Energy Surplus & Flexibility Absorption (GWh)",
+        surplusStackedSub: "Absolute values. Days with no red bar (Surplus = 0) indicate purely market-driven arbitrage charging.",
+        surplusBadgeTip: "Absorption % is calculated on the Theoretical Initial Surplus (ISP Surplus + BESS + PUMP)",
+        surplusCumulativeTitle: "Cumulative Flexibility Evolution (BESS & PUMP vs Surplus)",
+        surplusCumulativeSub: "Comparison of cumulative SCADA charging (Batteries + Pumped Hydro) vs cumulative residual ISP Surplus",
+        arbitrageMainTitle: "Arbitrage P&L & Hourly Operation Profile",
+        arbitrageDateLabel: "Date:",
+        arbitrageChartTitle: "Hourly BESS Operation per Unit (MWh)",
+        arbitrageChartSub: "Negative values = Charging, Positive values = Discharging",
+        arbitrageTableTitle: "Daily Financial Performance & Arbitrage",
+        thUnit: "BESS UNIT",
+        thCharge: "TOTAL CHARGE (MWH)",
+        thDischarge: "TOTAL DISCHARGE (MWH)",
+        thRte: "RTE (%)",
+        thPnl: "POTENTIAL DAILY P&L (€)",
+        thProfit: "UNIT PROFIT (€/MWH)"
+    }
 };
 
 function setLang(lang) {
@@ -22,15 +126,9 @@ function setLang(lang) {
     document.getElementById('monthLabel').innerText = t.monthLabel;
     document.getElementById('monthLabelSurp').innerText = t.monthLabel;
     
-    if(document.getElementById('btnMethodologyText')) {
-        document.getElementById('btnMethodologyText').innerText = t.btnMethodology;
-    }
-    if(document.getElementById('modalTitle')) {
-        document.getElementById('modalTitle').innerText = t.modalTitle;
-    }
-    if(document.getElementById('modalBody')) {
-        document.getElementById('modalBody').innerHTML = t.modalBody;
-    }
+    if(document.getElementById('btnMethodologyText')) document.getElementById('btnMethodologyText').innerText = t.btnMethodology;
+    if(document.getElementById('modalTitle')) document.getElementById('modalTitle').innerText = t.modalTitle;
+    if(document.getElementById('modalBody')) document.getElementById('modalBody').innerHTML = t.modalBody;
 
     document.getElementById('tabBtnDaily').innerText = t.tabDaily;
     document.getElementById('tabBtnMonthly').innerText = t.tabMonthly;
@@ -86,25 +184,6 @@ function setLang(lang) {
     if (typeof renderArbitrageTab === "function") renderArbitrageTab(); 
 }
 
-function switchTab(tabId) {
-    const tabs = ['daily', 'monthly', 'surplus'];
-    tabs.forEach(t => {
-        const btn = document.getElementById('tabBtn' + t.charAt(0).toUpperCase() + t.slice(1));
-        const view = document.getElementById('view' + t.charAt(0).toUpperCase() + t.slice(1));
-        if (t === tabId) {
-            btn.className = "text-emerald-400 font-bold border-b-2 border-emerald-400 pb-2 px-2 transition whitespace-nowrap";
-            view.classList.remove('hidden');
-        } else {
-            btn.className = "text-slate-500 hover:text-emerald-300 pb-2 px-2 transition whitespace-nowrap";
-            view.classList.add('hidden');
-        }
-    });
-
-    if (tabId === 'daily' && typeof updateDashboard === "function") updateDashboard();
-    if (tabId === 'monthly' && typeof updateMonthlyDashboard === "function") updateMonthlyDashboard();
-    if (tabId === 'surplus' && typeof updateSurplusDashboard === "function") updateSurplusDashboard();
-}
-
 function parseNum(val) {
     if (val === null || val === undefined) return 0;
     if (typeof val === 'number') return isNaN(val) ? 0 : val;
@@ -116,8 +195,8 @@ function parseNum(val) {
 function normalizeData(dataArray) {
     if (!dataArray || dataArray.length === 0) return [];
     
+    // Πλέον τα κλειδιά έρχονται απευθείας από τη δομή του Python script
     return dataArray.map(d => ({
-        // Keys map directly to the JSON structure created by Python
         date: d["Ημερομηνία"],
         unit: String(d["Μονάδα BESS"] || "").trim(),
         charge: parseNum(d["Φόρτιση (MWh)"]),
@@ -146,8 +225,8 @@ function updateFreshness(dates) {
 
 async function init() {
     try {
-        // Cache busting to ensure the browser fetches the latest static JSON file
-        const res = await fetch(`${API_URL}?t=${new Date().getTime()}`); 
+        // Προσθέτουμε timestamp στο URL (cache-busting) για να μην κρατάει ο browser παλιά δεδομένα
+        const res = await fetch(`${API_URL}?t=${new Date().getTime()}`);
         if (!res.ok) throw new Error("JSON file not found. Ensure the GitHub action has run.");
         
         const json = await res.json();
@@ -194,8 +273,7 @@ async function init() {
         if (typeof updateMonthlyDashboard === "function") updateMonthlyDashboard();
         if (typeof updateSurplusDashboard === "function") updateSurplusDashboard();
     } catch (err) {
-        alert("Σφάλμα κατά τη φόρτωση των δεδομένων: " + err.message);
-        console.error(err);
+        console.warn("Σφάλμα κατά τη φόρτωση των δεδομένων (Αναμενόμενο αν δεν έχει τρέξει το Action): " + err.message);
     }
 }
 init();
