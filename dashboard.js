@@ -431,12 +431,8 @@ function initArbitrageTab() {
         hourlyData.forEach(item => {
             let rawDate = item["Ημερομηνία"] || item["date"];
             if (rawDate) {
-                if (rawDate instanceof Date) {
-                    rawDate = rawDate.toISOString().split('T')[0];
-                } else {
-                    rawDate = String(rawDate).split('T')[0].trim();
-                }
-                datesSet.add(rawDate);
+                // Κρατάμε απευθείας τους πρώτους 10 χαρακτήρες (YYYY-MM-DD)
+                datesSet.add(String(rawDate).substring(0, 10));
             }
         });
 
@@ -477,21 +473,15 @@ function renderArbitrageTab() {
 
     const dayData = hourlyData.filter(item => {
         let d = item["Ημερομηνία"] || item["date"];
-        if (!d) return false;
-        if (d instanceof Date) d = d.toISOString().split('T')[0];
-        return String(d).startsWith(selectedDate);
+        // Φιλτράρισμα με βάση τους πρώτους 10 χαρακτήρες
+        return d && String(d).substring(0, 10) === selectedDate;
     });
 
     let dailyMcp = new Array(24).fill(0);
     const mcpRow = mcpData.find(item => {
         let d = item["Ημερομηνία"] || item["date"];
-        if (!d) return false;
-        
-        // Αν είναι Date object, το κάνουμε string. Αν είναι ήδη string (όπως στο JSON), 
-        // κρατάμε μόνο τους πρώτους 10 χαρακτήρες (YYYY-MM-DD) για σιγουριά.
-        let dateStr = (d instanceof Date) ? d.toISOString().split('T')[0] : String(d).substring(0, 10);
-        
-        return dateStr === selectedDate;
+        // Έλεγχος με βάση τους πρώτους 10 χαρακτήρες
+        return d && String(d).substring(0, 10) === selectedDate;
     });
     
     const chartLabels = [];
@@ -501,23 +491,21 @@ function renderArbitrageTab() {
         chartLabels.push(padHour);
     }
 
-if (mcpRow) {
+    if (mcpRow) {
         for (let h = 1; h <= 24; h++) {
-            // Υπολογίζουμε ποιο "T" (τέταρτο) ξεκινάει την τρέχουσα ώρα. 
-            // Π.χ. για h=1 είναι το T1, για h=2 είναι το T5, για h=3 είναι το T9.
+            // Υπολογίζουμε ποιο "T" (τέταρτο) ξεκινάει την τρέχουσα ώρα.
             let startT = (h - 1) * 4 + 1;
             
-            // Αν υπάρχει το νέο format (T1, T2...) από την Python:
             if (mcpRow['T' + startT] !== undefined) {
                 let q1 = parseFloat(mcpRow['T' + startT]) || 0;
                 let q2 = parseFloat(mcpRow['T' + (startT + 1)]) || 0;
                 let q3 = parseFloat(mcpRow['T' + (startT + 2)]) || 0;
                 let q4 = parseFloat(mcpRow['T' + (startT + 3)]) || 0;
                 
-                // Βγάζουμε τον μέσο όρο (Ωριαία Τιμή Εκκαθάρισης)
+                // Μέσος όρος τετάρτων
                 dailyMcp[h-1] = (q1 + q2 + q3 + q4) / 4;
             } else {
-                // Fallback για παλιά format αν χρειαστεί (π.χ. "1:00")
+                // Fallback 
                 let k = h + ':00';
                 dailyMcp[h-1] = parseFloat(String(mcpRow[k]).replace(',', '.')) || 0;
             }
@@ -779,11 +767,11 @@ window.addEventListener('load', () => {
                             overlay.style.display = 'none';
                         }, 500); 
                     }
-                }, 500); 
+                }, 1500); 
 
-            }, 800); 
+            }, 2400); 
 
-        }, 800); 
+        }, 2400); 
 
-    }, 500); 
+    }, 1500); 
 });
