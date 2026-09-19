@@ -1,0 +1,47 @@
+name: Daily BESS Data Update
+
+on:
+  schedule:
+    - cron: '0 7 * * *' # Τρέχει κάθε μέρα στις 07:00 UTC (09:00 ή 10:00 ώρα Ελλάδος ανάλογα τη θερινή/χειμερινή)
+  workflow_dispatch: # Εμφανίζει ένα κουμπάκι στο GitHub για να το τρέχουμε χειροκίνητα όποτε θέλουμε!
+
+permissions:
+  contents: write # Δίνει άδεια στο bot να ανεβάζει αρχεία (το νέο JSON) πίσω στο repository
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip' # Επιταχύνει το script краτώντας τα libraries στη μνήμη
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests pandas openpyxl
+
+      - name: Run Data Extraction Script
+        env:
+          ENTSOE_TOKEN: ${{ secrets.ENTSOE_TOKEN }}
+        run: python update_data.py
+
+      - name: Commit and Push Changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/historical.json
+          
+          # Ελέγχει αν το script όντως έφερε νέα data. Αν ναι, τα κάνει commit.
+          if git diff --staged --quiet; then
+            echo "Δεν βρέθηκαν νέα δεδομένα (ή δεν υπάρχει αλλαγή). Παράβλεψη commit."
+          else
+            git commit -m "Auto-update BESS data 🤖 [skip ci]"
+            git push
+          fi
