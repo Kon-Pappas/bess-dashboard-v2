@@ -501,10 +501,26 @@ function renderArbitrageTab() {
         chartLabels.push(padHour);
     }
 
-    if (mcpRow) {
+if (mcpRow) {
         for (let h = 1; h <= 24; h++) {
-            let k = h + ':00';
-            dailyMcp[h-1] = parseFloat(String(mcpRow[k]).replace(',', '.')) || 0;
+            // Υπολογίζουμε ποιο "T" (τέταρτο) ξεκινάει την τρέχουσα ώρα. 
+            // Π.χ. για h=1 είναι το T1, για h=2 είναι το T5, για h=3 είναι το T9.
+            let startT = (h - 1) * 4 + 1;
+            
+            // Αν υπάρχει το νέο format (T1, T2...) από την Python:
+            if (mcpRow['T' + startT] !== undefined) {
+                let q1 = parseFloat(mcpRow['T' + startT]) || 0;
+                let q2 = parseFloat(mcpRow['T' + (startT + 1)]) || 0;
+                let q3 = parseFloat(mcpRow['T' + (startT + 2)]) || 0;
+                let q4 = parseFloat(mcpRow['T' + (startT + 3)]) || 0;
+                
+                // Βγάζουμε τον μέσο όρο (Ωριαία Τιμή Εκκαθάρισης)
+                dailyMcp[h-1] = (q1 + q2 + q3 + q4) / 4;
+            } else {
+                // Fallback για παλιά format αν χρειαστεί (π.χ. "1:00")
+                let k = h + ':00';
+                dailyMcp[h-1] = parseFloat(String(mcpRow[k]).replace(',', '.')) || 0;
+            }
         }
     }
 
