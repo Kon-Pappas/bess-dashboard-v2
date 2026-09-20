@@ -49,7 +49,6 @@ def fetch_admie_excel(date_str, category):
 def process_admie_file(df, date_str, category, db):
     if df is None or df.empty: return
 
-    # 1. Εξαγωγή Surplus / Pumping
     if category == "ISP2ISPResults":
         surplus_val = 0.0
         surplus_row = df[df.apply(lambda r: r.astype(str).str.contains("Energy Surplus").any(), axis=1)]
@@ -70,7 +69,6 @@ def process_admie_file(df, date_str, category, db):
         db["pump"] = [d for d in db["pump"] if d.get("Ημερομηνία") != date_str]
         db["pump"].append({"Ημερομηνία": date_str, "Daily Pumping (MWh)": pump_val})
 
-    # 2. Εξαγωγή δεδομένων BESS
     target_agg = "isp" if category == "ISP2ISPResults" else "scada"
     db[target_agg] = [d for d in db[target_agg] if d.get("Ημερομηνία") != date_str]
     if category == "SystemRealizationSCADA":
@@ -151,14 +149,13 @@ def fetch_entsoe(date_str, db):
     
     is_dst = march_end <= dt < oct_end
     
-    # Ώρα Ελλάδος σε UTC
-    start_hour = 21 if is_dst else 22
+    # ΕΠΑΝΑΦΟΡΑ ΣΤΗ ΣΩΣΤΗ ΩΡΑ ENEX: Η αγορά συγχρονίζεται με CET/CEST. 
+    start_hour = 22 if is_dst else 23
     
     start_time = dt - timedelta(days=1)
     period_start = f"{start_time.strftime('%Y%m%d')}{start_hour}00"
     period_end = f"{dt.strftime('%Y%m%d')}{start_hour}00"
     
-    # Το απόλυτο σημείο μηδέν της Ελληνικής ημέρας σε UTC
     target_start_utc = start_time.replace(hour=start_hour, minute=0, second=0)
 
     url = (
@@ -177,17 +174,20 @@ def fetch_entsoe(date_str, db):
         root = ET.fromstring(res.text)
         ns = {'ns': root.tag.split('}')[0].strip('{')}
         
-        # Προετοιμασία λιστών 24 ωρών και 96 τετάρτων
         hourly_prices = [0.0] * 24
         quarterly_prices = [0.0] * 96
         has_15m = False
         has_60m = False
         
         for ts in root.findall('ns:TimeSeries', ns):
+            # ΘΩΡΑΚΙΣΗ: Φιλτράρουμε ΑΥΣΤΗΡΑ μόνο το Day-Ahead (A62)
+            business_type = ts.find('ns:businessType', ns)
+            if business_type is not None and business_type.text != "A62":
+                continue
+                
             period = ts.find('ns:Period', ns)
             if period is None: continue
             
-            # Βρίσκουμε τον ακριβή χρόνο έναρξης του κομματιού
             period_start_str = period.find('ns:timeInterval/ns:start', ns).text.replace('Z', '')
             if len(period_start_str) == 16:
                 period_start_utc = datetime.strptime(period_start_str, "%Y-%m-%dT%H:%M")
@@ -200,7 +200,6 @@ def fetch_entsoe(date_str, db):
                 pos = int(point.find('ns:position', ns).text)
                 price = float(point.find('ns:price.amount', ns).text)
                 
-                # Υπολογισμός θέσης με βάση τον ΑΠΟΛΥΤΟ ΧΡΟΝΟ (αγνοώντας το "χαζό" pos)
                 if resolution == "PT15M":
                     has_15m = True
                     point_time = period_start_utc + timedelta(minutes=15 * (pos - 1))
@@ -216,19 +215,16 @@ def fetch_entsoe(date_str, db):
                     if 0 <= diff_hours < 24:
                         hourly_prices[diff_hours] = price
 
-        # Αν ήρθαν 15λεπτα, βγάζουμε τον μέσο όρο ανά ώρα στο Backend!
         if has_15m and not has_60m:
             for h in range(24):
                 q_sum = sum(quarterly_prices[h*4 : h*4+4])
                 hourly_prices[h] = q_sum / 4.0
 
         if has_15m or has_60m:
-            # Safe Healing: Διαγράφουμε τα παλιά δεδομένα ΜΟΝΟ αφού βρήκαμε νέα
             db["mcpHourly"] = [d for d in db["mcpHourly"] if d.get("Ημερομηνία") != date_str]
             
             mcp_entry = {"Ημερομηνία": date_str}
             for h in range(1, 25):
-                # Σώζουμε 24 καθαρές τιμές ως "1:00", "2:00" κ.ο.κ.
                 mcp_entry[f"{h}:00"] = round(hourly_prices[h-1], 2)
                 
             db["mcpHourly"].append(mcp_entry)
@@ -236,7 +232,6 @@ def fetch_entsoe(date_str, db):
             
     except Exception as e:
         print(f"[{date_str}] ❌ Σφάλμα κώδικα (Parsing) ENTSO-E: {e}")
-
 
 def main():
     db = load_existing_data()
