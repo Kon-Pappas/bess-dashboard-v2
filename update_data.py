@@ -149,7 +149,7 @@ def fetch_entsoe(date_str, db):
     
     is_dst = march_end <= dt < oct_end
     
-    # ΕΠΑΝΑΦΟΡΑ ΣΤΗ ΣΩΣΤΗ ΩΡΑ ENEX: Η αγορά συγχρονίζεται με CET/CEST. 
+    # Διατηρούμε την απόλυτα σωστή ώρα του ENEX (Market Coupling σε CET)
     start_hour = 22 if is_dst else 23
     
     start_time = dt - timedelta(days=1)
@@ -174,17 +174,20 @@ def fetch_entsoe(date_str, db):
         root = ET.fromstring(res.text)
         ns = {'ns': root.tag.split('}')[0].strip('{')}
         
-        hourly_prices = [0.0] * 24
-        quarterly_prices = [0.0] * 96
-        has_15m = False
-        has_60m = False
+        # Απόλυτη Θωράκιση: Φτιάχνουμε 96 "άδεια" κουτάκια για κάθε 15λεπτο της ημέρας
+        quarters = [None] * 96
         
         for ts in root.findall('ns:TimeSeries', ns):
-            # ΘΩΡΑΚΙΣΗ: Φιλτράρουμε ΑΥΣΤΗΡΑ μόνο το Day-Ahead (A62)
+            # ΦΙΛΤΡΟ 1: Μόνο Day-Ahead (A62). Πετάει έξω Intraday & Fallbacks.
             business_type = ts.find('ns:businessType', ns)
             if business_type is not None and business_type.text != "A62":
                 continue
                 
+            # ΦΙΛΤΡΟ 2: Μόνο τιμές σε Ευρώ (Σώζει 100% τη Βουλγαρία από το BGN)
+            currency = ts.find('ns:currency_Unit.name', ns)
+            if currency is not None and currency.text != "EUR":
+                continue
+
             period = ts.find('ns:Period', ns)
             if period is None: continue
             
@@ -200,35 +203,44 @@ def fetch_entsoe(date_str, db):
                 pos = int(point.find('ns:position', ns).text)
                 price = float(point.find('ns:price.amount', ns).text)
                 
+                # Αν είναι 15λεπτη τιμή (PT15M), τη βάζουμε κατευθείαν στο σωστό 15λεπτο
                 if resolution == "PT15M":
-                    has_15m = True
                     point_time = period_start_utc + timedelta(minutes=15 * (pos - 1))
                     diff_minutes = int((point_time - target_start_utc).total_seconds() // 60)
                     idx = diff_minutes // 15
                     if 0 <= idx < 96:
-                        quarterly_prices[idx] = price
+                        quarters[idx] = price
                         
+                # Αν είναι Ωριαία τιμή (PT60M), γεμίζουμε 4 δεκαπεντάλεπτα 
+                # (ΑΛΛΑ μόνο αν δεν τα έχουμε ήδη γεμίσει με πιο ακριβή 15λεπτα δεδομένα!)
                 elif resolution == "PT60M":
-                    has_60m = True
                     point_time = period_start_utc + timedelta(hours=(pos - 1))
                     diff_hours = int((point_time - target_start_utc).total_seconds() // 3600)
                     if 0 <= diff_hours < 24:
-                        hourly_prices[diff_hours] = price
+                        start_idx = diff_hours * 4
+                        for i in range(4):
+                            if quarters[start_idx + i] is None:
+                                quarters[start_idx + i] = price
 
-        if has_15m and not has_60m:
-            for h in range(24):
-                q_sum = sum(quarterly_prices[h*4 : h*4+4])
-                hourly_prices[h] = q_sum / 4.0
-
-        if has_15m or has_60m:
-            db["mcpHourly"] = [d for d in db["mcpHourly"] if d.get("Ημερομηνία") != date_str]
+        # Υπολογισμός τελικών ωριαίων τιμών βγάζοντας τον μέσο όρο των τετάρτων!
+        valid_hours = 0
+        mcp_entry = {"Ημερομηνία": date_str}
+        
+        for h in range(24):
+            # Παίρνουμε τα 4 τέταρτα κάθε ώρας (εξαιρώντας τα άδεια 'None')
+            q_slice = quarters[h*4 : h*4+4]
+            valid_qs = [q for q in q_slice if q is not None]
             
-            mcp_entry = {"Ημερομηνία": date_str}
-            for h in range(1, 25):
-                mcp_entry[f"{h}:00"] = round(hourly_prices[h-1], 2)
-                
+            if len(valid_qs) > 0:
+                mcp_entry[f"{h+1}:00"] = round(sum(valid_qs) / len(valid_qs), 2)
+                valid_hours += 1
+            else:
+                mcp_entry[f"{h+1}:00"] = 0.0
+
+        if valid_hours > 0:
+            db["mcpHourly"] = [d for d in db["mcpHourly"] if d.get("Ημερομηνία") != date_str]
             db["mcpHourly"].append(mcp_entry)
-            print(f"[{date_str}] ✔ Επιτυχία ENTSO-E! Αποθηκεύτηκαν 24 ωριαίες τιμές.")
+            print(f"[{date_str}] ✔ Επιτυχία ENTSO-E! Αποθηκεύτηκαν {valid_hours}/24 ωριαίες τιμές.")
             
     except Exception as e:
         print(f"[{date_str}] ❌ Σφάλμα κώδικα (Parsing) ENTSO-E: {e}")
