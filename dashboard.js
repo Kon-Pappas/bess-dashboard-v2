@@ -767,11 +767,11 @@ window.addEventListener('load', () => {
                             overlay.style.display = 'none';
                         }, 500); 
                     }
-                }, 1500); 
+                }, 500); 
 
-            }, 2400); 
+            }, 800); 
 
-        }, 2400); 
+        }, 800); 
 
-    }, 1500); 
+    }, 500); 
 });
