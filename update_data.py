@@ -140,12 +140,9 @@ def fetch_entsoe(date_str, db):
     print(f"[{date_str}] Ξεκινάει η λήψη ENTSO-E...")
     
     if not ENTSOE_TOKEN:
-        print(f"[{date_str}] ❌ ΔΕΝ βρέθηκε το ENTSOE_TOKEN! Το API key δεν πέρασε από το GitHub Secrets.")
+        print(f"[{date_str}] ❌ ΔΕΝ βρέθηκε το ENTSOE_TOKEN!")
         return
-    
-    # Αφαιρούμε τις παλιές εγγραφές για να είμαστε σίγουροι ότι θα φέρει τα νέα 
-    db["mcpHourly"] = [d for d in db["mcpHourly"] if d.get("Ημερομηνία") != date_str]
-    
+        
     dt = datetime.strptime(date_str, "%Y-%m-%d")
     year = dt.year
     
@@ -153,11 +150,16 @@ def fetch_entsoe(date_str, db):
     oct_end = max(d for d in [datetime(year, 10, i) for i in range(25, 32)] if d.weekday() == 6)
     
     is_dst = march_end <= dt < oct_end
-    start_hour = 22 if is_dst else 23
+    
+    # Ώρα Ελλάδος σε UTC
+    start_hour = 21 if is_dst else 22
     
     start_time = dt - timedelta(days=1)
     period_start = f"{start_time.strftime('%Y%m%d')}{start_hour}00"
     period_end = f"{dt.strftime('%Y%m%d')}{start_hour}00"
+    
+    # Το απόλυτο σημείο μηδέν της Ελληνικής ημέρας σε UTC
+    target_start_utc = start_time.replace(hour=start_hour, minute=0, second=0)
 
     url = (
         f"https://web-api.tp.entsoe.eu/api?securityToken={ENTSOE_TOKEN}"
@@ -167,52 +169,74 @@ def fetch_entsoe(date_str, db):
     
     try:
         res = requests.get(url, headers=HEADERS)
-        if not res.ok:
-            print(f"[{date_str}] ❌ Σφάλμα HTTP {res.status_code}: {res.text[:150]}")
-            return
+        if not res.ok: return
             
-        if "<Reason>" in res.text:
-            import re
-            reason_text = re.search(r'<text>(.*?)</text>', res.text)
-            msg = reason_text.group(1) if reason_text else res.text[:150]
-            print(f"[{date_str}] ⚠️ Το ENTSO-E επέστρεψε μήνυμα Reason (κενά δεδομένα): {msg}")
-            return
+        if "<Reason>" in res.text: return
         
         import xml.etree.ElementTree as ET
         root = ET.fromstring(res.text)
         ns = {'ns': root.tag.split('}')[0].strip('{')}
         
-        prices = [0.0] * 96
-        points_found = 0
+        # Προετοιμασία λιστών 24 ωρών και 96 τετάρτων
+        hourly_prices = [0.0] * 24
+        quarterly_prices = [0.0] * 96
+        has_15m = False
+        has_60m = False
         
         for ts in root.findall('ns:TimeSeries', ns):
             period = ts.find('ns:Period', ns)
             if period is None: continue
             
+            # Βρίσκουμε τον ακριβή χρόνο έναρξης του κομματιού
+            period_start_str = period.find('ns:timeInterval/ns:start', ns).text.replace('Z', '')
+            if len(period_start_str) == 16:
+                period_start_utc = datetime.strptime(period_start_str, "%Y-%m-%dT%H:%M")
+            else:
+                period_start_utc = datetime.strptime(period_start_str[:19], "%Y-%m-%dT%H:%M:%S")
+                
             resolution = period.find('ns:resolution', ns).text
+            
             for point in period.findall('ns:Point', ns):
                 pos = int(point.find('ns:position', ns).text)
                 price = float(point.find('ns:price.amount', ns).text)
                 
-                if resolution == "PT15M" and 1 <= pos <= 96:
-                    prices[pos - 1] = price
-                    points_found += 1
-                elif resolution == "PT60M" and 1 <= pos <= 24:
-                    start_idx = (pos - 1) * 4
-                    for i in range(4): prices[start_idx + i] = price
-                    points_found += 4
+                # Υπολογισμός θέσης με βάση τον ΑΠΟΛΥΤΟ ΧΡΟΝΟ (αγνοώντας το "χαζό" pos)
+                if resolution == "PT15M":
+                    has_15m = True
+                    point_time = period_start_utc + timedelta(minutes=15 * (pos - 1))
+                    diff_minutes = int((point_time - target_start_utc).total_seconds() // 60)
+                    idx = diff_minutes // 15
+                    if 0 <= idx < 96:
+                        quarterly_prices[idx] = price
+                        
+                elif resolution == "PT60M":
+                    has_60m = True
+                    point_time = period_start_utc + timedelta(hours=(pos - 1))
+                    diff_hours = int((point_time - target_start_utc).total_seconds() // 3600)
+                    if 0 <= diff_hours < 24:
+                        hourly_prices[diff_hours] = price
 
-        if points_found > 0:
+        # Αν ήρθαν 15λεπτα, βγάζουμε τον μέσο όρο ανά ώρα στο Backend!
+        if has_15m and not has_60m:
+            for h in range(24):
+                q_sum = sum(quarterly_prices[h*4 : h*4+4])
+                hourly_prices[h] = q_sum / 4.0
+
+        if has_15m or has_60m:
+            # Safe Healing: Διαγράφουμε τα παλιά δεδομένα ΜΟΝΟ αφού βρήκαμε νέα
+            db["mcpHourly"] = [d for d in db["mcpHourly"] if d.get("Ημερομηνία") != date_str]
+            
             mcp_entry = {"Ημερομηνία": date_str}
-            for i in range(96):
-                mcp_entry[f"T{i+1}"] = prices[i]
+            for h in range(1, 25):
+                # Σώζουμε 24 καθαρές τιμές ως "1:00", "2:00" κ.ο.κ.
+                mcp_entry[f"{h}:00"] = round(hourly_prices[h-1], 2)
+                
             db["mcpHourly"].append(mcp_entry)
-            print(f"[{date_str}] ✔ Επιτυχία ENTSO-E! Βρέθηκαν {points_found} τιμές.")
-        else:
-            print(f"[{date_str}] ⚠️ Το XML κατέβηκε αλλά δεν είχε τιμές (points).")
+            print(f"[{date_str}] ✔ Επιτυχία ENTSO-E! Αποθηκεύτηκαν 24 ωριαίες τιμές.")
             
     except Exception as e:
         print(f"[{date_str}] ❌ Σφάλμα κώδικα (Parsing) ENTSO-E: {e}")
+
 
 def main():
     db = load_existing_data()
