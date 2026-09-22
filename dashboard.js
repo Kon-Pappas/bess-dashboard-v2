@@ -727,15 +727,21 @@ function renderArbitrageTab() {
 // ==========================================
 window.addEventListener('load', () => {
 
-    // Αρχικοποίηση γλώσσας
-    if (typeof setLang === 'function') {
-        setLang('en');
+    // Αρχικοποίηση γλώσσας με προστασία σφαλμάτων (Try/Catch)
+    try {
+        if (typeof setLang === 'function') {
+            setLang('en');
+        }
+    } catch (err) {
+        console.warn('Αποτυχία φόρτωσης μετάφρασης:', err);
     }
 
     const bar = document.getElementById('loading-progress-bar');
     const pct = document.getElementById('loading-percentage');
     const sub = document.getElementById('loading-subtitle');
     const overlay = document.getElementById('loading-overlay');
+    
+    // ... ο υπόλοιπος κώδικας συνεχίζει ως έχει ...
 
     function updateProgress(percent, text) {
         if (bar) bar.style.width = percent + '%';
