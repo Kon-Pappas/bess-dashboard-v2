@@ -382,13 +382,17 @@ function updateSurplusDashboard() {
             let bPct = (b / total) * 100;
             let pPct = (p / total) * 100;
 
-            // Έλεγχος BESS (> 0% για να θεωρηθεί "worst")
-            if (bPct > bessMax.pct) { bessMax = { pct: bPct, val: b, date: dateLbl }; }
-            if (bPct > 0 && bPct < bessMin.pct) { bessMin = { pct: bPct, val: b, date: dateLbl }; }
+            // Έλεγχος BESS (Αποκλείουμε το 0% και το 100%)
+            if (bPct > 0 && bPct < 100) {
+                if (bPct > bessMax.pct) { bessMax = { pct: bPct, val: b, date: dateLbl }; }
+                if (bPct < bessMin.pct) { bessMin = { pct: bPct, val: b, date: dateLbl }; }
+            }
             
-            // Έλεγχος PUMP (> 0% για να θεωρηθεί "worst")
-            if (pPct > pumpMax.pct) { pumpMax = { pct: pPct, val: p, date: dateLbl }; }
-            if (pPct > 0 && pPct < pumpMin.pct) { pumpMin = { pct: pPct, val: p, date: dateLbl }; }
+            // Έλεγχος PUMP (Αποκλείουμε το 0% και το 100%)
+            if (pPct > 0 && pPct < 100) {
+                if (pPct > pumpMax.pct) { pumpMax = { pct: pPct, val: p, date: dateLbl }; }
+                if (pPct < pumpMin.pct) { pumpMin = { pct: pPct, val: p, date: dateLbl }; }
+            }
         }
     }
 
