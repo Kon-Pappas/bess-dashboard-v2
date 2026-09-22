@@ -2,11 +2,20 @@ name: Daily BESS Data Update
 
 on:
   schedule:
-    - cron: '0 5 * * *' # Τρέχει κάθε μέρα στις 07:00 UTC (09:00 ή 10:00 ώρα Ελλάδος ανάλογα τη θερινή/χειμερινή)
-  workflow_dispatch: # Εμφανίζει ένα κουμπάκι στο GitHub για να το τρέχουμε χειροκίνητα όποτε θέλουμε!
+    - cron: '0 5 * * *'
+  workflow_dispatch:
+    inputs:
+      start_date:
+        description: 'Start Date (π.χ. 2026-06-10)'
+        required: false
+        type: string
+      end_date:
+        description: 'End Date (π.χ. 2026-09-15)'
+        required: false
+        type: string
 
 permissions:
-  contents: write # Δίνει άδεια στο bot να ανεβάζει αρχεία (το νέο JSON) πίσω στο repository
+  contents: write
 
 jobs:
   update-data:
@@ -29,6 +38,8 @@ jobs:
       - name: Run Data Extraction Script
         env:
           ENTSOE_TOKEN: ${{ secrets.ENTSOE_TOKEN }}
+          START_DATE: ${{ inputs.start_date }}
+          END_DATE: ${{ inputs.end_date }}
         run: python update_data.py
 
       - name: Commit and Push Changes
@@ -37,7 +48,6 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add data/historical.json
           
-          # Ελέγχει αν το script όντως έφερε νέα data. Αν ναι, τα κάνει commit.
           if git diff --staged --quiet; then
             echo "Δεν βρέθηκαν νέα δεδομένα (ή δεν υπάρχει αλλαγή). Παράβλεψη commit."
           else
