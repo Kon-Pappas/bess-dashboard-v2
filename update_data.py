@@ -247,11 +247,32 @@ def fetch_entsoe(date_str, db):
 
 def main():
     db = load_existing_data()
-    today = datetime.now()
     
-    print("Εκκίνηση BESS Data Update...")
-    for i in range(DAYS_TO_FETCH - 1, -1, -1):
-        target_date = (today - timedelta(days=i)).strftime("%Y-%m-%d")
+    start_date_env = os.environ.get("START_DATE")
+    end_date_env = os.environ.get("END_DATE")
+    
+    target_dates = []
+    
+    # Αν δώσαμε ημερομηνίες από το GitHub UI (Backfill)
+    if start_date_env and end_date_env:
+        print(f"Εκκίνηση BESS Data Update (Μαζικό Backfill: {start_date_env} έως {end_date_env})...")
+        try:
+            start_dt = datetime.strptime(start_date_env, "%Y-%m-%d")
+            end_dt = datetime.strptime(end_date_env, "%Y-%m-%d")
+            delta = end_dt - start_dt
+            for i in range(delta.days + 1):
+                target_dates.append((start_dt + timedelta(days=i)).strftime("%Y-%m-%d"))
+        except ValueError:
+            print("❌ Λάθος μορφή ημερομηνίας. Χρησιμοποιήστε YYYY-MM-DD.")
+            return
+    # Αν τρέχει αυτόματα με cron (Καθημερινό Healing)
+    else:
+        print(f"Εκκίνηση BESS Data Update (Αυτόματο Healing {DAYS_TO_FETCH} ημερών)...")
+        today = datetime.now()
+        for i in range(DAYS_TO_FETCH - 1, -1, -1):
+            target_dates.append((today - timedelta(days=i)).strftime("%Y-%m-%d"))
+            
+    for target_date in target_dates:
         print(f"\n--- Επεξεργασία: {target_date} ---")
         
         df_isp = fetch_admie_excel(target_date, "ISP2ISPResults")
