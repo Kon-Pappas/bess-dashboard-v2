@@ -694,6 +694,13 @@ function renderArbitrageTab() {
 // INITIALIZATION & PROGRESS LOADING SCREEN 
 // ==========================================
 window.addEventListener('load', () => {
+
+    // ΠΡΟΣΘΗΚΗ: Αρχικοποίηση της γλώσσας στα Αγγλικά κατά τη φόρτωση
+    // Αυτό λύνει το πρόβλημα (φάντασμα) με το άδειο Modal Methodology!
+    if (typeof setLang === 'function') {
+        setLang('en');
+    }
+
     const bar = document.getElementById('loading-progress-bar');
     const pct = document.getElementById('loading-percentage');
     const sub = document.getElementById('loading-subtitle');
