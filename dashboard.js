@@ -36,34 +36,66 @@ function getMcpData() {
 // 0. TABS SWITCHING (Controller)
 // ==========================================
 function switchTab(tabName) {
+    // Κρύβουμε όλα τα tabs
     document.getElementById('viewDaily').classList.add('hidden');
     document.getElementById('viewMonthly').classList.add('hidden');
     document.getElementById('viewSurplus').classList.add('hidden');
     document.getElementById('viewArbitrage').classList.add('hidden');
 
+    // Επαναφέρουμε τα χρώματα των κουμπιών
     const inactiveClass = "text-slate-500 hover:text-emerald-300 pb-2 px-2 transition whitespace-nowrap";
     document.getElementById('tabBtnDaily').className = inactiveClass;
     document.getElementById('tabBtnMonthly').className = inactiveClass;
     document.getElementById('tabBtnSurplus').className = inactiveClass;
     document.getElementById('tabBtnArbitrage').className = inactiveClass;
 
+    // ΚΡΥΒΟΥΜΕ όλα τα Global Dropdowns από τον Header
+    document.getElementById('globalDateContainer').classList.remove('flex');
+    document.getElementById('globalDateContainer').classList.add('hidden');
+    
+    document.getElementById('globalMonthContainer').classList.remove('flex');
+    document.getElementById('globalMonthContainer').classList.add('hidden');
+    
+    document.getElementById('globalSurplusContainer').classList.remove('flex');
+    document.getElementById('globalSurplusContainer').classList.add('hidden');
+    
+    document.getElementById('globalArbitrageContainer').classList.remove('flex');
+    document.getElementById('globalArbitrageContainer').classList.add('hidden');
+
     const activeClass = "text-emerald-400 font-bold border-b-2 border-emerald-400 pb-2 px-2 transition whitespace-nowrap";
 
+    // ΕΜΦΑΝΙΖΟΥΜΕ το Tab και το αντίστοιχο Dropdown στον Header
     if (tabName === 'daily') {
         document.getElementById('viewDaily').classList.remove('hidden');
         document.getElementById('tabBtnDaily').className = activeClass;
+        
+        document.getElementById('globalDateContainer').classList.remove('hidden');
+        document.getElementById('globalDateContainer').classList.add('flex');
+        
         updateDashboard();
     } else if (tabName === 'monthly') {
         document.getElementById('viewMonthly').classList.remove('hidden');
         document.getElementById('tabBtnMonthly').className = activeClass;
+        
+        document.getElementById('globalMonthContainer').classList.remove('hidden');
+        document.getElementById('globalMonthContainer').classList.add('flex');
+        
         updateMonthlyDashboard();
     } else if (tabName === 'surplus') {
         document.getElementById('viewSurplus').classList.remove('hidden');
         document.getElementById('tabBtnSurplus').className = activeClass;
+        
+        document.getElementById('globalSurplusContainer').classList.remove('hidden');
+        document.getElementById('globalSurplusContainer').classList.add('flex');
+        
         updateSurplusDashboard();
     } else if (tabName === 'arbitrage') {
         document.getElementById('viewArbitrage').classList.remove('hidden');
         document.getElementById('tabBtnArbitrage').className = activeClass;
+        
+        document.getElementById('globalArbitrageContainer').classList.remove('hidden');
+        document.getElementById('globalArbitrageContainer').classList.add('flex');
+        
         initArbitrageTab();
     }
 }
@@ -695,8 +727,7 @@ function renderArbitrageTab() {
 // ==========================================
 window.addEventListener('load', () => {
 
-    // ΠΡΟΣΘΗΚΗ: Αρχικοποίηση της γλώσσας στα Αγγλικά κατά τη φόρτωση
-    // Αυτό λύνει το πρόβλημα (φάντασμα) με το άδειο Modal Methodology!
+    // Αρχικοποίηση γλώσσας
     if (typeof setLang === 'function') {
         setLang('en');
     }
