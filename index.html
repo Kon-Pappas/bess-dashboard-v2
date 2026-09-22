@@ -196,14 +196,51 @@
                     <span class="cursor-help text-xs bg-slate-800 text-slate-300 px-2 py-1 rounded-full border border-slate-700 hover:border-emerald-500 transition" id="surplusBadge" title="">[?]</span>
                 </div>
                 <p class="text-xs text-slate-400 mb-4" id="surplusStackedSub">Absolute values. Days with no red bar (Surplus = 0) indicate purely market-driven arbitrage charging.</p>
-                <div class="relative h-96"><canvas id="surplusStackedChart"></canvas></div>
-            </div>
+                
+                <!-- ΠΡΟΣΘΗΚΗ: Κουτιά KPIs (Best/Worst Days) -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <!-- BESS KPI Card -->
+                    <div class="bg-emerald-900/10 border border-emerald-500/20 rounded-lg p-3 flex justify-between items-center shadow-sm">
+                        <div class="w-1/2 border-r border-emerald-500/20 pr-3">
+                            <span class="text-[10px] text-emerald-400/70 uppercase tracking-wider block mb-1">BESS - Best Day</span>
+                            <div class="flex items-baseline gap-2">
+                                <span id="bessBestPct" class="text-xl font-bold text-emerald-400">-</span>
+                                <span id="bessBestDate" class="text-xs text-slate-400">-</span>
+                            </div>
+                            <span id="bessBestMwh" class="text-xs text-emerald-500/70 block mt-0.5 font-medium">-</span>
+                        </div>
+                        <div class="w-1/2 pl-4">
+                            <span class="text-[10px] text-emerald-400/70 uppercase tracking-wider block mb-1">BESS - Worst Day</span>
+                            <div class="flex items-baseline gap-2">
+                                <span id="bessWorstPct" class="text-xl font-bold text-emerald-400">-</span>
+                                <span id="bessWorstDate" class="text-xs text-slate-400">-</span>
+                            </div>
+                            <span id="bessWorstMwh" class="text-xs text-emerald-500/70 block mt-0.5 font-medium">-</span>
+                        </div>
+                    </div>
+                    <!-- PUMP KPI Card -->
+                    <div class="bg-blue-900/10 border border-blue-500/20 rounded-lg p-3 flex justify-between items-center shadow-sm">
+                        <div class="w-1/2 border-r border-blue-500/20 pr-3">
+                            <span class="text-[10px] text-blue-400/70 uppercase tracking-wider block mb-1">PUMP - Best Day</span>
+                            <div class="flex items-baseline gap-2">
+                                <span id="pumpBestPct" class="text-xl font-bold text-blue-400">-</span>
+                                <span id="pumpBestDate" class="text-xs text-slate-400">-</span>
+                            </div>
+                            <span id="pumpBestMwh" class="text-xs text-blue-500/70 block mt-0.5 font-medium">-</span>
+                        </div>
+                        <div class="w-1/2 pl-4">
+                            <span class="text-[10px] text-blue-400/70 uppercase tracking-wider block mb-1">PUMP - Worst Day</span>
+                            <div class="flex items-baseline gap-2">
+                                <span id="pumpWorstPct" class="text-xl font-bold text-blue-400">-</span>
+                                <span id="pumpWorstDate" class="text-xs text-slate-400">-</span>
+                            </div>
+                            <span id="pumpWorstMwh" class="text-xs text-blue-500/70 block mt-0.5 font-medium">-</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- ΤΕΛΟΣ ΠΡΟΣΘΗΚΗΣ -->
 
-            <!-- Cumulative Line Chart -->
-            <div class="bg-slate-800/40 p-6 rounded-xl border border-slate-700">
-                <h2 class="text-lg font-semibold text-slate-200 mb-1" id="surplusCumulativeTitle">Cumulative Flexibility Evolution (BESS & PUMP vs Surplus)</h2>
-                <p class="text-xs text-slate-400 mb-4" id="surplusCumulativeSub">Comparison of cumulative SCADA charging (Batteries + Pumped Hydro) vs cumulative residual ISP Surplus</p>
-                <div class="relative h-80"><canvas id="surplusCumulativeChart"></canvas></div>
+                <div class="relative h-96"><canvas id="surplusStackedChart"></canvas></div>
             </div>
         </div>
 
