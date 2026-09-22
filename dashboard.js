@@ -308,7 +308,7 @@ function renderMonthlyCharts(labels, chargeData, dischargeData) {
 }
 
 // ==========================================
-// 3. SURPLUS DASHBOARD
+// 3. SURPLUS DASHBOARD (WITH KPI CARDS)
 // ==========================================
 function updateSurplusDashboard() {
     const selectedMonth = document.getElementById('monthSelectSurplus').value;
@@ -364,6 +364,51 @@ function updateSurplusDashboard() {
         cumPumpGWh.push(runPump);
         cumSurpGWh.push(runSurp);
     });
+
+    // --- ΛΟΓΙΚΗ ΓΙΑ BEST/WORST KPI CARDS ---
+    let bessMax = { pct: -1, val: 0, date: '' };
+    let bessMin = { pct: 101, val: 0, date: '' };
+    let pumpMax = { pct: -1, val: 0, date: '' };
+    let pumpMin = { pct: 101, val: 0, date: '' };
+
+    for (let i = 0; i < labels.length; i++) {
+        let b = dailyBessGWh[i];
+        let p = dailyPumpGWh[i];
+        let s = dailySurpGWh[i];
+        let total = b + p + s;
+        let dateLbl = labels[i];
+
+        if (total > 0) {
+            let bPct = (b / total) * 100;
+            let pPct = (p / total) * 100;
+
+            // Έλεγχος BESS (> 0% για να θεωρηθεί "worst")
+            if (bPct > bessMax.pct) { bessMax = { pct: bPct, val: b, date: dateLbl }; }
+            if (bPct > 0 && bPct < bessMin.pct) { bessMin = { pct: bPct, val: b, date: dateLbl }; }
+            
+            // Έλεγχος PUMP (> 0% για να θεωρηθεί "worst")
+            if (pPct > pumpMax.pct) { pumpMax = { pct: pPct, val: p, date: dateLbl }; }
+            if (pPct > 0 && pPct < pumpMin.pct) { pumpMin = { pct: pPct, val: p, date: dateLbl }; }
+        }
+    }
+
+    // Βοηθητική συνάρτηση για την ενημέρωση του HTML (GWh -> MWh)
+    const populateKPI = (prefix, data) => {
+        if (data.pct === -1 || data.pct === 101) {
+            document.getElementById(`${prefix}Pct`).innerText = '-';
+            document.getElementById(`${prefix}Date`).innerText = '';
+            document.getElementById(`${prefix}Mwh`).innerText = '';
+        } else {
+            document.getElementById(`${prefix}Pct`).innerText = data.pct.toFixed(1) + '%';
+            document.getElementById(`${prefix}Date`).innerText = data.date;
+            document.getElementById(`${prefix}Mwh`).innerText = (data.val * 1000).toLocaleString('el-GR', {maximumFractionDigits: 0}) + ' MWh';
+        }
+    };
+
+    populateKPI('bessBest', bessMax);
+    populateKPI('bessWorst', bessMin);
+    populateKPI('pumpBest', pumpMax);
+    populateKPI('pumpWorst', pumpMin);
 
     renderSurplusCharts(labels, dailyBessGWh, dailyPumpGWh, dailySurpGWh, cumBessGWh, cumPumpGWh, cumSurpGWh);
 }
@@ -733,15 +778,13 @@ window.addEventListener('load', () => {
             setLang('en');
         }
     } catch (err) {
-        console.warn('Αποτυχία φόρτωσης μετάφρασης:', err);
+        console.warn('Αποτυχία φόρτωσης μετάφρασης κατά την εκκίνηση:', err);
     }
 
     const bar = document.getElementById('loading-progress-bar');
     const pct = document.getElementById('loading-percentage');
     const sub = document.getElementById('loading-subtitle');
     const overlay = document.getElementById('loading-overlay');
-    
-    // ... ο υπόλοιπος κώδικας συνεχίζει ως έχει ...
 
     function updateProgress(percent, text) {
         if (bar) bar.style.width = percent + '%';
