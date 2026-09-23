@@ -2,8 +2,11 @@ name: Daily BESS Data Update
 
 on:
   schedule:
+    # Τρέχει κάθε μέρα στις 05:00 UTC (08:00 ώρα Ελλάδας το καλοκαίρι, 07:00 τον χειμώνα)
     - cron: '0 5 * * *'
-  workflow_dispatch:
+    # Τρέχει ξανά στις 05:30 UTC (08:30 ώρα Ελλάδας) ως backup
+    - cron: '30 5 * * *'
+  workflow_dispatch: # Σου επιτρέπει να το τρέχεις χειροκίνητα
     inputs:
       start_date:
         description: 'Start Date (π.χ. 2026-06-10)'
