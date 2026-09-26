@@ -236,17 +236,34 @@ function updateDashboard() {
     const ispTotal = ispDay.find(d => d.unit === "TOTAL BESS") || { charge: 0, discharge: 0, rte: "0.00%" };
     const scadaTotal = scadaDay.find(d => d.unit === "TOTAL BESS") || { charge: 0, discharge: 0, rte: "0.00%" };
 
-    document.getElementById('kpiChargeIsp').innerText = formatMWh(ispTotal.charge);
-    document.getElementById('kpiChargeIsp').nextElementSibling.innerText = "MWh";
-    document.getElementById('kpiChargeScada').innerText = formatMWh(scadaTotal.charge);
-    document.getElementById('kpiChargeScada').nextElementSibling.innerText = "MWh";
-    document.getElementById('kpiDischargeIsp').innerText = formatMWh(ispTotal.discharge);
-    document.getElementById('kpiDischargeIsp').nextElementSibling.innerText = "MWh";
-    document.getElementById('kpiDischargeScada').innerText = formatMWh(scadaTotal.discharge);
-    document.getElementById('kpiDischargeScada').nextElementSibling.innerText = "MWh";
+    // Update KPIs (Both PC and Mobile DOM elements)
+    const kpiMap = {
+        'kpiChargeIsp': ispTotal.charge,
+        'kpiChargeIsp_mob': ispTotal.charge,
+        'kpiChargeScada': scadaTotal.charge,
+        'kpiChargeScada_mob': scadaTotal.charge,
+        'kpiDischargeIsp': ispTotal.discharge,
+        'kpiDischargeIsp_mob': ispTotal.discharge,
+        'kpiDischargeScada': scadaTotal.discharge,
+        'kpiDischargeScada_mob': scadaTotal.discharge
+    };
 
-    document.getElementById('kpiRteIsp').innerText = ispTotal.rte;
-    document.getElementById('kpiRteScada').innerText = scadaTotal.rte;
+    for (const [id, val] of Object.entries(kpiMap)) {
+        const el = document.getElementById(id);
+        if (el) el.innerText = formatMWh(val);
+    }
+
+    const rteMap = {
+        'kpiRteIsp': ispTotal.rte,
+        'kpiRteIsp_mob': ispTotal.rte,
+        'kpiRteScada': scadaTotal.rte,
+        'kpiRteScada_mob': scadaTotal.rte
+    };
+
+    for (const [id, val] of Object.entries(rteMap)) {
+        const el = document.getElementById(id);
+        if (el) el.innerText = val;
+    }
 
     const unitMap = {};
     function getBaseUnitId(name) { return name.toUpperCase().replace(/BZ\d+/g, '').replace(/_/g, ''); }
