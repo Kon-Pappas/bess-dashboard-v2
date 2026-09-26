@@ -107,11 +107,8 @@
             </div>
         </header>
 
-        <!-- ΔΙΑΧΩΡΙΣΤΙΚΗ ΓΡΑΜΜΗ ΜΟΝΟ ΓΙΑ MOBILE -->
-        <div class="block md:hidden border-t border-slate-700/80 w-full mt-4 mb-2"></div>
-
         <!-- TABS NAVIGATION (2x2 Grid Boxes στο Mobile, Flex Tabs στο Desktop) -->
-        <div class="grid grid-cols-2 md:flex md:space-x-4 gap-3 md:gap-0 border-b-0 md:border-b md:border-slate-800 pb-2">
+        <div class="grid grid-cols-2 md:flex md:space-x-4 gap-3 md:gap-0 border-b-0 md:border-b md:border-slate-800 pb-2 mt-2">
             <button id="tabBtnDaily" onclick="switchTab('daily')" class="w-full text-white bg-indigo-600 font-bold border border-transparent rounded-xl py-3 px-3 text-center text-sm transition-colors shadow-md md:w-auto md:text-emerald-400 md:bg-transparent md:border-0 md:border-b-2 md:border-emerald-400 md:rounded-none md:py-2 md:pb-2 md:px-2 whitespace-nowrap md:shadow-none">Daily Analytics</button>
             
             <button id="tabBtnMonthly" onclick="switchTab('monthly')" class="w-full text-slate-400 bg-slate-800 border border-slate-700 rounded-xl py-3 px-3 text-center text-sm font-medium hover:bg-slate-700/50 transition-colors shadow-sm md:w-auto md:bg-transparent md:border-0 md:border-b-2 md:border-transparent md:rounded-none md:hover:bg-transparent md:hover:text-emerald-300 md:py-2 md:pb-2 md:px-2 whitespace-nowrap md:shadow-none">Monthly Impact</button>
@@ -382,7 +379,7 @@
                 document.getElementById('modalContent').classList.remove('scale-95');
             }, 10);
         }
-        function closeMethodologyModal() {
+        closeMethodologyModal = function() {
             const modal = document.getElementById('methodologyModal');
             modal.classList.add('opacity-0');
             document.getElementById('modalContent').classList.add('scale-95');
