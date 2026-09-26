@@ -83,10 +83,10 @@
                         </div>
                     </div>
 
-                    <!-- 2. LANGUAGE SWITCHER -->
+                    <!-- 2. LANGUAGE SWITCHER (Χρησιμοποιεί πλέον την changeLang) -->
                     <div class="w-full h-10 md:h-auto md:w-auto flex justify-center items-center gap-6 md:gap-2 bg-slate-800/80 md:bg-slate-800 border border-slate-700 rounded-xl md:rounded-lg px-4 md:p-1 text-sm md:text-xs font-bold shadow-sm">
-                        <button onclick="setLang('el')" id="btnGr" class="px-4 py-1 md:px-2 md:py-1 rounded text-slate-400 hover:text-white transition">GR</button>
-                        <button onclick="setLang('en')" id="btnEn" class="px-4 py-1 md:px-2 md:py-1 rounded bg-indigo-500 md:bg-emerald-600 text-white transition shadow-md">EN</button>
+                        <button onclick="changeLang('el')" id="btnGr" class="px-4 py-1 md:px-2 md:py-1 rounded text-slate-400 hover:text-white transition">GR</button>
+                        <button onclick="changeLang('en')" id="btnEn" class="px-4 py-1 md:px-2 md:py-1 rounded bg-indigo-500 md:bg-emerald-600 text-white transition shadow-md">EN</button>
                     </div>
 
                     <!-- 3. METHODOLOGY BUTTON -->
@@ -370,7 +370,7 @@
         </div>
     </div>
 
-    <!-- Script για το Modal -->
+    <!-- Script για το Modal και την ασφαλή εναλλαγή γλώσσας (changeLang) -->
     <script>
         function openMethodologyModal() {
             const modal = document.getElementById('methodologyModal');
@@ -385,6 +385,31 @@
             modal.classList.add('opacity-0');
             document.getElementById('modalContent').classList.add('scale-95');
             setTimeout(() => modal.classList.add('hidden'), 300);
+        }
+
+        // Ασφαλής διαχείριση χρωμάτων κουμπιών γλώσσας και κλήσης μετάφρασης
+        function changeLang(lang) {
+            const btnGr = document.getElementById('btnGr');
+            const btnEn = document.getElementById('btnEn');
+            
+            const activeClass = "px-4 py-1 md:px-2 md:py-1 rounded bg-indigo-500 md:bg-emerald-600 text-white transition shadow-md";
+            const inactiveClass = "px-4 py-1 md:px-2 md:py-1 rounded text-slate-400 hover:text-white transition";
+
+            if (lang === 'el') {
+                if (btnGr) btnGr.className = activeClass;
+                if (btnEn) btnEn.className = inactiveClass;
+            } else {
+                if (btnEn) btnEn.className = activeClass;
+                if (btnGr) btnGr.className = inactiveClass;
+            }
+
+            if (typeof setLang === 'function') {
+                try {
+                    setLang(lang);
+                } catch (err) {
+                    console.warn("Σφάλμα κατά την εκτέλεση της setLang:", err);
+                }
+            }
         }
     </script>
 
