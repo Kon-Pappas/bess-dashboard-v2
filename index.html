@@ -26,7 +26,7 @@
         <div class="text-emerald-400 text-sm font-mono font-bold mt-2" id="loading-percentage">15%</div>
     </div>
 
-    <!-- NΕΟ BREADCRUMB ΕΔΩ ΠΑΝΩ -->
+    <!-- BREADCRUMB -->
     <div class="max-w-7xl mx-auto w-full mb-4">
         <a href="https://kon-pappas.github.io/" class="flex items-center text-xs text-slate-400 hover:text-emerald-400 transition-colors group w-max">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1.5 opacity-70 group-hover:opacity-100" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
@@ -37,9 +37,11 @@
 
     <div class="max-w-7xl mx-auto space-y-6 w-full">
         
-        <!-- Header -->
+        <!-- HEADER -->
         <header class="border-b border-slate-700 pb-4">
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                
+                <!-- Τίτλος & Πληροφορίες -->
                 <div>
                     <div class="flex items-center gap-3">
                         <h1 class="text-3xl font-bold text-emerald-400" id="mainTitle">Greek BESS Market Analytics</h1>
@@ -51,51 +53,61 @@
                         <div><span id="nextUpdateLabel">Next Update:</span> <strong id="nextUpdateVal" class="text-blue-400">-</strong></div>
                     </div>
                 </div>
-                <div class="flex items-center gap-3">
+
+                <!-- CONTROLS CONTAINER (Mobile Stacked, Desktop Inline) -->
+                <div class="flex flex-col md:flex-row items-stretch md:items-center gap-3 w-full md:w-auto mt-4 md:mt-0">
                     
-                    <!-- GLOBAL SELECTORS CONTAINER -->
-                    <div id="globalSelectors" class="flex items-center bg-slate-800/80 px-3 py-1.5 rounded border border-slate-700 shadow-sm">
+                    <!-- 1. DATE SELECTOR & BADGE -->
+                    <div id="globalSelectors" class="w-full md:w-auto flex items-center justify-between md:justify-start bg-slate-800/80 px-4 py-3 md:px-3 md:py-1.5 rounded-xl md:rounded border border-slate-700 shadow-sm">
                         
-                        <!-- 1. Daily Date Select -->
+                        <!-- Daily Date Select -->
                         <div id="globalDateContainer" class="flex items-center gap-2">
-                            <label class="text-xs text-slate-300 font-semibold" id="dateLabel">Date:</label>
-                            <select id="dateSelect" onchange="updateDashboard()" class="bg-slate-900 border border-slate-600 text-slate-200 text-xs rounded px-2 py-1 outline-none cursor-pointer"></select>
+                            <label class="text-sm md:text-xs text-slate-300 font-semibold" id="dateLabel">Date:</label>
+                            <select id="dateSelect" onchange="updateDashboard()" class="bg-slate-900 border border-slate-600 text-slate-200 text-sm md:text-xs rounded px-2 py-1 outline-none cursor-pointer"></select>
                         </div>
                         
-                        <!-- 2. Monthly Select (Κρυμμένο) -->
+                        <!-- Monthly Select (Κρυμμένο by default) -->
                         <div id="globalMonthContainer" class="hidden items-center gap-2">
-                            <label class="text-xs text-slate-300 font-semibold" id="monthLabel">Month:</label>
-                            <select id="monthSelect" onchange="updateMonthlyDashboard()" class="bg-slate-900 border border-slate-600 text-slate-200 text-xs rounded px-2 py-1 outline-none cursor-pointer"></select>
+                            <label class="text-sm md:text-xs text-slate-300 font-semibold" id="monthLabel">Month:</label>
+                            <select id="monthSelect" onchange="updateMonthlyDashboard()" class="bg-slate-900 border border-slate-600 text-slate-200 text-sm md:text-xs rounded px-2 py-1 outline-none cursor-pointer"></select>
                         </div>
 
-                        <!-- 3. Surplus Month Select (Κρυμμένο) -->
+                        <!-- Surplus Month Select (Κρυμμένο by default) -->
                         <div id="globalSurplusContainer" class="hidden items-center gap-2">
-                            <label class="text-xs text-slate-300 font-semibold" id="monthLabelSurp">Month:</label>
-                            <select id="monthSelectSurplus" onchange="updateSurplusDashboard()" class="bg-slate-900 border border-slate-600 text-slate-200 text-xs rounded px-2 py-1 outline-none cursor-pointer"></select>
+                            <label class="text-sm md:text-xs text-slate-300 font-semibold" id="monthLabelSurp">Month:</label>
+                            <select id="monthSelectSurplus" onchange="updateSurplusDashboard()" class="bg-slate-900 border border-slate-600 text-slate-200 text-sm md:text-xs rounded px-2 py-1 outline-none cursor-pointer"></select>
                         </div>
 
-                        <!-- 4. Arbitrage Date Select (Κρυμμένο) -->
+                        <!-- Arbitrage Date Select (Κρυμμένο by default) -->
                         <div id="globalArbitrageContainer" class="hidden items-center gap-2">
-                            <label class="text-xs text-slate-300 font-semibold" id="arbitrageDateLabel">Date:</label>
-                            <select id="arbitrageDateSelect" onchange="renderArbitrageTab()" class="bg-slate-900 border border-slate-600 text-slate-200 text-xs rounded px-2 py-1 outline-none cursor-pointer"></select>
+                            <label class="text-sm md:text-xs text-slate-300 font-semibold" id="arbitrageDateLabel">Date:</label>
+                            <select id="arbitrageDateSelect" onchange="renderArbitrageTab()" class="bg-slate-900 border border-slate-600 text-slate-200 text-sm md:text-xs rounded px-2 py-1 outline-none cursor-pointer"></select>
+                        </div>
+
+                        <!-- DYNAMIC DATA STATUS BADGE -->
+                        <div id="dataStatusBadge" class="flex items-center gap-1.5 px-2 py-1 rounded border border-emerald-500/30 bg-emerald-500/10 text-[10px] md:text-xs font-bold text-emerald-400 ml-3 shadow-sm">
+                            <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
+                            <span id="dataStatusText">Complete Data</span>
                         </div>
                     </div>
 
-                    <!-- Κουμπί Μεθοδολογίας -->
-                    <button onclick="openMethodologyModal()" class="flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-emerald-400 transition bg-slate-800/80 px-3 py-1.5 rounded border border-slate-700 hover:border-emerald-500 shadow-sm">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <!-- 2. LANGUAGE SWITCHER -->
+                    <div class="w-full md:w-auto flex justify-center items-center gap-6 md:gap-2 bg-slate-800/80 md:bg-slate-800 border border-slate-700 rounded-xl md:rounded-lg px-4 py-3 md:p-1 text-sm md:text-xs font-bold shadow-sm">
+                        <button onclick="setLang('el')" id="btnGr" class="px-4 py-1.5 md:px-2 md:py-1 rounded text-slate-400 hover:text-white transition">GR</button>
+                        <button onclick="setLang('en')" id="btnEn" class="px-4 py-1.5 md:px-2 md:py-1 rounded bg-indigo-500 md:bg-emerald-600 text-white transition shadow-md">EN</button>
+                    </div>
+
+                    <!-- 3. METHODOLOGY BUTTON -->
+                    <button onclick="openMethodologyModal()" class="w-full md:w-auto flex justify-center items-center gap-2 text-sm md:text-xs font-semibold text-slate-400 hover:text-emerald-400 transition bg-slate-800/80 px-4 py-3 md:px-3 md:py-1.5 rounded-xl md:rounded border border-slate-700 hover:border-emerald-500 shadow-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 md:h-4 md:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                         <span id="btnMethodologyText">Methodology & Assumptions</span>
                     </button>
-                    <!-- Γλώσσες -->
-                    <div class="flex gap-2 bg-slate-800 border border-slate-700 rounded-lg p-1 text-xs font-bold shadow-sm">
-                        <button onclick="setLang('el')" id="btnGr" class="px-2 py-1 rounded text-slate-400 hover:text-white transition">GR</button>
-                        <button onclick="setLang('en')" id="btnEn" class="px-2 py-1 rounded bg-emerald-600 text-white transition">EN</button>
-                    </div>
+
                 </div>
             </div>
         </header>
 
-        <!-- NEA TABS NAVIGATION (Grid στο Mobile, Flex στο Desktop) -->
+        <!-- TABS NAVIGATION (Grid στο Mobile, Flex στο Desktop) -->
         <div class="grid grid-cols-2 md:flex md:space-x-4 gap-2 md:gap-0 border-b-0 md:border-b md:border-slate-800 pb-2">
             <button id="tabBtnDaily" onclick="switchTab('daily')" class="text-emerald-400 font-bold bg-slate-800/50 md:bg-transparent border border-slate-700 md:border-0 md:border-b-2 md:border-emerald-400 py-2 md:pb-2 md:px-2 rounded md:rounded-none transition text-sm whitespace-nowrap">Daily Analytics</button>
             <button id="tabBtnMonthly" onclick="switchTab('monthly')" class="text-slate-400 hover:text-emerald-300 hover:bg-slate-700/50 md:hover:bg-transparent bg-slate-800/20 md:bg-transparent border border-slate-700 md:border-0 md:border-b-2 md:border-transparent py-2 md:pb-2 md:px-2 rounded md:rounded-none transition text-sm whitespace-nowrap">Monthly Impact</button>
@@ -114,11 +126,10 @@
                     <div class="relative h-64 sm:h-80"><canvas id="dischargeChart"></canvas></div>
                 </div>
                 
-                <!-- HYBRID KPIs (Ghost on Mobile, Boxed on Desktop) -->
+                <!-- HYBRID KPIs -->
                 <div class="p-2 sm:bg-slate-800/60 sm:p-6 sm:rounded-xl sm:border border-slate-700 flex flex-col justify-center text-center">
                     <h3 class="text-xs sm:text-sm font-medium text-slate-400 mb-2 sm:mb-6 uppercase tracking-wider" id="totalDischargeLabel">Total Discharge</h3>
                     
-                    <!-- Mobile: Δίπλα-δίπλα | Desktop: Κάθετα -->
                     <div class="flex flex-row sm:flex-col justify-around sm:justify-center items-center gap-2 sm:space-y-6">
                         
                         <!-- ISP KPI -->
@@ -128,14 +139,12 @@
                                 <div class="w-2.5 h-2.5 bg-blue-400 rounded-sm"></div>
                                 <span class="text-[10px] sm:text-xs text-slate-500 font-semibold" id="lblDispIsp">ISP</span>
                             </div>
-                            <!-- Digital Box -->
                             <div class="bg-slate-900/80 shadow-inner px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg border border-slate-800/50 flex items-baseline gap-1">
                                 <span id="kpiDischargeIsp" class="text-xl sm:text-4xl font-bold text-blue-400">0.00</span>
                                 <span class="text-[10px] sm:text-sm text-slate-500">GWh</span>
                             </div>
                         </div>
 
-                        <!-- Διαχωριστικά: Κάθετο στο mobile, Οριζόντιο στο Desktop -->
                         <div class="hidden sm:block border-t border-slate-700 w-1/2 mx-auto"></div>
                         <div class="sm:hidden w-px h-10 bg-slate-700/50"></div>
                         
@@ -146,7 +155,6 @@
                                 <div class="w-2.5 h-2.5 bg-emerald-400 rounded-sm"></div>
                                 <span class="text-[10px] sm:text-xs text-slate-500 font-semibold" id="lblDispScada">SCADA</span>
                             </div>
-                            <!-- Digital Box -->
                             <div class="bg-slate-900/80 shadow-inner px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg border border-slate-800/50 flex items-baseline gap-1">
                                 <span id="kpiDischargeScada" class="text-xl sm:text-4xl font-bold text-emerald-400">0.00</span>
                                 <span class="text-[10px] sm:text-sm text-slate-500">GWh</span>
@@ -164,7 +172,7 @@
                     <div class="relative h-64 sm:h-80"><canvas id="chargeChart"></canvas></div>
                 </div>
                 
-                <!-- HYBRID KPIs (Ghost on Mobile, Boxed on Desktop) -->
+                <!-- HYBRID KPIs -->
                 <div class="p-2 sm:bg-slate-800/60 sm:p-6 sm:rounded-xl sm:border border-slate-700 flex flex-col justify-center text-center">
                     <h3 class="text-xs sm:text-sm font-medium text-slate-400 mb-2 sm:mb-6 uppercase tracking-wider" id="totalChargeLabel">Total Charge</h3>
                     
@@ -201,7 +209,7 @@
                 </div>
             </div>
 
-            <!-- ROW 3: RTE BLOCK (Επίσης Hybrid) -->
+            <!-- ROW 3: RTE BLOCK -->
             <div class="max-w-2xl mx-auto p-2 sm:bg-slate-800/60 sm:p-6 sm:rounded-xl sm:border border-slate-700 text-center mt-2 sm:mt-4">
                 <h3 class="text-xs sm:text-sm font-medium text-slate-400 mb-3 sm:mb-6 uppercase tracking-wider" id="rteLabel">Round Trip Efficiency (RTE - Total BESS)</h3>
                 
@@ -256,7 +264,6 @@
         <!-- VIEW 3: SURPLUS & FLEXIBILITY -->
         <div id="viewSurplus" class="space-y-8 hidden">
 
-            <!-- Absolute Stacked Bar Chart -->
             <div class="bg-slate-800/40 p-6 rounded-xl border border-slate-700 mt-4">
                 <div class="flex items-center gap-2 mb-1">
                     <h2 class="text-lg font-semibold text-slate-200" id="surplusStackedTitle">Daily Energy Surplus & Flexibility Absorption (GWh)</h2>
@@ -264,9 +271,8 @@
                 </div>
                 <p class="text-xs text-slate-400 mb-4" id="surplusStackedSub">Absolute values. Days with no red bar (Surplus = 0) indicate purely market-driven arbitrage charging.</p>
                 
-                <!-- Κουτιά KPIs (Best/Worst Days) -->
+                <!-- KPIs (Best/Worst Days) -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    <!-- BESS KPI Card -->
                     <div class="bg-emerald-900/10 border border-emerald-500/20 rounded-lg p-3 flex justify-between items-center shadow-sm">
                         <div class="w-1/2 border-r border-emerald-500/20 pr-3">
                             <span class="text-[10px] text-emerald-400/70 uppercase tracking-wider block mb-1">BESS - Best Day</span>
@@ -285,7 +291,6 @@
                             <span id="bessWorstMwh" class="text-xs text-emerald-500/70 block mt-0.5 font-medium">-</span>
                         </div>
                     </div>
-                    <!-- PUMP KPI Card -->
                     <div class="bg-blue-900/10 border border-blue-500/20 rounded-lg p-3 flex justify-between items-center shadow-sm">
                         <div class="w-1/2 border-r border-blue-500/20 pr-3">
                             <span class="text-[10px] text-blue-400/70 uppercase tracking-wider block mb-1">PUMP - Best Day</span>
@@ -305,12 +310,10 @@
                         </div>
                     </div>
                 </div>
-                <!-- ΤΕΛΟΣ ΚΟΥΤΙΩΝ -->
 
                 <div class="relative h-96"><canvas id="surplusStackedChart"></canvas></div>
             </div>
 
-            <!-- Cumulative Line Chart -->
             <div class="bg-slate-800/40 p-6 rounded-xl border border-slate-700">
                 <h2 class="text-lg font-semibold text-slate-200 mb-1" id="surplusCumulativeTitle">Cumulative Flexibility Evolution (BESS & PUMP vs Surplus)</h2>
                 <p class="text-xs text-slate-400 mb-4" id="surplusCumulativeSub">Comparison of cumulative SCADA charging (Batteries + Pumped Hydro) vs cumulative residual ISP Surplus</p>
@@ -324,14 +327,12 @@
                 <h2 id="arbitrageMainTitle" class="text-xl font-bold text-emerald-400">Arbitrage P&L & Hourly Operation Profile</h2>
             </div>
 
-            <!-- Dual-Axis / Stacked Bar Chart -->
             <div class="bg-slate-800/40 p-6 rounded-xl border border-slate-700">
                 <h3 id="arbitrageChartTitle" class="text-lg font-semibold text-slate-200 mb-1">Hourly BESS Operation per Unit (MWh)</h3>
                 <p id="arbitrageChartSub" class="text-xs text-slate-400 mb-4">Negative values = Charging, Positive values = Discharging</p>
                 <div class="relative h-96"><canvas id="arbitrageDualChart"></canvas></div>
             </div>
 
-            <!-- Financial Performance Table -->
             <div class="bg-slate-800/40 p-6 rounded-xl border border-slate-700">
                 <h3 id="arbitrageTableTitle" class="text-lg font-semibold text-slate-200 mb-4">Daily Financial Performance & Arbitrage</h3>
                 <div class="overflow-x-auto">
@@ -347,7 +348,6 @@
                             </tr>
                         </thead>
                         <tbody id="arbitrageTableBody" class="divide-y divide-slate-700">
-                            <!-- Δυναμική φόρτωση γραμμών -->
                         </tbody>
                     </table>
                 </div>
