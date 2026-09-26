@@ -42,8 +42,9 @@ function switchTab(tabName) {
     document.getElementById('viewSurplus').classList.add('hidden');
     document.getElementById('viewArbitrage').classList.add('hidden');
 
-    // Επαναφέρουμε τα χρώματα των κουμπιών
-    const inactiveClass = "text-slate-500 hover:text-emerald-300 pb-2 px-2 transition whitespace-nowrap";
+    // ΚΛΑΣΕΙΣ ΓΙΑ ΑΝΕΝΕΡΓΑ TABS (Mobile Box Button / Desktop Inline Tab)
+    const inactiveClass = "w-full text-slate-400 bg-slate-800 border border-slate-700 rounded-xl py-3 px-3 text-center text-sm font-medium hover:bg-slate-700/50 transition-colors shadow-sm md:w-auto md:bg-transparent md:border-0 md:border-b-2 md:border-transparent md:rounded-none md:hover:bg-transparent md:hover:text-emerald-300 md:py-2 md:pb-2 md:px-2 whitespace-nowrap md:shadow-none";
+
     document.getElementById('tabBtnDaily').className = inactiveClass;
     document.getElementById('tabBtnMonthly').className = inactiveClass;
     document.getElementById('tabBtnSurplus').className = inactiveClass;
@@ -62,7 +63,8 @@ function switchTab(tabName) {
     document.getElementById('globalArbitrageContainer').classList.remove('flex');
     document.getElementById('globalArbitrageContainer').classList.add('hidden');
 
-    const activeClass = "text-emerald-400 font-bold border-b-2 border-emerald-400 pb-2 px-2 transition whitespace-nowrap";
+    // ΚΛΑΣΕΙΣ ΓΙΑ ΕΝΕΡΓΟ TAB (Mobile Lit Box Button / Desktop Active Tab)
+    const activeClass = "w-full text-white bg-indigo-600 font-bold border border-transparent rounded-xl py-3 px-3 text-center text-sm transition-colors shadow-md md:w-auto md:text-emerald-400 md:bg-transparent md:border-0 md:border-b-2 md:border-emerald-400 md:rounded-none md:py-2 md:pb-2 md:px-2 whitespace-nowrap md:shadow-none";
 
     // ΕΜΦΑΝΙΖΟΥΜΕ το Tab και το αντίστοιχο Dropdown στον Header
     if (tabName === 'daily') {
