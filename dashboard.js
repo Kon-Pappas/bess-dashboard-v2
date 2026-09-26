@@ -19,7 +19,6 @@ function formatMWh(val) {
 }
 
 function formatEur(val) {
-    // Στα οικονομικά κρατάμε αυστηρά 2 δεκαδικά ψηφία
     return val.toLocaleString('el-GR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
@@ -59,7 +58,6 @@ function initGlobalDates() {
     let latestCompleteDate = null;
 
     allDates.forEach(date => {
-        // Έλεγχος αν υπάρχουν δεδομένα SCADA για να θεωρηθεί Complete
         const hasScada = rawData.scada && rawData.scada.some(d => d.date === date && d.unit === "TOTAL BESS");
         const isPending = !hasScada;
         
@@ -77,13 +75,11 @@ function initGlobalDates() {
             }
         });
 
-        // Βρίσκουμε την πιο πρόσφατη μέρα με ΠΛΗΡΗ δεδομένα (Complete)
         if (!isPending) {
             latestCompleteDate = date;
         }
     });
 
-    // Smart Fallback: Επιλογή της πιο πρόσφατης Complete ημερομηνίας
     const finalDefault = latestCompleteDate || allDates[allDates.length - 1];
     
     if (dateSelect) dateSelect.value = finalDefault;
@@ -114,13 +110,16 @@ function updateStatusBadge() {
     const isPending = option.dataset.pending === 'true';
     const lang = typeof currentLang !== 'undefined' ? currentLang : 'en';
 
+    // Εδώ προστέθηκαν οι κλάσεις shrink-0, whitespace-normal, και max-w-[60px] που ελέγχουν την αναδίπλωση!
     if (isPending) {
-        badge.className = "flex items-center gap-1.5 px-2 py-1 rounded border border-orange-500/30 bg-orange-500/10 text-[10px] md:text-xs font-bold text-orange-400 ml-3 shadow-sm";
-        badge.querySelector('div').className = "w-2 h-2 rounded-full bg-orange-500 animate-pulse";
+        badge.className = "flex shrink-0 items-center gap-1.5 px-2 py-1 rounded border border-orange-500/30 bg-orange-500/10 text-[10px] md:text-xs font-bold text-orange-400 shadow-sm";
+        badge.querySelector('div').className = "w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-orange-500 animate-pulse shrink-0";
+        textEl.className = "text-center leading-tight max-w-[60px] md:max-w-none whitespace-normal";
         textEl.innerText = lang === 'el' ? 'Pending SCADA' : 'Pending SCADA';
     } else {
-        badge.className = "flex items-center gap-1.5 px-2 py-1 rounded border border-emerald-500/30 bg-emerald-500/10 text-[10px] md:text-xs font-bold text-emerald-400 ml-3 shadow-sm";
-        badge.querySelector('div').className = "w-2 h-2 rounded-full bg-emerald-500";
+        badge.className = "flex shrink-0 items-center gap-1.5 px-2 py-1 rounded border border-emerald-500/30 bg-emerald-500/10 text-[10px] md:text-xs font-bold text-emerald-400 shadow-sm";
+        badge.querySelector('div').className = "w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-emerald-500 shrink-0";
+        textEl.className = "text-center leading-tight max-w-[60px] md:max-w-none whitespace-normal";
         textEl.innerText = lang === 'el' ? 'Complete Data' : 'Complete Data';
     }
 }
@@ -238,7 +237,6 @@ function updateDashboard() {
     const ispTotal = ispDay.find(d => d.unit === "TOTAL BESS") || { charge: 0, discharge: 0, rte: "0.00%" };
     const scadaTotal = scadaDay.find(d => d.unit === "TOTAL BESS") || { charge: 0, discharge: 0, rte: "0.00%" };
 
-    // Αλλάζουμε τα νούμερα σε ακέραια MWh και ενημερώνουμε το HTML (GWh -> MWh)
     document.getElementById('kpiChargeIsp').innerText = formatMWh(ispTotal.charge);
     document.getElementById('kpiChargeIsp').nextElementSibling.innerText = "MWh";
     document.getElementById('kpiChargeScada').innerText = formatMWh(scadaTotal.charge);
@@ -362,7 +360,6 @@ function updateMonthlyDashboard() {
         dischargeData.push(cumDischarge); 
     });
 
-    // Ενημέρωση KPIs σε MWh (ακέραια)
     document.getElementById('kpiMonthlyCharge').innerText = formatMWh(cumCharge);
     document.getElementById('kpiMonthlyCharge').nextElementSibling.innerText = "MWh";
     document.getElementById('kpiMonthlyDischarge').innerText = formatMWh(cumDischarge);
@@ -452,7 +449,6 @@ function updateSurplusDashboard() {
         if (parts.length >= 3) labels.push(`${parts[2]}/${parts[1]}`);
         else labels.push(date);
 
-        // Κρατάμε τα νούμερα σε MWh
         let bessDay = (scadaTotals[date] || 0);
         let pumpDay = (pumpTotals[date] || 0);
         let surpDay = Math.abs(surpTotals[date] || 0);
@@ -630,7 +626,6 @@ function renderArbitrageTab() {
     });
     
     const chartLabels = [];
-    
     for (let h = 1; h <= 24; h++) {
         let padHour = (h < 10 ? '0' + h : h) + ':00';
         chartLabels.push(padHour);
@@ -802,7 +797,6 @@ function renderArbitrageTab() {
             tr.className = "hover:bg-slate-700/50 transition-all cursor-pointer group";
             tr.id = "row-" + unit.replace(/\s+/g, '-');
             
-            // Εδώ γίνεται η χρήση των βοηθητικών format
             tr.innerHTML = `
                 <td class="p-3 font-bold text-slate-300 group-hover:text-white transition-colors" title="${hoverTitle}" style="border-left: 4px solid transparent;" onmouseover="this.style.borderLeftColor='${item.color}'" onmouseout="this.style.borderLeftColor='transparent'">${unit}</td>
                 <td class="p-3">${formatMWh(item.charge)}</td>
@@ -849,7 +843,7 @@ window.addEventListener('load', () => {
     setTimeout(() => {
         try {
             updateProgress(40, 'Calculating Daily Analytics & KPIs...');
-            initGlobalDates(); // Αρχικοποιούμε δυναμικά τα dropdowns
+            initGlobalDates();
             switchTab('daily');
         } catch (e) { console.error(e); }
 
