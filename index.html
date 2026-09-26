@@ -26,6 +26,15 @@
         <div class="text-emerald-400 text-sm font-mono font-bold mt-2" id="loading-percentage">15%</div>
     </div>
 
+    <!-- NΕΟ BREADCRUMB ΕΔΩ ΠΑΝΩ -->
+    <div class="max-w-7xl mx-auto w-full mb-4">
+        <a href="https://kon-pappas.github.io/" class="flex items-center text-xs text-slate-400 hover:text-emerald-400 transition-colors group w-max">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1.5 opacity-70 group-hover:opacity-100" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+            <span>Konstantinos Pappas Hub</span>
+            <span class="mx-2 opacity-50">/</span>
+        </a>
+    </div>
+
     <div class="max-w-7xl mx-auto space-y-6 w-full">
         
         <!-- Header -->
@@ -86,74 +95,131 @@
             </div>
         </header>
 
-        <!-- TABS NAVIGATION -->
-        <div class="flex space-x-6 border-b border-slate-800 pb-2 overflow-x-auto">
-            <button id="tabBtnDaily" onclick="switchTab('daily')" class="text-emerald-400 font-bold border-b-2 border-emerald-400 pb-2 px-2 transition whitespace-nowrap">Daily Analytics</button>
-            <button id="tabBtnMonthly" onclick="switchTab('monthly')" class="text-slate-500 hover:text-emerald-300 pb-2 px-2 transition whitespace-nowrap">Monthly Impact</button>
-            <button id="tabBtnSurplus" onclick="switchTab('surplus')" class="text-slate-500 hover:text-emerald-300 pb-2 px-2 transition whitespace-nowrap">Surplus & Flexibility</button>
-            <button id="tabBtnArbitrage" onclick="switchTab('arbitrage')" class="text-slate-500 hover:text-emerald-300 pb-2 px-2 transition whitespace-nowrap">Arbitrage P&L</button>
+        <!-- NEA TABS NAVIGATION (Grid στο Mobile, Flex στο Desktop) -->
+        <div class="grid grid-cols-2 md:flex md:space-x-4 gap-2 md:gap-0 border-b-0 md:border-b md:border-slate-800 pb-2">
+            <button id="tabBtnDaily" onclick="switchTab('daily')" class="text-emerald-400 font-bold bg-slate-800/50 md:bg-transparent border border-slate-700 md:border-0 md:border-b-2 md:border-emerald-400 py-2 md:pb-2 md:px-2 rounded md:rounded-none transition text-sm whitespace-nowrap">Daily Analytics</button>
+            <button id="tabBtnMonthly" onclick="switchTab('monthly')" class="text-slate-400 hover:text-emerald-300 hover:bg-slate-700/50 md:hover:bg-transparent bg-slate-800/20 md:bg-transparent border border-slate-700 md:border-0 md:border-b-2 md:border-transparent py-2 md:pb-2 md:px-2 rounded md:rounded-none transition text-sm whitespace-nowrap">Monthly Impact</button>
+            <button id="tabBtnSurplus" onclick="switchTab('surplus')" class="text-slate-400 hover:text-emerald-300 hover:bg-slate-700/50 md:hover:bg-transparent bg-slate-800/20 md:bg-transparent border border-slate-700 md:border-0 md:border-b-2 md:border-transparent py-2 md:pb-2 md:px-2 rounded md:rounded-none transition text-sm whitespace-nowrap">Surplus & Flexibility</button>
+            <button id="tabBtnArbitrage" onclick="switchTab('arbitrage')" class="text-slate-400 hover:text-emerald-300 hover:bg-slate-700/50 md:hover:bg-transparent bg-slate-800/20 md:bg-transparent border border-slate-700 md:border-0 md:border-b-2 md:border-transparent py-2 md:pb-2 md:px-2 rounded md:rounded-none transition text-sm whitespace-nowrap">Arbitrage P&L</button>
         </div>
 
         <!-- VIEW 1: DAILY ANALYTICS -->
         <div id="viewDaily" class="space-y-8 block">
 
+            <!-- ROW 1: DISCHARGE -->
             <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mt-4">
-                <div class="lg:col-span-3 bg-slate-800/40 p-6 rounded-xl border border-slate-700">
-                    <h2 class="text-lg font-semibold text-slate-200 mb-4" id="dischargeTitle">Discharge Per BESS Unit (MWh)</h2>
-                    <div class="relative h-80"><canvas id="dischargeChart"></canvas></div>
+                <!-- CHART -->
+                <div class="lg:col-span-3 bg-slate-800/40 p-4 sm:p-6 rounded-xl sm:border border-slate-700">
+                    <h2 class="text-base sm:text-lg font-semibold text-slate-200 mb-4" id="dischargeTitle">Discharge Per BESS Unit (MWh)</h2>
+                    <div class="relative h-64 sm:h-80"><canvas id="dischargeChart"></canvas></div>
                 </div>
-                <div class="bg-slate-800/60 p-6 rounded-xl border border-slate-700 flex flex-col justify-center text-center">
-                    <h3 class="text-sm font-medium text-slate-400 mb-6 uppercase tracking-wider" id="totalDischargeLabel">Total Discharge</h3>
-                    <div class="space-y-6">
-                        <div>
-                            <span class="block text-xs text-slate-500 mb-1" id="lblDispIsp">SCHEDULED (ISP)</span>
-                            <span id="kpiDischargeIsp" class="text-4xl font-bold text-blue-400">0.00</span>
-                            <span class="text-sm text-slate-500 block mt-1">GWh</span>
+                
+                <!-- HYBRID KPIs (Ghost on Mobile, Boxed on Desktop) -->
+                <div class="p-2 sm:bg-slate-800/60 sm:p-6 sm:rounded-xl sm:border border-slate-700 flex flex-col justify-center text-center">
+                    <h3 class="text-xs sm:text-sm font-medium text-slate-400 mb-2 sm:mb-6 uppercase tracking-wider" id="totalDischargeLabel">Total Discharge</h3>
+                    
+                    <!-- Mobile: Δίπλα-δίπλα | Desktop: Κάθετα -->
+                    <div class="flex flex-row sm:flex-col justify-around sm:justify-center items-center gap-2 sm:space-y-6">
+                        
+                        <!-- ISP KPI -->
+                        <div class="flex flex-col items-center">
+                            <!-- Mini Legend -->
+                            <div class="flex items-center gap-1.5 mb-1.5">
+                                <div class="w-2.5 h-2.5 bg-blue-400 rounded-sm"></div>
+                                <span class="text-[10px] sm:text-xs text-slate-500 font-semibold" id="lblDispIsp">ISP</span>
+                            </div>
+                            <!-- Digital Box -->
+                            <div class="bg-slate-900/80 shadow-inner px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg border border-slate-800/50 flex items-baseline gap-1">
+                                <span id="kpiDischargeIsp" class="text-xl sm:text-4xl font-bold text-blue-400">0.00</span>
+                                <span class="text-[10px] sm:text-sm text-slate-500">GWh</span>
+                            </div>
                         </div>
-                        <div class="border-t border-slate-700 w-1/2 mx-auto"></div>
-                        <div>
-                            <span class="block text-xs text-slate-500 mb-1" id="lblDispScada">ACTUAL (SCADA)</span>
-                            <span id="kpiDischargeScada" class="text-4xl font-bold text-emerald-400">0.00</span>
-                            <span class="text-sm text-slate-500 block mt-1">GWh</span>
+
+                        <!-- Διαχωριστικά: Κάθετο στο mobile, Οριζόντιο στο Desktop -->
+                        <div class="hidden sm:block border-t border-slate-700 w-1/2 mx-auto"></div>
+                        <div class="sm:hidden w-px h-10 bg-slate-700/50"></div>
+                        
+                        <!-- SCADA KPI -->
+                        <div class="flex flex-col items-center">
+                            <!-- Mini Legend -->
+                            <div class="flex items-center gap-1.5 mb-1.5">
+                                <div class="w-2.5 h-2.5 bg-emerald-400 rounded-sm"></div>
+                                <span class="text-[10px] sm:text-xs text-slate-500 font-semibold" id="lblDispScada">SCADA</span>
+                            </div>
+                            <!-- Digital Box -->
+                            <div class="bg-slate-900/80 shadow-inner px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg border border-slate-800/50 flex items-baseline gap-1">
+                                <span id="kpiDischargeScada" class="text-xl sm:text-4xl font-bold text-emerald-400">0.00</span>
+                                <span class="text-[10px] sm:text-sm text-slate-500">GWh</span>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
+            <!-- ROW 2: CHARGE -->
             <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                <div class="lg:col-span-3 bg-slate-800/40 p-6 rounded-xl border border-slate-700">
-                    <h2 class="text-lg font-semibold text-slate-200 mb-4" id="chargeTitle">Charge Per BESS Unit (MWh)</h2>
-                    <div class="relative h-80"><canvas id="chargeChart"></canvas></div>
+                <!-- CHART -->
+                <div class="lg:col-span-3 bg-slate-800/40 p-4 sm:p-6 rounded-xl sm:border border-slate-700">
+                    <h2 class="text-base sm:text-lg font-semibold text-slate-200 mb-4" id="chargeTitle">Charge Per BESS Unit (MWh)</h2>
+                    <div class="relative h-64 sm:h-80"><canvas id="chargeChart"></canvas></div>
                 </div>
-                <div class="bg-slate-800/60 p-6 rounded-xl border border-slate-700 flex flex-col justify-center text-center">
-                    <h3 class="text-sm font-medium text-slate-400 mb-6 uppercase tracking-wider" id="totalChargeLabel">Total Charge</h3>
-                    <div class="space-y-6">
-                        <div>
-                            <span class="block text-xs text-slate-500 mb-1" id="lblChgIsp">SCHEDULED (ISP)</span>
-                            <span id="kpiChargeIsp" class="text-4xl font-bold text-purple-400">0.00</span>
-                            <span class="text-sm text-slate-500 block mt-1">GWh</span>
+                
+                <!-- HYBRID KPIs (Ghost on Mobile, Boxed on Desktop) -->
+                <div class="p-2 sm:bg-slate-800/60 sm:p-6 sm:rounded-xl sm:border border-slate-700 flex flex-col justify-center text-center">
+                    <h3 class="text-xs sm:text-sm font-medium text-slate-400 mb-2 sm:mb-6 uppercase tracking-wider" id="totalChargeLabel">Total Charge</h3>
+                    
+                    <div class="flex flex-row sm:flex-col justify-around sm:justify-center items-center gap-2 sm:space-y-6">
+                        <!-- ISP KPI -->
+                        <div class="flex flex-col items-center">
+                            <!-- Mini Legend -->
+                            <div class="flex items-center gap-1.5 mb-1.5">
+                                <div class="w-2.5 h-2.5 bg-purple-400 rounded-sm"></div>
+                                <span class="text-[10px] sm:text-xs text-slate-500 font-semibold" id="lblChgIsp">ISP</span>
+                            </div>
+                            <div class="bg-slate-900/80 shadow-inner px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg border border-slate-800/50 flex items-baseline gap-1">
+                                <span id="kpiChargeIsp" class="text-xl sm:text-4xl font-bold text-purple-400">0.00</span>
+                                <span class="text-[10px] sm:text-sm text-slate-500">GWh</span>
+                            </div>
                         </div>
-                        <div class="border-t border-slate-700 w-1/2 mx-auto"></div>
-                        <div>
-                            <span class="block text-xs text-slate-500 mb-1" id="lblChgScada">ACTUAL (SCADA)</span>
-                            <span id="kpiChargeScada" class="text-4xl font-bold text-orange-400">0.00</span>
-                            <span class="text-sm text-slate-500 block mt-1">GWh</span>
+
+                        <div class="hidden sm:block border-t border-slate-700 w-1/2 mx-auto"></div>
+                        <div class="sm:hidden w-px h-10 bg-slate-700/50"></div>
+                        
+                        <!-- SCADA KPI -->
+                        <div class="flex flex-col items-center">
+                            <!-- Mini Legend -->
+                            <div class="flex items-center gap-1.5 mb-1.5">
+                                <div class="w-2.5 h-2.5 bg-orange-400 rounded-sm"></div>
+                                <span class="text-[10px] sm:text-xs text-slate-500 font-semibold" id="lblChgScada">SCADA</span>
+                            </div>
+                            <div class="bg-slate-900/80 shadow-inner px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg border border-slate-800/50 flex items-baseline gap-1">
+                                <span id="kpiChargeScada" class="text-xl sm:text-4xl font-bold text-orange-400">0.00</span>
+                                <span class="text-[10px] sm:text-sm text-slate-500">GWh</span>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="max-w-2xl mx-auto bg-slate-800/60 p-6 rounded-xl border border-slate-700 text-center mt-4">
-                <h3 class="text-sm font-medium text-slate-400 mb-6 uppercase tracking-wider" id="rteLabel">Round Trip Efficiency (RTE - Total BESS)</h3>
+            <!-- ROW 3: RTE BLOCK (Επίσης Hybrid) -->
+            <div class="max-w-2xl mx-auto p-2 sm:bg-slate-800/60 sm:p-6 sm:rounded-xl sm:border border-slate-700 text-center mt-2 sm:mt-4">
+                <h3 class="text-xs sm:text-sm font-medium text-slate-400 mb-3 sm:mb-6 uppercase tracking-wider" id="rteLabel">Round Trip Efficiency (RTE - Total BESS)</h3>
+                
                 <div class="flex justify-around items-center">
-                    <div>
-                        <span class="block text-xs text-slate-500 mb-1" id="lblRteIsp">ISP RTE</span>
-                        <span id="kpiRteIsp" class="text-3xl font-bold text-slate-200">0.00%</span>
+                    <div class="flex flex-col items-center">
+                        <span class="block text-[10px] sm:text-xs text-slate-500 mb-1 font-semibold" id="lblRteIsp">ISP RTE</span>
+                        <div class="bg-slate-900/80 shadow-inner px-3 py-1 sm:px-6 sm:py-2 rounded-lg border border-slate-800/50">
+                            <span id="kpiRteIsp" class="text-lg sm:text-3xl font-bold text-slate-300">0.00%</span>
+                        </div>
                     </div>
-                    <div class="h-12 w-px bg-slate-600"></div>
-                    <div>
-                        <span class="block text-xs text-slate-500 mb-1" id="lblRteScada">SCADA RTE</span>
-                        <span id="kpiRteScada" class="text-3xl font-bold text-emerald-400">0.00%</span>
+                    
+                    <div class="h-8 sm:h-12 w-px bg-slate-700/50"></div>
+                    
+                    <div class="flex flex-col items-center">
+                        <span class="block text-[10px] sm:text-xs text-slate-500 mb-1 font-semibold" id="lblRteScada">SCADA RTE</span>
+                        <div class="bg-slate-900/80 shadow-inner px-3 py-1 sm:px-6 sm:py-2 rounded-lg border border-slate-800/50">
+                            <span id="kpiRteScada" class="text-lg sm:text-3xl font-bold text-emerald-400">0.00%</span>
+                        </div>
                     </div>
                 </div>
             </div>
