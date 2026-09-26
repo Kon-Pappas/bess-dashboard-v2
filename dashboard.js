@@ -110,16 +110,15 @@ function updateStatusBadge() {
     const isPending = option.dataset.pending === 'true';
     const lang = typeof currentLang !== 'undefined' ? currentLang : 'en';
 
-    // Εδώ προστέθηκαν οι κλάσεις shrink-0, whitespace-normal, και max-w-[60px] που ελέγχουν την αναδίπλωση!
     if (isPending) {
-        badge.className = "flex shrink-0 items-center gap-1.5 px-2 py-1 rounded border border-orange-500/30 bg-orange-500/10 text-[10px] md:text-xs font-bold text-orange-400 shadow-sm";
+        badge.className = "flex shrink-0 items-center gap-1.5 px-2 py-0.5 rounded border border-orange-500/30 bg-orange-500/10 text-[10px] md:text-xs font-bold text-orange-400 shadow-sm";
         badge.querySelector('div').className = "w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-orange-500 animate-pulse shrink-0";
-        textEl.className = "text-center leading-tight max-w-[60px] md:max-w-none whitespace-normal";
+        textEl.className = "whitespace-nowrap";
         textEl.innerText = lang === 'el' ? 'Pending SCADA' : 'Pending SCADA';
     } else {
-        badge.className = "flex shrink-0 items-center gap-1.5 px-2 py-1 rounded border border-emerald-500/30 bg-emerald-500/10 text-[10px] md:text-xs font-bold text-emerald-400 shadow-sm";
+        badge.className = "flex shrink-0 items-center gap-1.5 px-2 py-0.5 rounded border border-emerald-500/30 bg-emerald-500/10 text-[10px] md:text-xs font-bold text-emerald-400 shadow-sm";
         badge.querySelector('div').className = "w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-emerald-500 shrink-0";
-        textEl.className = "text-center leading-tight max-w-[60px] md:max-w-none whitespace-normal";
+        textEl.className = "whitespace-nowrap";
         textEl.innerText = lang === 'el' ? 'Complete Data' : 'Complete Data';
     }
 }
