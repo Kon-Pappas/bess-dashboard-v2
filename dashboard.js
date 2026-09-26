@@ -1,5 +1,5 @@
 // ==========================================
-// GLOBAL CHART INSTANCES
+// GLOBAL CHART INSTANCES & STATE
 // ==========================================
 let dischargeChartInst = null;
 let chargeChartInst = null;
@@ -9,15 +9,22 @@ let surplusStackedChartInst = null;
 let surplusCumulativeChartInst = null;
 let arbitrageDualChartInst = null;
 
-// Μεταβλητή για να θυμόμαστε ποια BESS είναι "απομονωμένη"
 let currentlyIsolatedBess = null;
 
 // ==========================================
-// HELPERS
+// DATA CLUTTER REDUCTION (Κανόνας 2)
 // ==========================================
-function formatGWh(mwh) {
-    let gwh = mwh / 1000;
-    return gwh < 1 ? gwh.toFixed(3) : gwh.toFixed(2);
+function formatMWh(val) {
+    return Math.round(val).toLocaleString('el-GR');
+}
+
+function formatEur(val) {
+    // Στα οικονομικά κρατάμε αυστηρά 2 δεκαδικά ψηφία
+    return val.toLocaleString('el-GR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function formatPct(val) {
+    return val.toFixed(1) + '%';
 }
 
 function getHourlyData() {
@@ -33,16 +40,100 @@ function getMcpData() {
 }
 
 // ==========================================
+// SMART DEFAULT SELECTION (Κανόνας 7)
+// ==========================================
+function initGlobalDates() {
+    if (!rawData || !rawData.isp) return;
+
+    const datesSet = new Set();
+    rawData.isp.forEach(d => datesSet.add(d.date));
+    if (rawData.scada) rawData.scada.forEach(d => datesSet.add(d.date));
+    
+    const allDates = Array.from(datesSet).sort();
+    const dateSelect = document.getElementById('dateSelect');
+    const arbSelect = document.getElementById('arbitrageDateSelect');
+    
+    if (dateSelect) dateSelect.innerHTML = '';
+    if (arbSelect) arbSelect.innerHTML = '';
+
+    let latestCompleteDate = null;
+
+    allDates.forEach(date => {
+        // Έλεγχος αν υπάρχουν δεδομένα SCADA για να θεωρηθεί Complete
+        const hasScada = rawData.scada && rawData.scada.some(d => d.date === date && d.unit === "TOTAL BESS");
+        const isPending = !hasScada;
+        
+        const lang = typeof currentLang !== 'undefined' ? currentLang : 'en';
+        const pendingText = lang === 'el' ? ' (Εκκρεμεί SCADA)' : ' (Pending SCADA)';
+        const displayText = date + (isPending ? pendingText : '');
+
+        [dateSelect, arbSelect].forEach(select => {
+            if (select) {
+                let opt = document.createElement('option');
+                opt.value = date;
+                opt.innerText = displayText;
+                opt.dataset.pending = isPending; 
+                select.appendChild(opt);
+            }
+        });
+
+        // Βρίσκουμε την πιο πρόσφατη μέρα με ΠΛΗΡΗ δεδομένα (Complete)
+        if (!isPending) {
+            latestCompleteDate = date;
+        }
+    });
+
+    // Smart Fallback: Επιλογή της πιο πρόσφατης Complete ημερομηνίας
+    const finalDefault = latestCompleteDate || allDates[allDates.length - 1];
+    
+    if (dateSelect) dateSelect.value = finalDefault;
+    if (arbSelect) arbSelect.value = finalDefault;
+}
+
+function updateStatusBadge() {
+    const badge = document.getElementById('dataStatusBadge');
+    const textEl = document.getElementById('dataStatusText');
+    if (!badge || !textEl) return;
+
+    let activeSelect = null;
+    if (!document.getElementById('viewDaily').classList.contains('hidden')) {
+        activeSelect = document.getElementById('dateSelect');
+    } else if (!document.getElementById('viewArbitrage').classList.contains('hidden')) {
+        activeSelect = document.getElementById('arbitrageDateSelect');
+    }
+
+    if (!activeSelect) {
+        badge.classList.add('hidden');
+        return;
+    }
+
+    badge.classList.remove('hidden');
+    const option = activeSelect.options[activeSelect.selectedIndex];
+    if (!option) return;
+
+    const isPending = option.dataset.pending === 'true';
+    const lang = typeof currentLang !== 'undefined' ? currentLang : 'en';
+
+    if (isPending) {
+        badge.className = "flex items-center gap-1.5 px-2 py-1 rounded border border-orange-500/30 bg-orange-500/10 text-[10px] md:text-xs font-bold text-orange-400 ml-3 shadow-sm";
+        badge.querySelector('div').className = "w-2 h-2 rounded-full bg-orange-500 animate-pulse";
+        textEl.innerText = lang === 'el' ? 'Pending SCADA' : 'Pending SCADA';
+    } else {
+        badge.className = "flex items-center gap-1.5 px-2 py-1 rounded border border-emerald-500/30 bg-emerald-500/10 text-[10px] md:text-xs font-bold text-emerald-400 ml-3 shadow-sm";
+        badge.querySelector('div').className = "w-2 h-2 rounded-full bg-emerald-500";
+        textEl.innerText = lang === 'el' ? 'Complete Data' : 'Complete Data';
+    }
+}
+
+// ==========================================
 // 0. TABS SWITCHING (Controller)
 // ==========================================
 function switchTab(tabName) {
-    // Κρύβουμε όλα τα tabs
     document.getElementById('viewDaily').classList.add('hidden');
     document.getElementById('viewMonthly').classList.add('hidden');
     document.getElementById('viewSurplus').classList.add('hidden');
     document.getElementById('viewArbitrage').classList.add('hidden');
 
-    // ΚΛΑΣΕΙΣ ΓΙΑ ΑΝΕΝΕΡΓΑ TABS (Mobile Box Button / Desktop Inline Tab)
     const inactiveClass = "w-full text-slate-400 bg-slate-800 border border-slate-700 rounded-xl py-3 px-3 text-center text-sm font-medium hover:bg-slate-700/50 transition-colors shadow-sm md:w-auto md:bg-transparent md:border-0 md:border-b-2 md:border-transparent md:rounded-none md:hover:bg-transparent md:hover:text-emerald-300 md:py-2 md:pb-2 md:px-2 whitespace-nowrap md:shadow-none";
 
     document.getElementById('tabBtnDaily').className = inactiveClass;
@@ -50,7 +141,6 @@ function switchTab(tabName) {
     document.getElementById('tabBtnSurplus').className = inactiveClass;
     document.getElementById('tabBtnArbitrage').className = inactiveClass;
 
-    // ΚΡΥΒΟΥΜΕ όλα τα Global Dropdowns από τον Header
     document.getElementById('globalDateContainer').classList.remove('flex');
     document.getElementById('globalDateContainer').classList.add('hidden');
     
@@ -63,14 +153,11 @@ function switchTab(tabName) {
     document.getElementById('globalArbitrageContainer').classList.remove('flex');
     document.getElementById('globalArbitrageContainer').classList.add('hidden');
 
-    // ΚΛΑΣΕΙΣ ΓΙΑ ΕΝΕΡΓΟ TAB (Mobile Lit Box Button / Desktop Active Tab)
     const activeClass = "w-full text-white bg-indigo-600 font-bold border border-transparent rounded-xl py-3 px-3 text-center text-sm transition-colors shadow-md md:w-auto md:text-emerald-400 md:bg-transparent md:border-0 md:border-b-2 md:border-emerald-400 md:rounded-none md:py-2 md:pb-2 md:px-2 whitespace-nowrap md:shadow-none";
 
-    // ΕΜΦΑΝΙΖΟΥΜΕ το Tab και το αντίστοιχο Dropdown στον Header
     if (tabName === 'daily') {
         document.getElementById('viewDaily').classList.remove('hidden');
         document.getElementById('tabBtnDaily').className = activeClass;
-        
         document.getElementById('globalDateContainer').classList.remove('hidden');
         document.getElementById('globalDateContainer').classList.add('flex');
         
@@ -78,7 +165,6 @@ function switchTab(tabName) {
     } else if (tabName === 'monthly') {
         document.getElementById('viewMonthly').classList.remove('hidden');
         document.getElementById('tabBtnMonthly').className = activeClass;
-        
         document.getElementById('globalMonthContainer').classList.remove('hidden');
         document.getElementById('globalMonthContainer').classList.add('flex');
         
@@ -86,7 +172,6 @@ function switchTab(tabName) {
     } else if (tabName === 'surplus') {
         document.getElementById('viewSurplus').classList.remove('hidden');
         document.getElementById('tabBtnSurplus').className = activeClass;
-        
         document.getElementById('globalSurplusContainer').classList.remove('hidden');
         document.getElementById('globalSurplusContainer').classList.add('flex');
         
@@ -94,12 +179,13 @@ function switchTab(tabName) {
     } else if (tabName === 'arbitrage') {
         document.getElementById('viewArbitrage').classList.remove('hidden');
         document.getElementById('tabBtnArbitrage').className = activeClass;
-        
         document.getElementById('globalArbitrageContainer').classList.remove('hidden');
         document.getElementById('globalArbitrageContainer').classList.add('flex');
         
-        initArbitrageTab();
+        renderArbitrageTab();
     }
+
+    updateStatusBadge();
 }
 
 // ==========================================
@@ -142,6 +228,7 @@ function toggleBessIsolation(clickedUnit) {
 // 1. DAILY DASHBOARD
 // ==========================================
 function updateDashboard() {
+    updateStatusBadge();
     const selectedDate = document.getElementById('dateSelect').value;
     if (!selectedDate || !rawData || !rawData.isp || rawData.isp.length === 0) return;
 
@@ -151,10 +238,16 @@ function updateDashboard() {
     const ispTotal = ispDay.find(d => d.unit === "TOTAL BESS") || { charge: 0, discharge: 0, rte: "0.00%" };
     const scadaTotal = scadaDay.find(d => d.unit === "TOTAL BESS") || { charge: 0, discharge: 0, rte: "0.00%" };
 
-    document.getElementById('kpiChargeIsp').innerText = formatGWh(ispTotal.charge);
-    document.getElementById('kpiChargeScada').innerText = formatGWh(scadaTotal.charge);
-    document.getElementById('kpiDischargeIsp').innerText = formatGWh(ispTotal.discharge);
-    document.getElementById('kpiDischargeScada').innerText = formatGWh(scadaTotal.discharge);
+    // Αλλάζουμε τα νούμερα σε ακέραια MWh και ενημερώνουμε το HTML (GWh -> MWh)
+    document.getElementById('kpiChargeIsp').innerText = formatMWh(ispTotal.charge);
+    document.getElementById('kpiChargeIsp').nextElementSibling.innerText = "MWh";
+    document.getElementById('kpiChargeScada').innerText = formatMWh(scadaTotal.charge);
+    document.getElementById('kpiChargeScada').nextElementSibling.innerText = "MWh";
+    document.getElementById('kpiDischargeIsp').innerText = formatMWh(ispTotal.discharge);
+    document.getElementById('kpiDischargeIsp').nextElementSibling.innerText = "MWh";
+    document.getElementById('kpiDischargeScada').innerText = formatMWh(scadaTotal.discharge);
+    document.getElementById('kpiDischargeScada').nextElementSibling.innerText = "MWh";
+
     document.getElementById('kpiRteIsp').innerText = ispTotal.rte;
     document.getElementById('kpiRteScada').innerText = scadaTotal.rte;
 
@@ -194,6 +287,10 @@ function renderDailyCharts(labels, ispDischarge, scadaDischarge, ispCharge, scad
     Chart.defaults.color = '#94a3b8';
     Chart.defaults.font.family = 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     
+    const tooltipOptions = {
+        callbacks: { label: function(ctx) { return formatMWh(ctx.parsed.y) + ' MWh'; } }
+    };
+
     const ctxDischarge = document.getElementById('dischargeChart').getContext('2d');
     if (dischargeChartInst) dischargeChartInst.destroy();
     
@@ -208,7 +305,7 @@ function renderDailyCharts(labels, ispDischarge, scadaDischarge, ispCharge, scad
         }, 
         options: { 
             responsive: true, maintainAspectRatio: false, 
-            plugins: { legend: { position: 'top' } }, 
+            plugins: { legend: { position: 'top' }, tooltip: tooltipOptions }, 
             scales: { x: { grid: { display: false } }, y: { grid: { color: '#334155' } } } 
         } 
     });
@@ -227,7 +324,7 @@ function renderDailyCharts(labels, ispDischarge, scadaDischarge, ispCharge, scad
         }, 
         options: { 
             responsive: true, maintainAspectRatio: false, 
-            plugins: { legend: { position: 'top' } }, 
+            plugins: { legend: { position: 'top' }, tooltip: tooltipOptions }, 
             scales: { x: { grid: { display: false } }, y: { grid: { color: '#334155' } } } 
         } 
     });
@@ -261,17 +358,22 @@ function updateMonthlyDashboard() {
         
         cumCharge += dailyTotals[date].charge;
         cumDischarge += dailyTotals[date].discharge;
-        chargeData.push(cumCharge / 1000); 
-        dischargeData.push(cumDischarge / 1000); 
+        chargeData.push(cumCharge); 
+        dischargeData.push(cumDischarge); 
     });
 
-    document.getElementById('kpiMonthlyCharge').innerText = formatGWh(cumCharge);
-    document.getElementById('kpiMonthlyDischarge').innerText = formatGWh(cumDischarge);
+    // Ενημέρωση KPIs σε MWh (ακέραια)
+    document.getElementById('kpiMonthlyCharge').innerText = formatMWh(cumCharge);
+    document.getElementById('kpiMonthlyCharge').nextElementSibling.innerText = "MWh";
+    document.getElementById('kpiMonthlyDischarge').innerText = formatMWh(cumDischarge);
+    document.getElementById('kpiMonthlyDischarge').nextElementSibling.innerText = "MWh";
 
     renderMonthlyCharts(labels, chargeData, dischargeData);
 }
 
 function renderMonthlyCharts(labels, chargeData, dischargeData) {
+    const tooltipOptions = { callbacks: { label: function(ctx) { return formatMWh(ctx.parsed.y) + ' MWh'; } } };
+
     const ctxDischarge = document.getElementById('monthlyDischargeChart').getContext('2d');
     if (monthlyDischargeChartInst) monthlyDischargeChartInst.destroy();
     
@@ -280,13 +382,13 @@ function renderMonthlyCharts(labels, chargeData, dischargeData) {
         data: { 
             labels: labels, 
             datasets: [{ 
-                label: 'GWh', data: dischargeData, borderColor: '#34d399', 
+                label: 'MWh', data: dischargeData, borderColor: '#34d399', 
                 backgroundColor: 'rgba(52, 211, 153, 0.2)', fill: true, tension: 0.3, pointRadius: 3, pointBackgroundColor: '#34d399' 
             }] 
         }, 
         options: { 
-            responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, 
-            scales: { x: { grid: { display: false } }, y: { grid: { color: '#334155' }, title: { display: true, text: 'GWh' } } } 
+            responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: tooltipOptions }, 
+            scales: { x: { grid: { display: false } }, y: { grid: { color: '#334155' }, title: { display: true, text: 'MWh' } } } 
         } 
     });
 
@@ -298,19 +400,19 @@ function renderMonthlyCharts(labels, chargeData, dischargeData) {
         data: { 
             labels: labels, 
             datasets: [{ 
-                label: 'GWh', data: chargeData, borderColor: '#fb923c', 
+                label: 'MWh', data: chargeData, borderColor: '#fb923c', 
                 backgroundColor: 'rgba(251, 146, 60, 0.2)', fill: true, tension: 0.3, pointRadius: 3, pointBackgroundColor: '#fb923c' 
             }] 
         }, 
         options: { 
-            responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, 
-            scales: { x: { grid: { display: false } }, y: { grid: { color: '#334155' }, title: { display: true, text: 'GWh' } } } 
+            responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: tooltipOptions }, 
+            scales: { x: { grid: { display: false } }, y: { grid: { color: '#334155' }, title: { display: true, text: 'MWh' } } } 
         } 
     });
 }
 
 // ==========================================
-// 3. SURPLUS DASHBOARD (WITH KPI CARDS)
+// 3. SURPLUS DASHBOARD
 // ==========================================
 function updateSurplusDashboard() {
     const selectedMonth = document.getElementById('monthSelectSurplus').value;
@@ -335,13 +437,13 @@ function updateSurplusDashboard() {
     const allDates = [...new Set([...Object.keys(scadaTotals), ...Object.keys(pumpTotals), ...Object.keys(surpTotals)])].sort();
     
     const labels = [];
-    const dailyBessGWh = [];
-    const dailyPumpGWh = [];
-    const dailySurpGWh = [];
+    const dailyBess = [];
+    const dailyPump = [];
+    const dailySurp = [];
     
-    const cumBessGWh = [];
-    const cumPumpGWh = [];
-    const cumSurpGWh = [];
+    const cumBess = [];
+    const cumPump = [];
+    const cumSurp = [];
     
     let runBess = 0, runPump = 0, runSurp = 0;
 
@@ -350,33 +452,33 @@ function updateSurplusDashboard() {
         if (parts.length >= 3) labels.push(`${parts[2]}/${parts[1]}`);
         else labels.push(date);
 
-        let bessDay = (scadaTotals[date] || 0) / 1000;
-        let pumpDay = (pumpTotals[date] || 0) / 1000;
-        let surpDay = Math.abs(surpTotals[date] || 0) / 1000;
+        // Κρατάμε τα νούμερα σε MWh
+        let bessDay = (scadaTotals[date] || 0);
+        let pumpDay = (pumpTotals[date] || 0);
+        let surpDay = Math.abs(surpTotals[date] || 0);
         
-        dailyBessGWh.push(bessDay);
-        dailyPumpGWh.push(pumpDay);
-        dailySurpGWh.push(surpDay);
+        dailyBess.push(bessDay);
+        dailyPump.push(pumpDay);
+        dailySurp.push(surpDay);
 
         runBess += bessDay;
         runPump += pumpDay;
         runSurp += surpDay;
         
-        cumBessGWh.push(runBess);
-        cumPumpGWh.push(runPump);
-        cumSurpGWh.push(runSurp);
+        cumBess.push(runBess);
+        cumPump.push(runPump);
+        cumSurp.push(runSurp);
     });
 
-    // --- ΛΟΓΙΚΗ ΓΙΑ BEST/WORST KPI CARDS ---
     let bessMax = { pct: -1, val: 0, date: '' };
     let bessMin = { pct: 101, val: 0, date: '' };
     let pumpMax = { pct: -1, val: 0, date: '' };
     let pumpMin = { pct: 101, val: 0, date: '' };
 
     for (let i = 0; i < labels.length; i++) {
-        let b = dailyBessGWh[i];
-        let p = dailyPumpGWh[i];
-        let s = dailySurpGWh[i];
+        let b = dailyBess[i];
+        let p = dailyPump[i];
+        let s = dailySurp[i];
         let total = b + p + s;
         let dateLbl = labels[i];
 
@@ -384,13 +486,11 @@ function updateSurplusDashboard() {
             let bPct = (b / total) * 100;
             let pPct = (p / total) * 100;
 
-            // Έλεγχος BESS (Αποκλείουμε το 0% και το 100%)
             if (bPct > 0 && bPct < 100) {
                 if (bPct > bessMax.pct) { bessMax = { pct: bPct, val: b, date: dateLbl }; }
                 if (bPct < bessMin.pct) { bessMin = { pct: bPct, val: b, date: dateLbl }; }
             }
             
-            // Έλεγχος PUMP (Αποκλείουμε το 0% και το 100%)
             if (pPct > 0 && pPct < 100) {
                 if (pPct > pumpMax.pct) { pumpMax = { pct: pPct, val: p, date: dateLbl }; }
                 if (pPct < pumpMin.pct) { pumpMin = { pct: pPct, val: p, date: dateLbl }; }
@@ -398,16 +498,15 @@ function updateSurplusDashboard() {
         }
     }
 
-    // Βοηθητική συνάρτηση για την ενημέρωση του HTML (GWh -> MWh)
     const populateKPI = (prefix, data) => {
         if (data.pct === -1 || data.pct === 101) {
             document.getElementById(`${prefix}Pct`).innerText = '-';
             document.getElementById(`${prefix}Date`).innerText = '';
             document.getElementById(`${prefix}Mwh`).innerText = '';
         } else {
-            document.getElementById(`${prefix}Pct`).innerText = data.pct.toFixed(1) + '%';
+            document.getElementById(`${prefix}Pct`).innerText = formatPct(data.pct);
             document.getElementById(`${prefix}Date`).innerText = data.date;
-            document.getElementById(`${prefix}Mwh`).innerText = (data.val * 1000).toLocaleString('el-GR', {maximumFractionDigits: 0}) + ' MWh';
+            document.getElementById(`${prefix}Mwh`).innerText = formatMWh(data.val) + ' MWh';
         }
     };
 
@@ -416,7 +515,7 @@ function updateSurplusDashboard() {
     populateKPI('pumpBest', pumpMax);
     populateKPI('pumpWorst', pumpMin);
 
-    renderSurplusCharts(labels, dailyBessGWh, dailyPumpGWh, dailySurpGWh, cumBessGWh, cumPumpGWh, cumSurpGWh);
+    renderSurplusCharts(labels, dailyBess, dailyPump, dailySurp, cumBess, cumPump, cumSurp);
 }
 
 function renderSurplusCharts(labels, dailyBess, dailyPump, dailySurplus, cumBess, cumPump, cumSurplus) {
@@ -441,6 +540,7 @@ function renderSurplusCharts(labels, dailyBess, dailyPump, dailySurplus, cumBess
                 legend: { position: 'top' },
                 tooltip: {
                     callbacks: {
+                        label: function(ctx) { return formatMWh(ctx.parsed.y) + ' MWh'; },
                         footer: function(tooltipItems) {
                             let idx = tooltipItems[0].dataIndex;
                             let bess = dailyBess[idx];
@@ -454,20 +554,20 @@ function renderSurplusCharts(labels, dailyBess, dailyPump, dailySurplus, cumBess
                             }
                             
                             let total = bess + pump + surp;
-                            let pctBess = ((bess / total) * 100).toFixed(1);
-                            let pctPump = ((pump / total) * 100).toFixed(1);
-                            let pctSurp = ((surp / total) * 100).toFixed(1);
+                            let pctBess = formatPct((bess / total) * 100);
+                            let pctPump = formatPct((pump / total) * 100);
+                            let pctSurp = formatPct((surp / total) * 100);
                             
                             return (lang === 'el') ? 
-                                `\n💡 Επίλυση Θεωρητικού Πλεονάσματος:\n- Αντλησιοταμίευση (PUMP): ${pctPump}%\n- Μπαταρίες (BESS): ${pctBess}%\n- Τελικό Πλεόνασμα (Surplus): ${pctSurp}%` :
-                                `\n💡 Theoretical Surplus Resolution:\n- Pumped Hydro (PUMP): ${pctPump}%\n- Batteries (BESS): ${pctBess}%\n- Residual Surplus: ${pctSurp}%`;
+                                `\n💡 Επίλυση Θεωρητικού Πλεονάσματος:\n- Αντλησιοταμίευση (PUMP): ${pctPump}\n- Μπαταρίες (BESS): ${pctBess}\n- Τελικό Πλεόνασμα (Surplus): ${pctSurp}` :
+                                `\n💡 Theoretical Surplus Resolution:\n- Pumped Hydro (PUMP): ${pctPump}\n- Batteries (BESS): ${pctBess}\n- Residual Surplus: ${pctSurp}`;
                         }
                     }
                 }
             },
             scales: { 
                 x: { stacked: true, grid: { display: false } }, 
-                y: { stacked: true, grid: { color: '#334155' }, title: { display: true, text: 'GWh' } } 
+                y: { stacked: true, grid: { color: '#334155' }, title: { display: true, text: 'MWh' } } 
             }
         }
     });
@@ -487,8 +587,11 @@ function renderSurplusCharts(labels, dailyBess, dailyPump, dailySurplus, cumBess
         },
         options: {
             responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { position: 'top' } },
-            scales: { x: { grid: { display: false } }, y: { grid: { color: '#334155' }, title: { display: true, text: 'GWh' } } }
+            plugins: { 
+                legend: { position: 'top' },
+                tooltip: { callbacks: { label: function(ctx) { return formatMWh(ctx.parsed.y) + ' MWh'; } } }
+            },
+            scales: { x: { grid: { display: false } }, y: { grid: { color: '#334155' }, title: { display: true, text: 'MWh' } } }
         }
     });
 }
@@ -496,47 +599,8 @@ function renderSurplusCharts(labels, dailyBess, dailyPump, dailySurplus, cumBess
 // ==========================================
 // 4. ARBITRAGE P&L & HOURLY OPERATIONS
 // ==========================================
-function initArbitrageTab() {
-    const select = document.getElementById('arbitrageDateSelect');
-    if (!select) return;
-
-    const hourlyData = getHourlyData();
-
-    if (!hourlyData || hourlyData.length === 0) {
-        select.innerHTML = '<option value="">Loading data...</option>';
-        setTimeout(initArbitrageTab, 1000);
-        return;
-    }
-
-    if (select.options.length <= 1 || select.options[0].text === "Loading data..." || select.options[0].text === "Φόρτωση δεδομένων...") {
-        const datesSet = new Set();
-        
-        hourlyData.forEach(item => {
-            let rawDate = item["Ημερομηνία"] || item["date"];
-            if (rawDate) {
-                // Κρατάμε απευθείας τους πρώτους 10 χαρακτήρες (YYYY-MM-DD)
-                datesSet.add(String(rawDate).substring(0, 10));
-            }
-        });
-
-        const dates = [...datesSet].sort();
-
-        select.innerHTML = '';
-        dates.forEach(d => {
-            let opt = document.createElement('option');
-            opt.value = d;
-            opt.innerText = d;
-            select.appendChild(opt);
-        });
-
-        if (dates.length > 0) {
-            select.value = dates[dates.length - 1];
-        }
-    }
-    renderArbitrageTab();
-}
-
 function renderArbitrageTab() {
+    updateStatusBadge();
     currentlyIsolatedBess = null; 
 
     const select = document.getElementById('arbitrageDateSelect');
@@ -556,14 +620,12 @@ function renderArbitrageTab() {
 
     const dayData = hourlyData.filter(item => {
         let d = item["Ημερομηνία"] || item["date"];
-        // Φιλτράρισμα με βάση τους πρώτους 10 χαρακτήρες
         return d && String(d).substring(0, 10) === selectedDate;
     });
 
     let dailyMcp = new Array(24).fill(0);
     const mcpRow = mcpData.find(item => {
         let d = item["Ημερομηνία"] || item["date"];
-        // Έλεγχος με βάση τους πρώτους 10 χαρακτήρες
         return d && String(d).substring(0, 10) === selectedDate;
     });
     
@@ -576,19 +638,14 @@ function renderArbitrageTab() {
 
     if (mcpRow) {
         for (let h = 1; h <= 24; h++) {
-            // Υπολογίζουμε ποιο "T" (τέταρτο) ξεκινάει την τρέχουσα ώρα.
             let startT = (h - 1) * 4 + 1;
-            
             if (mcpRow['T' + startT] !== undefined) {
                 let q1 = parseFloat(mcpRow['T' + startT]) || 0;
                 let q2 = parseFloat(mcpRow['T' + (startT + 1)]) || 0;
                 let q3 = parseFloat(mcpRow['T' + (startT + 2)]) || 0;
                 let q4 = parseFloat(mcpRow['T' + (startT + 3)]) || 0;
-                
-                // Μέσος όρος τετάρτων
                 dailyMcp[h-1] = (q1 + q2 + q3 + q4) / 4;
             } else {
-                // Fallback 
                 let k = h + ':00';
                 dailyMcp[h-1] = parseFloat(String(mcpRow[k]).replace(',', '.')) || 0;
             }
@@ -617,7 +674,6 @@ function renderArbitrageTab() {
             let key4 = key2 + ':00';                   
             
             let rawVal = row[key1] ?? row[key2] ?? row[key3] ?? row[key4] ?? 0;
-            
             const val = parseFloat(String(rawVal).replace(',', '.')) || 0;
             dataPoints.push(val);
             
@@ -710,9 +766,9 @@ function renderArbitrageTab() {
                             let label = context.dataset.label || '';
                             if (label) label += ': ';
                             if (context.dataset.yAxisID === 'yMcp') {
-                                label += context.parsed.y.toFixed(2) + ' €/MWh';
+                                label += formatEur(context.parsed.y) + ' / MWh';
                             } else {
-                                label += context.parsed.y.toFixed(2) + ' MWh';
+                                label += formatMWh(context.parsed.y) + ' MWh';
                             }
                             return label;
                         }
@@ -729,20 +785,15 @@ function renderArbitrageTab() {
             const item = pnlSummary[unit];
             const tr = document.createElement('tr');
             
-            // --- ΛΟΓΙΚΗ RTE (ΔΙΓΛΩΣΣΑ Χρώματα & Tooltips 83-92) ---
             let rteColorClass = "text-slate-300"; 
             let rteTooltip = (lang === 'en') ? "Normal RTE levels." : "Φυσιολογικά επίπεδα απόδοσης (RTE).";
             
             if (item.rte > 0 && item.rte < 83) {
                 rteColorClass = "text-yellow-400 font-bold";
-                rteTooltip = (lang === 'en') 
-                    ? "Low RTE (<83%): Possible SoC carryover for next day use or high auxiliary consumption." 
-                    : "Χαμηλό RTE (<83%): Πιθανή διατήρηση αποθέματος (SoC) για χρήση την επόμενη ημέρα ή υψηλές ιδιοκαταναλώσεις.";
+                rteTooltip = (lang === 'en') ? "Low RTE (<83%): Possible SoC carryover for next day use or high auxiliary consumption." : "Χαμηλό RTE (<83%): Πιθανή διατήρηση αποθέματος (SoC) για χρήση την επόμενη ημέρα ή υψηλές ιδιοκαταναλώσεις.";
             } else if (item.rte > 92) {
                 rteColorClass = "text-rose-500 font-bold";
-                rteTooltip = (lang === 'en') 
-                    ? "Unrealistic RTE (>92%): Discharging energy stored yesterday (SoC Carryover) or SCADA error." 
-                    : "Μη ρεαλιστικό RTE (>92%): Εκφόρτιση ενέργειας που είχε αποθηκευτεί χθες (SoC Carryover) ή σφάλμα SCADA.";
+                rteTooltip = (lang === 'en') ? "Unrealistic RTE (>92%): Discharging energy stored yesterday (SoC Carryover) or SCADA error." : "Μη ρεαλιστικό RTE (>92%): Εκφόρτιση ενέργειας που είχε αποθηκευτεί χθες (SoC Carryover) ή σφάλμα SCADA.";
             } else if (item.rte === 0) {
                 rteColorClass = "text-slate-500";
                 rteTooltip = (lang === 'en') ? "Zero cycle activity." : "Μηδενική δραστηριότητα κύκλου.";
@@ -751,23 +802,21 @@ function renderArbitrageTab() {
             tr.className = "hover:bg-slate-700/50 transition-all cursor-pointer group";
             tr.id = "row-" + unit.replace(/\s+/g, '-');
             
+            // Εδώ γίνεται η χρήση των βοηθητικών format
             tr.innerHTML = `
                 <td class="p-3 font-bold text-slate-300 group-hover:text-white transition-colors" title="${hoverTitle}" style="border-left: 4px solid transparent;" onmouseover="this.style.borderLeftColor='${item.color}'" onmouseout="this.style.borderLeftColor='transparent'">${unit}</td>
-                <td class="p-3">${item.charge.toFixed(2)}</td>
-                <td class="p-3">${item.discharge.toFixed(2)}</td>
+                <td class="p-3">${formatMWh(item.charge)}</td>
+                <td class="p-3">${formatMWh(item.discharge)}</td>
                 <td class="p-3">
                     <span class="${rteColorClass} cursor-help border-b border-dotted border-slate-500" title="${rteTooltip}">
-                        ${item.rte.toFixed(1)}%
+                        ${formatPct(item.rte)}
                     </span>
                 </td>
-                <td class="p-3 font-semibold ${item.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${item.pnl.toLocaleString('el-GR', {style: 'currency', currency: 'EUR', minimumFractionDigits: 0, maximumFractionDigits: 0})}</td>
-                <td class="p-3">${item.unitProfit.toFixed(0)} €/MWh</td>
+                <td class="p-3 font-semibold ${item.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${formatEur(item.pnl)}</td>
+                <td class="p-3">${formatEur(item.unitProfit)} / MWh</td>
             `;
             
-            tr.onclick = (e) => {
-                toggleBessIsolation(unit);
-            };
-            
+            tr.onclick = () => toggleBessIsolation(unit);
             tbody.appendChild(tr);
         });
     }
@@ -778,11 +827,8 @@ function renderArbitrageTab() {
 // ==========================================
 window.addEventListener('load', () => {
 
-    // Αρχικοποίηση γλώσσας με προστασία σφαλμάτων (Try/Catch)
     try {
-        if (typeof setLang === 'function') {
-            setLang('en');
-        }
+        if (typeof setLang === 'function') setLang('en');
     } catch (err) {
         console.warn('Αποτυχία φόρτωσης μετάφρασης κατά την εκκίνηση:', err);
     }
@@ -803,10 +849,9 @@ window.addEventListener('load', () => {
     setTimeout(() => {
         try {
             updateProgress(40, 'Calculating Daily Analytics & KPIs...');
+            initGlobalDates(); // Αρχικοποιούμε δυναμικά τα dropdowns
             switchTab('daily');
-        } catch (e) {
-            console.error(e);
-        }
+        } catch (e) { console.error(e); }
 
         setTimeout(() => {
             try {
@@ -839,32 +884,17 @@ window.addEventListener('load', () => {
                     });
                     if (months.length > 0) mSelectSurp.value = months[months.length - 1];
                 }
-            } catch (e) {
-                console.error(e);
-            }
+            } catch (e) { console.error(e); }
 
             setTimeout(() => {
-                try {
-                    updateProgress(90, 'Preparing Hourly Arbitrage & P&L...');
-                    initArbitrageTab();
-                } catch (e) {
-                    console.error(e);
-                }
-
                 updateProgress(100, 'Dashboard is ready!');
-                
                 setTimeout(() => {
                     if (overlay) {
                         overlay.classList.add('opacity-0');
-                        setTimeout(() => {
-                            overlay.style.display = 'none';
-                        }, 500); 
+                        setTimeout(() => { overlay.style.display = 'none'; }, 500); 
                     }
                 }, 500); 
-
             }, 500); 
-
         }, 500); 
-
     }, 500); 
 });
