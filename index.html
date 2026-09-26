@@ -58,36 +58,37 @@
                 <div class="flex flex-col md:flex-row items-stretch md:items-center gap-3 w-full md:w-auto mt-4 md:mt-0">
                     
                     <!-- 1. DATE SELECTOR & BADGE -->
-                    <div id="globalSelectors" class="w-full md:w-auto flex items-center justify-between md:justify-start bg-slate-800/80 px-4 py-3 md:px-3 md:py-1.5 rounded-xl md:rounded border border-slate-700 shadow-sm">
+                    <!-- Προστέθηκε gap-2 και justify-between για να κρατάει το badge δεξιά -->
+                    <div id="globalSelectors" class="w-full md:w-auto flex items-center justify-between bg-slate-800/80 px-4 py-3 md:px-3 md:py-1.5 rounded-xl md:rounded border border-slate-700 shadow-sm gap-2">
                         
-                        <!-- Daily Date Select -->
-                        <div id="globalDateContainer" class="flex items-center gap-2">
-                            <label class="text-sm md:text-xs text-slate-300 font-semibold" id="dateLabel">Date:</label>
-                            <select id="dateSelect" onchange="updateDashboard()" class="bg-slate-900 border border-slate-600 text-slate-200 text-sm md:text-xs rounded px-2 py-1 outline-none cursor-pointer"></select>
+                        <!-- Daily Date Select (Με στένεμα w-28 για Mobile) -->
+                        <div id="globalDateContainer" class="flex items-center gap-2 min-w-0">
+                            <label class="text-sm md:text-xs text-slate-300 font-semibold whitespace-nowrap" id="dateLabel">Date:</label>
+                            <select id="dateSelect" onchange="updateDashboard()" class="bg-slate-900 border border-slate-600 text-slate-200 text-sm md:text-xs rounded px-2 py-1 outline-none cursor-pointer w-28 sm:w-36 md:w-auto truncate"></select>
                         </div>
                         
-                        <!-- Monthly Select (Κρυμμένο by default) -->
-                        <div id="globalMonthContainer" class="hidden items-center gap-2">
-                            <label class="text-sm md:text-xs text-slate-300 font-semibold" id="monthLabel">Month:</label>
-                            <select id="monthSelect" onchange="updateMonthlyDashboard()" class="bg-slate-900 border border-slate-600 text-slate-200 text-sm md:text-xs rounded px-2 py-1 outline-none cursor-pointer"></select>
+                        <!-- Monthly Select (Κρυμμένο) -->
+                        <div id="globalMonthContainer" class="hidden items-center gap-2 min-w-0">
+                            <label class="text-sm md:text-xs text-slate-300 font-semibold whitespace-nowrap" id="monthLabel">Month:</label>
+                            <select id="monthSelect" onchange="updateMonthlyDashboard()" class="bg-slate-900 border border-slate-600 text-slate-200 text-sm md:text-xs rounded px-2 py-1 outline-none cursor-pointer w-28 sm:w-36 md:w-auto truncate"></select>
                         </div>
 
-                        <!-- Surplus Month Select (Κρυμμένο by default) -->
-                        <div id="globalSurplusContainer" class="hidden items-center gap-2">
-                            <label class="text-sm md:text-xs text-slate-300 font-semibold" id="monthLabelSurp">Month:</label>
-                            <select id="monthSelectSurplus" onchange="updateSurplusDashboard()" class="bg-slate-900 border border-slate-600 text-slate-200 text-sm md:text-xs rounded px-2 py-1 outline-none cursor-pointer"></select>
+                        <!-- Surplus Month Select (Κρυμμένο) -->
+                        <div id="globalSurplusContainer" class="hidden items-center gap-2 min-w-0">
+                            <label class="text-sm md:text-xs text-slate-300 font-semibold whitespace-nowrap" id="monthLabelSurp">Month:</label>
+                            <select id="monthSelectSurplus" onchange="updateSurplusDashboard()" class="bg-slate-900 border border-slate-600 text-slate-200 text-sm md:text-xs rounded px-2 py-1 outline-none cursor-pointer w-28 sm:w-36 md:w-auto truncate"></select>
                         </div>
 
-                        <!-- Arbitrage Date Select (Κρυμμένο by default) -->
-                        <div id="globalArbitrageContainer" class="hidden items-center gap-2">
-                            <label class="text-sm md:text-xs text-slate-300 font-semibold" id="arbitrageDateLabel">Date:</label>
-                            <select id="arbitrageDateSelect" onchange="renderArbitrageTab()" class="bg-slate-900 border border-slate-600 text-slate-200 text-sm md:text-xs rounded px-2 py-1 outline-none cursor-pointer"></select>
+                        <!-- Arbitrage Date Select (Κρυμμένο) -->
+                        <div id="globalArbitrageContainer" class="hidden items-center gap-2 min-w-0">
+                            <label class="text-sm md:text-xs text-slate-300 font-semibold whitespace-nowrap" id="arbitrageDateLabel">Date:</label>
+                            <select id="arbitrageDateSelect" onchange="renderArbitrageTab()" class="bg-slate-900 border border-slate-600 text-slate-200 text-sm md:text-xs rounded px-2 py-1 outline-none cursor-pointer w-28 sm:w-36 md:w-auto truncate"></select>
                         </div>
 
-                        <!-- DYNAMIC DATA STATUS BADGE -->
-                        <div id="dataStatusBadge" class="flex items-center gap-1.5 px-2 py-1 rounded border border-emerald-500/30 bg-emerald-500/10 text-[10px] md:text-xs font-bold text-emerald-400 ml-3 shadow-sm">
-                            <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
-                            <span id="dataStatusText">Complete Data</span>
+                        <!-- DYNAMIC DATA STATUS BADGE (Προστασία με shrink-0) -->
+                        <div id="dataStatusBadge" class="flex shrink-0 items-center gap-1.5 px-2 py-1 rounded border border-emerald-500/30 bg-emerald-500/10 text-[10px] md:text-xs font-bold text-emerald-400 shadow-sm">
+                            <div class="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-emerald-500 shrink-0"></div>
+                            <span id="dataStatusText" class="text-center leading-tight max-w-[60px] md:max-w-none whitespace-normal">Complete Data</span>
                         </div>
                     </div>
 
@@ -107,6 +108,9 @@
             </div>
         </header>
 
+        <!-- ΔΙΑΧΩΡΙΣΤΙΚΗ ΓΡΑΜΜΗ ΜΟΝΟ ΓΙΑ MOBILE -->
+        <div class="block md:hidden border-t border-slate-700/80 w-full mt-4 mb-2"></div>
+
         <!-- TABS NAVIGATION (2x2 Grid Boxes στο Mobile, Flex Tabs στο Desktop) -->
         <div class="grid grid-cols-2 md:flex md:space-x-4 gap-3 md:gap-0 border-b-0 md:border-b md:border-slate-800 pb-2 mt-2">
             <button id="tabBtnDaily" onclick="switchTab('daily')" class="w-full text-white bg-indigo-600 font-bold border border-transparent rounded-xl py-3 px-3 text-center text-sm transition-colors shadow-md md:w-auto md:text-emerald-400 md:bg-transparent md:border-0 md:border-b-2 md:border-emerald-400 md:rounded-none md:py-2 md:pb-2 md:px-2 whitespace-nowrap md:shadow-none">Daily Analytics</button>
@@ -120,18 +124,14 @@
 
         <!-- VIEW 1: DAILY ANALYTICS -->
         <div id="viewDaily" class="space-y-8 block">
-
-            <!-- ROW 1: DISCHARGE -->
             <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mt-4">
                 <div class="lg:col-span-3 bg-slate-800/40 p-4 sm:p-6 rounded-xl sm:border border-slate-700">
                     <h2 class="text-base sm:text-lg font-semibold text-slate-200 mb-4" id="dischargeTitle">Discharge Per BESS Unit (MWh)</h2>
                     <div class="relative h-64 sm:h-80"><canvas id="dischargeChart"></canvas></div>
                 </div>
-                
                 <div class="p-2 sm:bg-slate-800/60 sm:p-6 sm:rounded-xl sm:border border-slate-700 flex flex-col justify-center text-center">
                     <h3 class="text-xs sm:text-sm font-medium text-slate-400 mb-2 sm:mb-6 uppercase tracking-wider" id="totalDischargeLabel">Total Discharge</h3>
                     <div class="flex flex-row sm:flex-col justify-around sm:justify-center items-center gap-2 sm:space-y-6">
-                        
                         <div class="flex flex-col items-center">
                             <div class="flex items-center gap-1.5 mb-1.5">
                                 <div class="w-2.5 h-2.5 bg-blue-400 rounded-sm"></div>
@@ -142,10 +142,8 @@
                                 <span class="text-[10px] sm:text-sm text-slate-500">GWh</span>
                             </div>
                         </div>
-
                         <div class="hidden sm:block border-t border-slate-700 w-1/2 mx-auto"></div>
                         <div class="sm:hidden w-px h-10 bg-slate-700/50"></div>
-                        
                         <div class="flex flex-col items-center">
                             <div class="flex items-center gap-1.5 mb-1.5">
                                 <div class="w-2.5 h-2.5 bg-emerald-400 rounded-sm"></div>
@@ -160,16 +158,13 @@
                 </div>
             </div>
 
-            <!-- ROW 2: CHARGE -->
             <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
                 <div class="lg:col-span-3 bg-slate-800/40 p-4 sm:p-6 rounded-xl sm:border border-slate-700">
                     <h2 class="text-base sm:text-lg font-semibold text-slate-200 mb-4" id="chargeTitle">Charge Per BESS Unit (MWh)</h2>
                     <div class="relative h-64 sm:h-80"><canvas id="chargeChart"></canvas></div>
                 </div>
-                
                 <div class="p-2 sm:bg-slate-800/60 sm:p-6 sm:rounded-xl sm:border border-slate-700 flex flex-col justify-center text-center">
                     <h3 class="text-xs sm:text-sm font-medium text-slate-400 mb-2 sm:mb-6 uppercase tracking-wider" id="totalChargeLabel">Total Charge</h3>
-                    
                     <div class="flex flex-row sm:flex-col justify-around sm:justify-center items-center gap-2 sm:space-y-6">
                         <div class="flex flex-col items-center">
                             <div class="flex items-center gap-1.5 mb-1.5">
@@ -181,10 +176,8 @@
                                 <span class="text-[10px] sm:text-sm text-slate-500">GWh</span>
                             </div>
                         </div>
-
                         <div class="hidden sm:block border-t border-slate-700 w-1/2 mx-auto"></div>
                         <div class="sm:hidden w-px h-10 bg-slate-700/50"></div>
-                        
                         <div class="flex flex-col items-center">
                             <div class="flex items-center gap-1.5 mb-1.5">
                                 <div class="w-2.5 h-2.5 bg-orange-400 rounded-sm"></div>
@@ -199,7 +192,6 @@
                 </div>
             </div>
 
-            <!-- ROW 3: RTE BLOCK -->
             <div class="max-w-2xl mx-auto p-2 sm:bg-slate-800/60 sm:p-6 sm:rounded-xl sm:border border-slate-700 text-center mt-2 sm:mt-4">
                 <h3 class="text-xs sm:text-sm font-medium text-slate-400 mb-3 sm:mb-6 uppercase tracking-wider" id="rteLabel">Round Trip Efficiency (RTE - Total BESS)</h3>
                 <div class="flex justify-around items-center">
@@ -209,9 +201,7 @@
                             <span id="kpiRteIsp" class="text-lg sm:text-3xl font-bold text-slate-300">0.00%</span>
                         </div>
                     </div>
-                    
                     <div class="h-8 sm:h-12 w-px bg-slate-700/50"></div>
-                    
                     <div class="flex flex-col items-center">
                         <span class="block text-[10px] sm:text-xs text-slate-500 mb-1 font-semibold" id="lblRteScada">SCADA RTE</span>
                         <div class="bg-slate-900/80 shadow-inner px-3 py-1 sm:px-6 sm:py-2 rounded-lg border border-slate-800/50">
@@ -379,7 +369,7 @@
                 document.getElementById('modalContent').classList.remove('scale-95');
             }, 10);
         }
-        closeMethodologyModal = function() {
+        function closeMethodologyModal() {
             const modal = document.getElementById('methodologyModal');
             modal.classList.add('opacity-0');
             document.getElementById('modalContent').classList.add('scale-95');
