@@ -236,7 +236,6 @@ function updateDashboard() {
     const ispTotal = ispDay.find(d => d.unit === "TOTAL BESS") || { charge: 0, discharge: 0, rte: "0.00%" };
     const scadaTotal = scadaDay.find(d => d.unit === "TOTAL BESS") || { charge: 0, discharge: 0, rte: "0.00%" };
 
-    // Update KPIs (Both PC and Mobile DOM elements)
     const kpiMap = {
         'kpiChargeIsp': ispTotal.charge,
         'kpiChargeIsp_mob': ispTotal.charge,
@@ -376,10 +375,23 @@ function updateMonthlyDashboard() {
         dischargeData.push(cumDischarge); 
     });
 
-    document.getElementById('kpiMonthlyCharge').innerText = formatMWh(cumCharge);
-    document.getElementById('kpiMonthlyCharge').nextElementSibling.innerText = "MWh";
-    document.getElementById('kpiMonthlyDischarge').innerText = formatMWh(cumDischarge);
-    document.getElementById('kpiMonthlyDischarge').nextElementSibling.innerText = "MWh";
+    // Μετατροπή σε μορφοποιημένο κείμενο
+    const strCharge = formatMWh(cumCharge);
+    const strDischarge = formatMWh(cumDischarge);
+
+    // Ενημέρωση PC
+    const kpiChargePc = document.getElementById('kpiMonthlyCharge');
+    if (kpiChargePc) kpiChargePc.innerText = strCharge;
+    
+    const kpiDischargePc = document.getElementById('kpiMonthlyDischarge');
+    if (kpiDischargePc) kpiDischargePc.innerText = strDischarge;
+
+    // Ενημέρωση MOBILE
+    const kpiChargeMob = document.getElementById('kpiMonthlyCharge_mob');
+    if (kpiChargeMob) kpiChargeMob.innerText = strCharge;
+
+    const kpiDischargeMob = document.getElementById('kpiMonthlyDischarge_mob');
+    if (kpiDischargeMob) kpiDischargeMob.innerText = strDischarge;
 
     renderMonthlyCharts(labels, chargeData, dischargeData);
 }
