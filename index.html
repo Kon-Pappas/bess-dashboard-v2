@@ -349,20 +349,20 @@
                 <div class="relative h-96"><canvas id="arbitrageDualChart"></canvas></div>
             </div>
 
-            <!-- ARBITRAGE TABLE (With Mobile Accordion hidden md:table-cell classes) -->
+            <!-- ARBITRAGE TABLE -->
             <div class="bg-slate-800/40 p-4 sm:p-6 rounded-xl border border-slate-700">
                 <h3 id="arbitrageTableTitle" class="text-lg font-semibold text-slate-200 mb-4">Daily Financial Performance & Arbitrage</h3>
                 <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm text-slate-300">
+                    <!-- Base is text-left so the whole table lays out correctly, headers specifically modified -->
+                    <table class="w-full text-sm text-slate-300">
                         <thead class="bg-slate-900 text-slate-400 uppercase text-xs">
                             <tr>
-                                <th id="thUnit" class="p-3">BESS UNIT</th>
-                                <th id="thCharge" class="p-3">TOTAL CHARGE (MWH)</th>
-                                <th id="thDischarge" class="p-3">TOTAL DISCHARGE (MWH)</th>
-                                <!-- These 3 columns are hidden on mobile -->
-                                <th id="thRte" class="p-3 hidden md:table-cell">RTE (%)</th>
-                                <th id="thPnl" class="p-3 hidden md:table-cell">POTENTIAL DAILY P&L (€)</th>
-                                <th id="thProfit" class="p-3 hidden md:table-cell">UNIT PROFIT (€/MWH)</th>
+                                <th id="thUnit" class="p-3 text-left">BESS UNIT</th>
+                                <th id="thCharge" class="p-3 text-right">TOTAL CHARGE (MWH)</th>
+                                <th id="thDischarge" class="p-3 text-right">TOTAL DISCHARGE (MWH)</th>
+                                <th id="thRte" class="p-3 hidden md:table-cell text-right">RTE (%)</th>
+                                <th id="thPnl" class="p-3 hidden md:table-cell text-right">POTENTIAL DAILY P&L (€)</th>
+                                <th id="thProfit" class="p-3 hidden md:table-cell text-right">UNIT PROFIT (€/MWH)</th>
                             </tr>
                         </thead>
                         <tbody id="arbitrageTableBody" class="divide-y divide-slate-700">
