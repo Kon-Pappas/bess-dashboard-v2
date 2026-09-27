@@ -850,7 +850,6 @@ function renderArbitrageTab() {
                 <td class="p-3 text-left" style="border-left: 4px solid transparent;" onmouseover="this.style.borderLeftColor='${item.color}'" onmouseout="if(currentlyIsolatedBess !== '${unit}') this.style.borderLeftColor='transparent'">
                     <div class="flex items-center justify-between font-bold text-slate-300 group-hover:text-white transition-colors" title="${hoverTitle}">
                         <span>${unit}</span>
-                        <!-- Chevron icon for mobile only -->
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 md:hidden text-slate-500 transition-transform duration-300 chevron-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                         </svg>
@@ -871,28 +870,28 @@ function renderArbitrageTab() {
             trMain.onclick = () => toggleBessIsolation(unit);
             tbody.appendChild(trMain);
 
-            // 2. Δημιουργία Κρυφής Γραμμής Ακορντεόν (Expand Row - Only for Mobile)
+            // 2. Δημιουργία Κρυφής Γραμμής Ακορντεόν (Expand Row - Only for Mobile) - VERTICAL LAYOUT
             const trExpand = document.createElement('tr');
-            trExpand.className = "bess-expand-row hidden md:hidden bg-slate-800/40";
+            trExpand.className = "bess-expand-row hidden md:hidden bg-slate-800/30";
             trExpand.id = "expand-" + safeUnitId;
 
             trExpand.innerHTML = `
-                <td colspan="3" class="p-0">
-                    <div class="mx-3 my-2 p-3 rounded bg-slate-900/80 border border-slate-700 shadow-inner flex justify-between items-center" style="border-left: 4px solid ${item.color};">
+                <td colspan="3" class="p-0 border-t-0">
+                    <div class="flex flex-col bg-slate-900/40" style="border-left: 4px solid ${item.color};">
                         
-                        <div class="flex flex-col text-right">
-                            <span class="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">RTE</span>
-                            <span class="${rteColorClass} text-xs font-semibold cursor-help" title="${rteTooltip}">${formatPct(item.rte)}</span>
+                        <div class="flex justify-between items-center py-3 px-4 border-b border-slate-700/50">
+                            <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">RTE</span>
+                            <span class="${rteColorClass} text-sm font-semibold cursor-help" title="${rteTooltip}">${formatPct(item.rte)}</span>
                         </div>
                         
-                        <div class="flex flex-col text-right">
-                            <span class="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">P&L</span>
-                            <span class="text-xs font-bold ${item.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${formatEur(item.pnl)}</span>
+                        <div class="flex justify-between items-center py-3 px-4 border-b border-slate-700/50">
+                            <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Potential Daily P&L</span>
+                            <span class="text-sm font-bold ${item.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${formatEur(item.pnl)}</span>
                         </div>
                         
-                        <div class="flex flex-col text-right">
-                            <span class="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">Profit/MWh</span>
-                            <span class="text-xs font-semibold text-slate-300">${formatEur(item.unitProfit)}</span>
+                        <div class="flex justify-between items-center py-3 px-4">
+                            <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Profit / MWh</span>
+                            <span class="text-sm font-bold text-yellow-400">${formatEur(item.unitProfit)}</span>
                         </div>
 
                     </div>
