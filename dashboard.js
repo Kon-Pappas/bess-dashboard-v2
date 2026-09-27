@@ -852,8 +852,9 @@ function renderArbitrageTab() {
             trMain.className = "bess-main-row hover:bg-slate-700/50 transition-all cursor-pointer group";
             trMain.id = "row-" + safeUnitId;
             
+            // NOTE: ΟΛΑ ΤΑ ΚΕΛΙΑ (εκτός από το BESS Unit) έχουν πλέον class="text-right"
             trMain.innerHTML = `
-                <td class="p-3" style="border-left: 4px solid transparent;" onmouseover="this.style.borderLeftColor='${item.color}'" onmouseout="if(currentlyIsolatedBess !== '${unit}') this.style.borderLeftColor='transparent'">
+                <td class="p-3 text-left" style="border-left: 4px solid transparent;" onmouseover="this.style.borderLeftColor='${item.color}'" onmouseout="if(currentlyIsolatedBess !== '${unit}') this.style.borderLeftColor='transparent'">
                     <div class="flex items-center justify-between font-bold text-slate-300 group-hover:text-white transition-colors" title="${hoverTitle}">
                         <span>${unit}</span>
                         <!-- Chevron icon for mobile only -->
@@ -862,16 +863,16 @@ function renderArbitrageTab() {
                         </svg>
                     </div>
                 </td>
-                <td class="p-3">${formatMWh(item.charge)}</td>
-                <td class="p-3">${formatMWh(item.discharge)}</td>
+                <td class="p-3 text-right">${formatMWh(item.charge)}</td>
+                <td class="p-3 text-right">${formatMWh(item.discharge)}</td>
                 <!-- Hidden on mobile -->
-                <td class="p-3 hidden md:table-cell">
+                <td class="p-3 hidden md:table-cell text-right">
                     <span class="${rteColorClass} cursor-help border-b border-dotted border-slate-500" title="${rteTooltip}">
                         ${formatPct(item.rte)}
                     </span>
                 </td>
-                <td class="p-3 font-semibold hidden md:table-cell ${item.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${formatEur(item.pnl)}</td>
-                <td class="p-3 hidden md:table-cell">${formatEur(item.unitProfit)} / MWh</td>
+                <td class="p-3 font-semibold hidden md:table-cell text-right ${item.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${formatEur(item.pnl)}</td>
+                <td class="p-3 hidden md:table-cell text-right">${formatEur(item.unitProfit)} / MWh</td>
             `;
             
             trMain.onclick = () => toggleBessIsolation(unit);
@@ -879,20 +880,20 @@ function renderArbitrageTab() {
 
             // 2. Δημιουργία Κρυφής Γραμμής Ακορντεόν (Expand Row - Only for Mobile)
             const trExpand = document.createElement('tr');
-            // 'hidden' = κρύβεται by default. 'md:hidden' = διασφαλίζει ότι δεν θα εμφανιστεί ΠΟΤΕ σε οθόνη υπολογιστή
             trExpand.className = "bess-expand-row hidden md:hidden bg-slate-800/40";
             trExpand.id = "expand-" + safeUnitId;
 
+            // NOTE: Τα μπλοκ μέσα στο ακορντεόν έγιναν text-right (η στοίχιση του κειμένου τους δηλαδή προς τα δεξιά)
             trExpand.innerHTML = `
                 <td colspan="3" class="p-0">
                     <div class="mx-3 my-2 p-3 rounded bg-slate-900/80 border border-slate-700 shadow-inner flex justify-between items-center" style="border-left: 4px solid ${item.color};">
                         
-                        <div class="flex flex-col text-left">
+                        <div class="flex flex-col text-right">
                             <span class="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">RTE</span>
                             <span class="${rteColorClass} text-xs font-semibold cursor-help" title="${rteTooltip}">${formatPct(item.rte)}</span>
                         </div>
                         
-                        <div class="flex flex-col text-center">
+                        <div class="flex flex-col text-right">
                             <span class="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">P&L</span>
                             <span class="text-xs font-bold ${item.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${formatEur(item.pnl)}</span>
                         </div>
