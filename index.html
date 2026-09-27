@@ -349,7 +349,8 @@
                 <div class="relative h-96"><canvas id="arbitrageDualChart"></canvas></div>
             </div>
 
-            <div class="bg-slate-800/40 p-6 rounded-xl border border-slate-700">
+            <!-- ARBITRAGE TABLE (With Mobile Accordion hidden md:table-cell classes) -->
+            <div class="bg-slate-800/40 p-4 sm:p-6 rounded-xl border border-slate-700">
                 <h3 id="arbitrageTableTitle" class="text-lg font-semibold text-slate-200 mb-4">Daily Financial Performance & Arbitrage</h3>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-sm text-slate-300">
@@ -358,9 +359,10 @@
                                 <th id="thUnit" class="p-3">BESS UNIT</th>
                                 <th id="thCharge" class="p-3">TOTAL CHARGE (MWH)</th>
                                 <th id="thDischarge" class="p-3">TOTAL DISCHARGE (MWH)</th>
-                                <th id="thRte" class="p-3">RTE (%)</th>
-                                <th id="thPnl" class="p-3">POTENTIAL DAILY P&L (€)</th>
-                                <th id="thProfit" class="p-3">UNIT PROFIT (€/MWH)</th>
+                                <!-- These 3 columns are hidden on mobile -->
+                                <th id="thRte" class="p-3 hidden md:table-cell">RTE (%)</th>
+                                <th id="thPnl" class="p-3 hidden md:table-cell">POTENTIAL DAILY P&L (€)</th>
+                                <th id="thProfit" class="p-3 hidden md:table-cell">UNIT PROFIT (€/MWH)</th>
                             </tr>
                         </thead>
                         <tbody id="arbitrageTableBody" class="divide-y divide-slate-700">
