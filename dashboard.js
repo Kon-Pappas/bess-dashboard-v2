@@ -187,35 +187,62 @@ function switchTab(tabName) {
 }
 
 // ==========================================
-// INTERACTIVE ISOLATION FOR ARBITRAGE
+// INTERACTIVE ISOLATION & MOBILE ACCORDION
 // ==========================================
 function toggleBessIsolation(clickedUnit) {
     if (!arbitrageDualChartInst) return;
 
     const datasets = arbitrageDualChartInst.data.datasets;
+    const safeUnitId = clickedUnit.replace(/\s+/g, '-');
     
     if (currentlyIsolatedBess === clickedUnit) {
+        // DESELECT ALL: Restore Chart to full visibility
         currentlyIsolatedBess = null;
         datasets.forEach((ds, idx) => {
             arbitrageDualChartInst.setDatasetVisibility(idx, true);
         });
-        document.querySelectorAll('#arbitrageTableBody tr').forEach(tr => {
+        
+        // Restore opacity 100% to all main rows and reset chevrons
+        document.querySelectorAll('.bess-main-row').forEach(tr => {
             tr.style.opacity = '1';
+            const icon = tr.querySelector('.chevron-icon');
+            if (icon) icon.classList.remove('rotate-180');
+        });
+        
+        // Hide all mobile accordion expansion rows
+        document.querySelectorAll('.bess-expand-row').forEach(tr => {
+            tr.classList.add('hidden');
         });
     } else {
+        // SELECT SPECIFIC UNIT: Isolate in chart
         currentlyIsolatedBess = clickedUnit;
         datasets.forEach((ds, idx) => {
             if (ds.yAxisID === 'yMcp') {
-                arbitrageDualChartInst.setDatasetVisibility(idx, true);
+                arbitrageDualChartInst.setDatasetVisibility(idx, true); // Keep MCP line visible
             } else {
                 arbitrageDualChartInst.setDatasetVisibility(idx, ds.label === clickedUnit);
             }
         });
-        document.querySelectorAll('#arbitrageTableBody tr').forEach(tr => {
-            if (tr.id === "row-" + clickedUnit.replace(/\s+/g, '-')) {
+        
+        // Drop opacity for unselected main rows, rotate chevron for selected
+        document.querySelectorAll('.bess-main-row').forEach(tr => {
+            const icon = tr.querySelector('.chevron-icon');
+            if (tr.id === "row-" + safeUnitId) {
                 tr.style.opacity = '1';
+                if (icon) icon.classList.add('rotate-180');
             } else {
                 tr.style.opacity = '0.3';
+                if (icon) icon.classList.remove('rotate-180');
+            }
+        });
+        
+        // Show ONLY the correct mobile accordion row
+        document.querySelectorAll('.bess-expand-row').forEach(tr => {
+            if (tr.id === "expand-" + safeUnitId) {
+                tr.classList.remove('hidden');
+                tr.style.opacity = '1'; 
+            } else {
+                tr.classList.add('hidden');
             }
         });
     }
@@ -375,18 +402,15 @@ function updateMonthlyDashboard() {
         dischargeData.push(cumDischarge); 
     });
 
-    // Μετατροπή σε μορφοποιημένο κείμενο
     const strCharge = formatMWh(cumCharge);
     const strDischarge = formatMWh(cumDischarge);
 
-    // Ενημέρωση PC
     const kpiChargePc = document.getElementById('kpiMonthlyCharge');
     if (kpiChargePc) kpiChargePc.innerText = strCharge;
     
     const kpiDischargePc = document.getElementById('kpiMonthlyDischarge');
     if (kpiDischargePc) kpiDischargePc.innerText = strDischarge;
 
-    // Ενημέρωση MOBILE
     const kpiChargeMob = document.getElementById('kpiMonthlyCharge_mob');
     if (kpiChargeMob) kpiChargeMob.innerText = strCharge;
 
@@ -801,12 +825,13 @@ function renderArbitrageTab() {
         }
     });
 
+    // Populate Table with Accordion functionality
     const tbody = document.getElementById('arbitrageTableBody');
     if (tbody) {
         tbody.innerHTML = '';
         Object.keys(pnlSummary).forEach(unit => {
             const item = pnlSummary[unit];
-            const tr = document.createElement('tr');
+            const safeUnitId = unit.replace(/\s+/g, '-');
             
             let rteColorClass = "text-slate-300"; 
             let rteTooltip = (lang === 'en') ? "Normal RTE levels." : "Φυσιολογικά επίπεδα απόδοσης (RTE).";
@@ -822,24 +847,68 @@ function renderArbitrageTab() {
                 rteTooltip = (lang === 'en') ? "Zero cycle activity." : "Μηδενική δραστηριότητα κύκλου.";
             }
             
-            tr.className = "hover:bg-slate-700/50 transition-all cursor-pointer group";
-            tr.id = "row-" + unit.replace(/\s+/g, '-');
+            // 1. Δημιουργία Κύριας Γραμμής (Main Row)
+            const trMain = document.createElement('tr');
+            trMain.className = "bess-main-row hover:bg-slate-700/50 transition-all cursor-pointer group";
+            trMain.id = "row-" + safeUnitId;
             
-            tr.innerHTML = `
-                <td class="p-3 font-bold text-slate-300 group-hover:text-white transition-colors" title="${hoverTitle}" style="border-left: 4px solid transparent;" onmouseover="this.style.borderLeftColor='${item.color}'" onmouseout="this.style.borderLeftColor='transparent'">${unit}</td>
+            trMain.innerHTML = `
+                <td class="p-3" style="border-left: 4px solid transparent;" onmouseover="this.style.borderLeftColor='${item.color}'" onmouseout="if(currentlyIsolatedBess !== '${unit}') this.style.borderLeftColor='transparent'">
+                    <div class="flex items-center justify-between font-bold text-slate-300 group-hover:text-white transition-colors" title="${hoverTitle}">
+                        <span>${unit}</span>
+                        <!-- Chevron icon for mobile only -->
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 md:hidden text-slate-500 transition-transform duration-300 chevron-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </div>
+                </td>
                 <td class="p-3">${formatMWh(item.charge)}</td>
                 <td class="p-3">${formatMWh(item.discharge)}</td>
-                <td class="p-3">
+                <!-- Hidden on mobile -->
+                <td class="p-3 hidden md:table-cell">
                     <span class="${rteColorClass} cursor-help border-b border-dotted border-slate-500" title="${rteTooltip}">
                         ${formatPct(item.rte)}
                     </span>
                 </td>
-                <td class="p-3 font-semibold ${item.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${formatEur(item.pnl)}</td>
-                <td class="p-3">${formatEur(item.unitProfit)} / MWh</td>
+                <td class="p-3 font-semibold hidden md:table-cell ${item.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${formatEur(item.pnl)}</td>
+                <td class="p-3 hidden md:table-cell">${formatEur(item.unitProfit)} / MWh</td>
             `;
             
-            tr.onclick = () => toggleBessIsolation(unit);
-            tbody.appendChild(tr);
+            trMain.onclick = () => toggleBessIsolation(unit);
+            tbody.appendChild(trMain);
+
+            // 2. Δημιουργία Κρυφής Γραμμής Ακορντεόν (Expand Row - Only for Mobile)
+            const trExpand = document.createElement('tr');
+            // 'hidden' = κρύβεται by default. 'md:hidden' = διασφαλίζει ότι δεν θα εμφανιστεί ΠΟΤΕ σε οθόνη υπολογιστή
+            trExpand.className = "bess-expand-row hidden md:hidden bg-slate-800/40";
+            trExpand.id = "expand-" + safeUnitId;
+
+            trExpand.innerHTML = `
+                <td colspan="3" class="p-0">
+                    <div class="mx-3 my-2 p-3 rounded bg-slate-900/80 border border-slate-700 shadow-inner flex justify-between items-center" style="border-left: 4px solid ${item.color};">
+                        
+                        <div class="flex flex-col text-left">
+                            <span class="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">RTE</span>
+                            <span class="${rteColorClass} text-xs font-semibold cursor-help" title="${rteTooltip}">${formatPct(item.rte)}</span>
+                        </div>
+                        
+                        <div class="flex flex-col text-center">
+                            <span class="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">P&L</span>
+                            <span class="text-xs font-bold ${item.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${formatEur(item.pnl)}</span>
+                        </div>
+                        
+                        <div class="flex flex-col text-right">
+                            <span class="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">Unit Profit</span>
+                            <span class="text-xs font-semibold text-slate-300">${formatEur(item.unitProfit)}</span>
+                        </div>
+
+                    </div>
+                </td>
+            `;
+            
+            // Το expand row είναι click-through ή κλείνει το ακορντεόν αν πατηθεί
+            trExpand.onclick = () => toggleBessIsolation(unit);
+            tbody.appendChild(trExpand);
         });
     }
 }
