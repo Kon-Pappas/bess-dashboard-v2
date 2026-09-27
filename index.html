@@ -83,7 +83,7 @@
                         </div>
                     </div>
 
-                    <!-- 2. LANGUAGE SWITCHER (Χρησιμοποιεί πλέον την changeLang) -->
+                    <!-- 2. LANGUAGE SWITCHER -->
                     <div class="w-full h-10 md:h-auto md:w-auto flex justify-center items-center gap-6 md:gap-2 bg-slate-800/80 md:bg-slate-800 border border-slate-700 rounded-xl md:rounded-lg px-4 md:p-1 text-sm md:text-xs font-bold shadow-sm">
                         <button onclick="changeLang('el')" id="btnGr" class="px-4 py-1 md:px-2 md:py-1 rounded text-slate-400 hover:text-white transition">GR</button>
                         <button onclick="changeLang('en')" id="btnEn" class="px-4 py-1 md:px-2 md:py-1 rounded bg-indigo-500 md:bg-emerald-600 text-white transition shadow-md">EN</button>
@@ -224,29 +224,59 @@
         </div>
 
         <!-- VIEW 2: MONTHLY IMPACT -->
-        <div id="viewMonthly" class="space-y-8 hidden">
-            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mt-4">
-                <div class="lg:col-span-3 bg-slate-800/40 p-6 rounded-xl border border-slate-700">
-                    <h2 class="text-lg font-semibold text-slate-200 mb-1" id="monthlyDischargeTitle">Potential Displaced Thermal Generation (Lignite/Gas) - (Cumulative Discharge)</h2>
-                    <p class="text-xs text-slate-400 mb-4" id="monthlyDischargeSub">SCADA Data - Avoided Thermal Generation</p>
-                    <div class="relative h-80"><canvas id="monthlyDischargeChart"></canvas></div>
-                </div>
-                <div class="bg-slate-800/60 p-6 rounded-xl border border-slate-700 flex flex-col justify-center text-center">
-                    <h3 class="text-sm font-medium text-slate-400 mb-4 uppercase tracking-wider" id="kpiLabelDisplaced">Monthly Displaced</h3>
-                    <span id="kpiMonthlyDischarge" class="text-4xl font-bold text-emerald-400">0.00</span>
-                    <span class="text-sm text-slate-500 block mt-1">GWh</span>
+        <div id="viewMonthly" class="space-y-6 hidden pt-4">
+
+            <!-- PC VIEW ONLY: EXECUTIVE SUMMARY RIBBON (Top KPIs for Monthly) -->
+            <div class="hidden lg:grid grid-cols-2 gap-6">
+                <!-- 1. PC: Monthly Displaced -->
+                <div class="bg-slate-800/60 p-4 rounded-xl border border-slate-700 flex flex-col justify-center text-center shadow-sm">
+                    <h3 class="text-sm font-medium text-slate-400 mb-2 uppercase tracking-wider" id="kpiLabelDisplaced">Monthly Displaced</h3>
+                    <div class="flex items-baseline justify-center gap-1">
+                        <span id="kpiMonthlyDischarge" class="text-3xl font-bold text-emerald-400">0</span>
+                        <span class="text-sm text-slate-500">MWh</span>
+                    </div>
                 </div>
 
-                <div class="lg:col-span-3 bg-slate-800/40 p-6 rounded-xl border border-slate-700 mt-6 lg:mt-0">
-                    <h2 class="text-lg font-semibold text-slate-200 mb-1" id="monthlyChargeTitle">Potential Avoided RES Curtailment (Cumulative Charge)</h2>
-                    <p class="text-xs text-slate-400 mb-4" id="monthlyChargeSub">SCADA Data - Energy saved from curtailment</p>
-                    <div class="relative h-80"><canvas id="monthlyChargeChart"></canvas></div>
+                <!-- 2. PC: Monthly Avoided -->
+                <div class="bg-slate-800/60 p-4 rounded-xl border border-slate-700 flex flex-col justify-center text-center shadow-sm">
+                    <h3 class="text-sm font-medium text-slate-400 mb-2 uppercase tracking-wider" id="kpiLabelAvoided">Monthly Avoided</h3>
+                    <div class="flex items-baseline justify-center gap-1">
+                        <span id="kpiMonthlyCharge" class="text-3xl font-bold text-orange-400">0</span>
+                        <span class="text-sm text-slate-500">MWh</span>
+                    </div>
                 </div>
-                <div class="bg-slate-800/60 p-6 rounded-xl border border-slate-700 flex flex-col justify-center text-center mt-6 lg:mt-0">
-                    <h3 class="text-sm font-medium text-slate-400 mb-4 uppercase tracking-wider" id="kpiLabelAvoided">Monthly Avoided</h3>
-                    <span id="kpiMonthlyCharge" class="text-4xl font-bold text-orange-400">0.00</span>
-                    <span class="text-sm text-slate-500 block mt-1">GWh</span>
+            </div>
+
+            <!-- MONTHLY DISCHARGE SECTION (Full Width Chart) -->
+            <div class="bg-slate-800/40 p-4 sm:p-6 rounded-xl border border-slate-700">
+                <!-- MOBILE VIEW ONLY: KPI Inside Chart Card -->
+                <div class="block lg:hidden bg-slate-900/50 p-4 rounded-xl border border-slate-800 flex-col justify-center text-center shadow-inner mb-6">
+                    <h3 class="text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider" id="mobKpiLabelDisplaced">Monthly Displaced</h3>
+                    <div class="flex items-baseline justify-center gap-1">
+                        <span id="kpiMonthlyDischarge_mob" class="text-2xl font-bold text-emerald-400">0</span>
+                        <span class="text-xs text-slate-500">MWh</span>
+                    </div>
                 </div>
+                
+                <h2 class="text-base sm:text-lg font-semibold text-slate-200 mb-1" id="monthlyDischargeTitle">Potential Displaced Thermal Generation (Lignite/Gas) - (Cumulative Discharge)</h2>
+                <p class="text-xs text-slate-400 mb-4" id="monthlyDischargeSub">SCADA Data - Avoided Thermal Generation</p>
+                <div class="relative h-64 sm:h-80"><canvas id="monthlyDischargeChart"></canvas></div>
+            </div>
+
+            <!-- MONTHLY CHARGE SECTION (Full Width Chart) -->
+            <div class="bg-slate-800/40 p-4 sm:p-6 rounded-xl border border-slate-700">
+                <!-- MOBILE VIEW ONLY: KPI Inside Chart Card -->
+                <div class="block lg:hidden bg-slate-900/50 p-4 rounded-xl border border-slate-800 flex-col justify-center text-center shadow-inner mb-6">
+                    <h3 class="text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider" id="mobKpiLabelAvoided">Monthly Avoided</h3>
+                    <div class="flex items-baseline justify-center gap-1">
+                        <span id="kpiMonthlyCharge_mob" class="text-2xl font-bold text-orange-400">0</span>
+                        <span class="text-xs text-slate-500">MWh</span>
+                    </div>
+                </div>
+
+                <h2 class="text-base sm:text-lg font-semibold text-slate-200 mb-1" id="monthlyChargeTitle">Potential Avoided RES Curtailment (Cumulative Charge)</h2>
+                <p class="text-xs text-slate-400 mb-4" id="monthlyChargeSub">SCADA Data - Energy saved from curtailment</p>
+                <div class="relative h-64 sm:h-80"><canvas id="monthlyChargeChart"></canvas></div>
             </div>
         </div>
 
@@ -370,7 +400,7 @@
         </div>
     </div>
 
-    <!-- Script για το Modal και την ασφαλή εναλλαγή γλώσσας (changeLang) -->
+    <!-- Script για το Modal και την ασφαλή εναλλαγή γλώσσας -->
     <script>
         function openMethodologyModal() {
             const modal = document.getElementById('methodologyModal');
