@@ -196,35 +196,30 @@ function toggleBessIsolation(clickedUnit) {
     const safeUnitId = clickedUnit.replace(/\s+/g, '-');
     
     if (currentlyIsolatedBess === clickedUnit) {
-        // DESELECT ALL: Restore Chart to full visibility
         currentlyIsolatedBess = null;
         datasets.forEach((ds, idx) => {
             arbitrageDualChartInst.setDatasetVisibility(idx, true);
         });
         
-        // Restore opacity 100% to all main rows and reset chevrons
         document.querySelectorAll('.bess-main-row').forEach(tr => {
             tr.style.opacity = '1';
             const icon = tr.querySelector('.chevron-icon');
             if (icon) icon.classList.remove('rotate-180');
         });
         
-        // Hide all mobile accordion expansion rows
         document.querySelectorAll('.bess-expand-row').forEach(tr => {
             tr.classList.add('hidden');
         });
     } else {
-        // SELECT SPECIFIC UNIT: Isolate in chart
         currentlyIsolatedBess = clickedUnit;
         datasets.forEach((ds, idx) => {
             if (ds.yAxisID === 'yMcp') {
-                arbitrageDualChartInst.setDatasetVisibility(idx, true); // Keep MCP line visible
+                arbitrageDualChartInst.setDatasetVisibility(idx, true);
             } else {
                 arbitrageDualChartInst.setDatasetVisibility(idx, ds.label === clickedUnit);
             }
         });
         
-        // Drop opacity for unselected main rows, rotate chevron for selected
         document.querySelectorAll('.bess-main-row').forEach(tr => {
             const icon = tr.querySelector('.chevron-icon');
             if (tr.id === "row-" + safeUnitId) {
@@ -236,7 +231,6 @@ function toggleBessIsolation(clickedUnit) {
             }
         });
         
-        // Show ONLY the correct mobile accordion row
         document.querySelectorAll('.bess-expand-row').forEach(tr => {
             if (tr.id === "expand-" + safeUnitId) {
                 tr.classList.remove('hidden');
@@ -852,7 +846,6 @@ function renderArbitrageTab() {
             trMain.className = "bess-main-row hover:bg-slate-700/50 transition-all cursor-pointer group";
             trMain.id = "row-" + safeUnitId;
             
-            // NOTE: ΟΛΑ ΤΑ ΚΕΛΙΑ (εκτός από το BESS Unit) έχουν πλέον class="text-right"
             trMain.innerHTML = `
                 <td class="p-3 text-left" style="border-left: 4px solid transparent;" onmouseover="this.style.borderLeftColor='${item.color}'" onmouseout="if(currentlyIsolatedBess !== '${unit}') this.style.borderLeftColor='transparent'">
                     <div class="flex items-center justify-between font-bold text-slate-300 group-hover:text-white transition-colors" title="${hoverTitle}">
@@ -883,7 +876,6 @@ function renderArbitrageTab() {
             trExpand.className = "bess-expand-row hidden md:hidden bg-slate-800/40";
             trExpand.id = "expand-" + safeUnitId;
 
-            // NOTE: Τα μπλοκ μέσα στο ακορντεόν έγιναν text-right (η στοίχιση του κειμένου τους δηλαδή προς τα δεξιά)
             trExpand.innerHTML = `
                 <td colspan="3" class="p-0">
                     <div class="mx-3 my-2 p-3 rounded bg-slate-900/80 border border-slate-700 shadow-inner flex justify-between items-center" style="border-left: 4px solid ${item.color};">
@@ -899,7 +891,7 @@ function renderArbitrageTab() {
                         </div>
                         
                         <div class="flex flex-col text-right">
-                            <span class="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">Unit Profit</span>
+                            <span class="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">Profit/MWh</span>
                             <span class="text-xs font-semibold text-slate-300">${formatEur(item.unitProfit)}</span>
                         </div>
 
@@ -907,7 +899,6 @@ function renderArbitrageTab() {
                 </td>
             `;
             
-            // Το expand row είναι click-through ή κλείνει το ακορντεόν αν πατηθεί
             trExpand.onclick = () => toggleBessIsolation(unit);
             tbody.appendChild(trExpand);
         });
