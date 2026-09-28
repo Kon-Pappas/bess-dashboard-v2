@@ -819,7 +819,6 @@ function renderArbitrageTab() {
         }
     });
 
-    // Populate Table with Accordion functionality
     const tbody = document.getElementById('arbitrageTableBody');
     if (tbody) {
         tbody.innerHTML = '';
@@ -841,7 +840,6 @@ function renderArbitrageTab() {
                 rteTooltip = (lang === 'en') ? "Zero cycle activity." : "Μηδενική δραστηριότητα κύκλου.";
             }
             
-            // 1. Δημιουργία Κύριας Γραμμής (Main Row)
             const trMain = document.createElement('tr');
             trMain.className = "bess-main-row hover:bg-slate-700/50 transition-all cursor-pointer group";
             trMain.id = "row-" + safeUnitId;
@@ -857,7 +855,6 @@ function renderArbitrageTab() {
                 </td>
                 <td class="p-3 text-right">${formatMWh(item.charge)}</td>
                 <td class="p-3 text-right">${formatMWh(item.discharge)}</td>
-                <!-- Hidden on mobile -->
                 <td class="p-3 hidden md:table-cell text-right">
                     <span class="${rteColorClass} cursor-help border-b border-dotted border-slate-500" title="${rteTooltip}">
                         ${formatPct(item.rte)}
@@ -870,7 +867,6 @@ function renderArbitrageTab() {
             trMain.onclick = () => toggleBessIsolation(unit);
             tbody.appendChild(trMain);
 
-            // 2. Δημιουργία Κρυφής Γραμμής Ακορντεόν (Expand Row - Only for Mobile) - VERTICAL LAYOUT
             const trExpand = document.createElement('tr');
             trExpand.className = "bess-expand-row hidden md:hidden bg-slate-800/30";
             trExpand.id = "expand-" + safeUnitId;
@@ -905,78 +901,130 @@ function renderArbitrageTab() {
 }
 
 // ==========================================
-// INITIALIZATION & PROGRESS LOADING SCREEN 
+// NEO INITIALIZATION & WATERFALL LOADING UI 
 // ==========================================
+
+function animateStep(stepNum, nextAction) {
+    const row = document.getElementById(`loadRow${stepNum}`);
+    const bar = document.getElementById(`loadBar${stepNum}`);
+    const pct = document.getElementById(`loadPct${stepNum}`);
+    
+    // Εμφάνιση της σειράς
+    if (row) row.classList.remove('opacity-0');
+    
+    // Μικρή καθυστέρηση για να παίξει το CSS transition
+    setTimeout(() => {
+        if (bar) bar.style.width = '100%'; // Η μπάρα αρχίζει να γεμίζει (css duration 300ms)
+        
+        // Counter από 0 έως 100
+        let start = 0;
+        const interval = setInterval(() => {
+            start += 12; // Ταχύτητα γεμίσματος
+            if (start >= 100) {
+                start = 100;
+                clearInterval(interval);
+                
+                // Μόλις φτάσει 100%, βάζουμε πράσινο χρώμα και SVG checkmark (τικ)
+                if (pct) {
+                    pct.innerHTML = `<svg class="w-3.5 h-3.5 text-emerald-400 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>`;
+                }
+                if (bar) {
+                    if(stepNum === 1) bar.classList.replace('bg-blue-500', 'bg-emerald-500');
+                    else bar.classList.replace('bg-purple-500', 'bg-emerald-500');
+                }
+            } else {
+                if (pct) pct.innerText = start + '%';
+            }
+        }, 30); // Ανανέωση νούμερου κάθε 30ms (συνολικά ~250ms)
+        
+        // Πάμε στο επόμενο βήμα μετά από 500ms
+        setTimeout(() => {
+            if (nextAction) nextAction();
+        }, 500);
+        
+    }, 50);
+}
+
 window.addEventListener('load', () => {
 
+    // Ασφαλής ρύθμιση γλώσσας
     try {
         if (typeof setLang === 'function') setLang('en');
     } catch (err) {
-        console.warn('Αποτυχία φόρτωσης μετάφρασης κατά την εκκίνηση:', err);
+        console.warn('Αποτυχία φόρτωσης μετάφρασης:', err);
     }
 
-    const bar = document.getElementById('loading-progress-bar');
-    const pct = document.getElementById('loading-percentage');
-    const sub = document.getElementById('loading-subtitle');
-    const overlay = document.getElementById('loading-overlay');
-
-    function updateProgress(percent, text) {
-        if (bar) bar.style.width = percent + '%';
-        if (pct) pct.innerText = percent + '%';
-        if (sub) sub.innerText = text;
-    }
-
-    updateProgress(15, 'Reading data files...');
-
+    // Καθυστερούμε λιγάκι για να είμαστε σίγουροι ότι "ζωγραφίστηκε" το modal στην οθόνη
     setTimeout(() => {
-        try {
-            updateProgress(40, 'Calculating Daily Analytics & KPIs...');
-            initGlobalDates();
-            switchTab('daily');
-        } catch (e) { console.error(e); }
-
-        setTimeout(() => {
-            try {
-                updateProgress(70, 'Processing Monthly & Flexibility Data...');
+        
+        // ΒΗΜΑ 1: Data Files
+        animateStep(1, () => {
+            
+            // Τρέχουμε τους υπολογισμούς στο background τώρα (Daily)
+            try { initGlobalDates(); switchTab('daily'); } catch (e) { console.error(e); }
+            
+            // ΒΗΜΑ 2: Daily Analytics
+            animateStep(2, () => {
                 
-                const mSelect = document.getElementById('monthSelect');
-                if (mSelect && rawData && rawData.scada) {
-                    const monthsSet = new Set();
-                    rawData.scada.forEach(d => { if (d.date) monthsSet.add(d.date.substring(0, 7)); });
-                    const months = [...monthsSet].sort();
-                    mSelect.innerHTML = '';
-                    months.forEach(m => {
-                        let opt = document.createElement('option');
-                        opt.value = m; opt.innerText = m;
-                        mSelect.appendChild(opt);
-                    });
-                    if (months.length > 0) mSelect.value = months[months.length - 1];
-                }
-
-                const mSelectSurp = document.getElementById('monthSelectSurplus');
-                if (mSelectSurp && rawData && rawData.surplus) {
-                    const monthsSet = new Set();
-                    rawData.surplus.forEach(d => { if (d.date) monthsSet.add(d.date.substring(0, 7)); });
-                    const months = [...monthsSet].sort();
-                    mSelectSurp.innerHTML = '';
-                    months.forEach(m => {
-                        let opt = document.createElement('option');
-                        opt.value = m; opt.innerText = m;
-                        mSelectSurp.appendChild(opt);
-                    });
-                    if (months.length > 0) mSelectSurp.value = months[months.length - 1];
-                }
-            } catch (e) { console.error(e); }
-
-            setTimeout(() => {
-                updateProgress(100, 'Dashboard is ready!');
-                setTimeout(() => {
-                    if (overlay) {
-                        overlay.classList.add('opacity-0');
-                        setTimeout(() => { overlay.style.display = 'none'; }, 500); 
+                // Υπολογισμοί background (Monthly)
+                try {
+                    const mSelect = document.getElementById('monthSelect');
+                    if (mSelect && rawData && rawData.scada) {
+                        const mSet = new Set();
+                        rawData.scada.forEach(d => { if (d.date) mSet.add(d.date.substring(0, 7)); });
+                        const months = [...mSet].sort();
+                        mSelect.innerHTML = '';
+                        months.forEach(m => mSelect.appendChild(new Option(m, m)));
+                        if (months.length > 0) mSelect.value = months[months.length - 1];
                     }
-                }, 500); 
-            }, 500); 
-        }, 500); 
-    }, 500); 
+                } catch (e) { console.error(e); }
+
+                // ΒΗΜΑ 3: Monthly Impact
+                animateStep(3, () => {
+                    
+                    // Υπολογισμοί background (Surplus)
+                    try {
+                        const msSelect = document.getElementById('monthSelectSurplus');
+                        if (msSelect && rawData && rawData.surplus) {
+                            const mSet = new Set();
+                            rawData.surplus.forEach(d => { if (d.date) mSet.add(d.date.substring(0, 7)); });
+                            const months = [...mSet].sort();
+                            msSelect.innerHTML = '';
+                            months.forEach(m => msSelect.appendChild(new Option(m, m)));
+                            if (months.length > 0) msSelect.value = months[months.length - 1];
+                        }
+                    } catch (e) { console.error(e); }
+
+                    // ΒΗΜΑ 4: Surplus & Flex
+                    animateStep(4, () => {
+                        
+                        // ΒΗΜΑ 5: Arbitrage P&L
+                        animateStep(5, () => {
+                            
+                            // ΒΗΜΑ 6: Dashboard is Ready!
+                            const row6 = document.getElementById('loadRow6');
+                            const spinner = document.getElementById('mainSpinner');
+                            
+                            if (spinner) spinner.classList.add('hidden'); // Κρύβουμε το spinner
+                            
+                            if (row6) {
+                                row6.classList.remove('opacity-0', 'translate-y-2');
+                                row6.classList.add('opacity-100', 'translate-y-0');
+                            }
+                            
+                            // Περιμένουμε λίγο να το δει ο χρήστης και σβήνουμε το Overlay
+                            setTimeout(() => {
+                                const overlay = document.getElementById('loading-overlay');
+                                if (overlay) {
+                                    overlay.classList.add('opacity-0');
+                                    setTimeout(() => overlay.style.display = 'none', 500); 
+                                }
+                            }, 800);
+                            
+                        }); // Τέλος 5
+                    }); // Τέλος 4
+                }); // Τέλος 3
+            }); // Τέλος 2
+        }); // Τέλος 1
+    }, 200); // Αρχική καθυστέρηση
 });
