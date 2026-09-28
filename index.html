@@ -9,21 +9,96 @@
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen p-4 md:p-8 flex flex-col justify-between">
 
-    <!-- Loading Overlay -->
-    <div id="loading-overlay" class="fixed inset-0 z-[9999] bg-slate-900 flex flex-col items-center justify-center transition-opacity duration-500 px-4">
-        <div class="w-16 h-16 border-4 border-slate-700 border-t-emerald-500 rounded-full animate-spin mb-6"></div>
-        <div class="text-white text-xl font-semibold text-center mb-2" id="loading-title">
-            Loading Market Data...
-        </div>
-        <div class="text-sm text-slate-400 text-center mb-6" id="loading-subtitle">
-            Reading data files...
-        </div>
+    <!-- NEO LOADING OVERLAY (Waterfall Boot Sequence) -->
+    <div id="loading-overlay" class="fixed inset-0 z-[9999] bg-slate-900/95 backdrop-blur-sm flex flex-col items-center justify-center transition-opacity duration-500 px-4">
         
-        <!-- Progress Bar Container -->
-        <div class="w-full max-w-md bg-slate-800 rounded-full h-4 p-0.5 border border-slate-700 overflow-hidden shadow-inner">
-            <div id="loading-progress-bar" class="bg-emerald-500 h-full rounded-full transition-all duration-300" style="width: 15%;"></div>
+        <!-- Main Container (Compact & Mobile Safe) -->
+        <div class="w-full max-w-sm bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl p-5 flex flex-col gap-4">
+            
+            <!-- Header -->
+            <div class="flex items-center gap-3 mb-1 border-b border-slate-700/50 pb-3">
+                <div class="w-5 h-5 border-2 border-slate-600 border-t-emerald-500 rounded-full animate-spin" id="mainSpinner"></div>
+                <h2 class="text-white text-base font-bold tracking-wide">System Initialization</h2>
+            </div>
+
+            <!-- Κουτί (Α): Data -->
+            <div class="bg-slate-900/50 rounded-xl p-3 border border-slate-700/50 flex flex-col gap-2">
+                <div class="flex items-center gap-2 mb-1">
+                    <svg class="w-3.5 h-3.5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" /></svg>
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Data Fetching</span>
+                </div>
+                
+                <!-- (α) Σειρά 1 -->
+                <div class="opacity-0 transition-opacity duration-300" id="loadRow1">
+                    <div class="flex justify-between items-end mb-1">
+                        <span class="text-xs text-slate-300">Reading data files</span>
+                        <span class="text-[10px] font-mono text-emerald-400 font-bold" id="loadPct1">0%</span>
+                    </div>
+                    <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                        <div class="bg-blue-500 h-full rounded-full w-0 transition-all duration-300 ease-out" id="loadBar1"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Κουτί (Β): Analytics Engine -->
+            <div class="bg-slate-900/50 rounded-xl p-3 border border-slate-700/50 flex flex-col gap-3 mt-1">
+                <div class="flex items-center gap-2 mb-1">
+                    <svg class="w-3.5 h-3.5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Analytics Engine</span>
+                </div>
+                
+                <!-- (β) Σειρά 2 -->
+                <div class="opacity-0 transition-opacity duration-300" id="loadRow2">
+                    <div class="flex justify-between items-end mb-1">
+                        <span class="text-xs text-slate-300">Loading Daily Analytics</span>
+                        <span class="text-[10px] font-mono text-emerald-400 font-bold" id="loadPct2">0%</span>
+                    </div>
+                    <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                        <div class="bg-purple-500 h-full rounded-full w-0 transition-all duration-300 ease-out" id="loadBar2"></div>
+                    </div>
+                </div>
+
+                <!-- (γ) Σειρά 3 -->
+                <div class="opacity-0 transition-opacity duration-300" id="loadRow3">
+                    <div class="flex justify-between items-end mb-1">
+                        <span class="text-xs text-slate-300">Loading Monthly Impact</span>
+                        <span class="text-[10px] font-mono text-emerald-400 font-bold" id="loadPct3">0%</span>
+                    </div>
+                    <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                        <div class="bg-purple-500 h-full rounded-full w-0 transition-all duration-300 ease-out" id="loadBar3"></div>
+                    </div>
+                </div>
+
+                <!-- (δ) Σειρά 4 -->
+                <div class="opacity-0 transition-opacity duration-300" id="loadRow4">
+                    <div class="flex justify-between items-end mb-1">
+                        <span class="text-xs text-slate-300">Loading Surplus & Flex</span>
+                        <span class="text-[10px] font-mono text-emerald-400 font-bold" id="loadPct4">0%</span>
+                    </div>
+                    <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                        <div class="bg-purple-500 h-full rounded-full w-0 transition-all duration-300 ease-out" id="loadBar4"></div>
+                    </div>
+                </div>
+
+                <!-- (ε) Σειρά 5 -->
+                <div class="opacity-0 transition-opacity duration-300" id="loadRow5">
+                    <div class="flex justify-between items-end mb-1">
+                        <span class="text-xs text-slate-300">Loading Arbitrage P&L</span>
+                        <span class="text-[10px] font-mono text-emerald-400 font-bold" id="loadPct5">0%</span>
+                    </div>
+                    <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                        <div class="bg-purple-500 h-full rounded-full w-0 transition-all duration-300 ease-out" id="loadBar5"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Κουτί (Γ): Ready -->
+            <div class="opacity-0 transition-all duration-500 transform translate-y-2 flex items-center justify-center p-3 mt-1 rounded-xl border border-emerald-500/30 bg-emerald-500/10 gap-2" id="loadRow6">
+                <svg class="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <span class="text-emerald-400 font-bold text-sm tracking-wide">Dashboard is ready!</span>
+            </div>
+
         </div>
-        <div class="text-emerald-400 text-sm font-mono font-bold mt-2" id="loading-percentage">15%</div>
     </div>
 
     <!-- BREADCRUMB -->
@@ -353,16 +428,15 @@
             <div class="bg-slate-800/40 p-4 sm:p-6 rounded-xl border border-slate-700">
                 <h3 id="arbitrageTableTitle" class="text-lg font-semibold text-slate-200 mb-4">Daily Financial Performance & Arbitrage</h3>
                 <div class="overflow-x-auto">
-                    <!-- Base is text-left so the whole table lays out correctly, headers specifically modified -->
                     <table class="w-full text-sm text-slate-300">
                         <thead class="bg-slate-900 text-slate-400 uppercase text-xs">
                             <tr>
                                 <th id="thUnit" class="p-3 text-left">BESS UNIT</th>
-                                <th id="thCharge" class="p-3 text-right">Total Charge (Mwh)</th>
-                                <th id="thDischarge" class="p-3 text-right">Total Discharge (Mwh)</th>
+                                <th id="thCharge" class="p-3 text-right">TOTAL CHARGE (MWH)</th>
+                                <th id="thDischarge" class="p-3 text-right">TOTAL DISCHARGE (MWH)</th>
                                 <th id="thRte" class="p-3 hidden md:table-cell text-right">RTE (%)</th>
-                                <th id="thPnl" class="p-3 hidden md:table-cell text-right">Potential Daily P&L (€)</th>
-                                <th id="thProfit" class="p-3 hidden md:table-cell text-right">Unit Profit (€/Mwh)</th>
+                                <th id="thPnl" class="p-3 hidden md:table-cell text-right">POTENTIAL DAILY P&L (€)</th>
+                                <th id="thProfit" class="p-3 hidden md:table-cell text-right">UNIT PROFIT (€/MWH)</th>
                             </tr>
                         </thead>
                         <tbody id="arbitrageTableBody" class="divide-y divide-slate-700">
