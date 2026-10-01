@@ -443,6 +443,9 @@ def main():
         process_scada(fetch_admie_excel(target_date, "SystemRealizationSCADA"), target_date, db)
         fetch_entsoe(target_date, db)
 
+        # Ευγένεια προς τους servers σε μαζικό backfill (αποφυγή rate limits / ban)
+        time.sleep(float(os.environ.get("DAY_DELAY_SECONDS", "2")))
+
     save_data(db)
     print("\n✔ Η ενημέρωση ολοκληρώθηκε!")
 
