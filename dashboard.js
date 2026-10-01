@@ -12,6 +12,43 @@ let arbitrageDualChartInst = null;
 let currentlyIsolatedBess = null;
 
 // ==========================================
+// ΑΝΤΙΣΤΟΙΧΙΣΗ ΩΡΩΝ MCP ↔ SCADA
+// Η ημέρα παράδοσης της Αγοράς Επόμενης Ημέρας ορίζεται σε CET, ενώ οι ώρες του SCADA ακολουθούν
+// την ελληνική ώρα (+1h). Εμπειρικά (συσχέτιση BESS-MCP, κάθε μήνας Ιούν-Σεπ) η ώρα SCADA h
+// ταιριάζει με την ώρα MCP h-1. Δεν έχει επιβεβαιωθεί από τεκμηρίωση του ΑΔΜΗΕ.
+// Αλλαγή προεπιλογής: μετάβαση της παρακάτω σταθεράς σε false.
+// ==========================================
+let mcpShiftEnabled = true;
+
+function setMcpShift(on) {
+    mcpShiftEnabled = !!on;
+    renderArbitrageTab();
+}
+
+// Ωριαίες τιμές MCP μιας εγγραφής (υποστηρίζει και τέταρτα T1..T96). Τιμές που λείπουν -> 0.
+function getMcpHoursFromRow(row, nH) {
+    const out = new Array(nH).fill(0);
+    if (!row) return out;
+    for (let h = 1; h <= nH; h++) {
+        const startT = (h - 1) * 4 + 1;
+        if (row['T' + startT] !== undefined) {
+            let sum = 0;
+            for (let i = 0; i < 4; i++) sum += parseFloat(row['T' + (startT + i)]) || 0;
+            out[h - 1] = sum / 4;
+        } else {
+            out[h - 1] = parseFloat(String(row[h + ':00']).replace(',', '.')) || 0;
+        }
+    }
+    return out;
+}
+
+// Τιμή που αντιστοιχεί σε κάθε ώρα SCADA. Με shift: ώρα 1 <- τελευταία ώρα προηγούμενης ημέρας, ώρα k <- ώρα k-1.
+function alignMcpToScadaHours(mcpHours, prevDayLastPrice, shift) {
+    if (!shift) return mcpHours.slice();
+    return mcpHours.map((_, i) => (i === 0 ? prevDayLastPrice : mcpHours[i - 1]));
+}
+
+// ==========================================
 // DATA CLUTTER REDUCTION (Κανόνας 2)
 // ==========================================
 function formatMWh(val) {
@@ -656,6 +693,21 @@ function renderArbitrageTab() {
 
     const lang = typeof currentLang !== 'undefined' ? currentLang : 'en';
     const mcpLegendLabel = (lang === 'en') ? 'MCP Price (€/MWh)' : 'Τιμή MCP (€/MWh)';
+    const mcpLegendLabelFinal = mcpLegendLabel + (mcpShiftEnabled ? (lang === 'en' ? ' – SCADA-aligned' : ' – ευθυγραμμισμένη με SCADA') : '');
+    const chk = document.getElementById('mcpShiftToggle');
+    if (chk) chk.checked = mcpShiftEnabled;
+    const shiftLbl = document.getElementById('mcpShiftLabel');
+    if (shiftLbl) shiftLbl.textContent = (lang === 'en')
+        ? 'Align MCP to SCADA hours (MCP hour h−1 ↔ SCADA hour h)'
+        : 'Αντιστοίχιση MCP με ώρες SCADA (ώρα MCP h−1 ↔ ώρα SCADA h)';
+    const alignNote = document.getElementById('arbitrageAlignNote');
+    if (alignNote) alignNote.textContent = mcpShiftEnabled
+        ? ((lang === 'en')
+            ? 'The day-ahead delivery day is defined in CET, while SCADA hours follow Greek local time (+1h). Hourly volumes are priced with a one-hour offset, which fits the data better (correlation 0.63 vs 0.58, consistent in every month). Not yet confirmed by IPTO documentation.'
+            : 'Η ημέρα παράδοσης της Αγοράς Επόμενης Ημέρας ορίζεται σε CET, ενώ οι ώρες SCADA ακολουθούν την ελληνική ώρα (+1h). Οι ωριαίοι όγκοι αποτιμώνται με μετατόπιση μίας ώρας, που ταιριάζει καλύτερα στα δεδομένα (συσχέτιση 0,63 έναντι 0,58, σταθερά κάθε μήνα). Δεν έχει επιβεβαιωθεί ακόμα από τεκμηρίωση του ΑΔΜΗΕ.')
+        : ((lang === 'en')
+            ? 'Raw matching: SCADA hour h is priced with MCP hour h, without any offset.'
+            : 'Απλή αντιστοίχιση: η ώρα SCADA h αποτιμάται με την ώρα MCP h, χωρίς μετατόπιση.');
     const yBessTitle = (lang === 'en') ? 'BESS Volume (MWh)' : 'Όγκος BESS (MWh)';
     const yMcpTitle = (lang === 'en') ? 'MCP Price (€/MWh)' : 'Τιμή MCP (€/MWh)';
     const hoverTitle = (lang === 'en') ? 'Click to isolate this unit on the chart' : 'Κλικ για να απομονώσεις αυτή τη μονάδα στο γράφημα';
@@ -665,33 +717,36 @@ function renderArbitrageTab() {
         return d && String(d).substring(0, 10) === selectedDate;
     });
 
-    let dailyMcp = new Array(24).fill(0);
+    const nH = dayData.some(r => r['25:00'] !== undefined && r['25:00'] !== null) ? 25 : 24;
+
     const mcpRow = mcpData.find(item => {
         let d = item["Ημερομηνία"] || item["date"];
         return d && String(d).substring(0, 10) === selectedDate;
     });
-    
+
     const chartLabels = [];
-    for (let h = 1; h <= 24; h++) {
-        let padHour = (h < 10 ? '0' + h : h) + ':00';
-        chartLabels.push(padHour);
+    for (let h = 1; h <= nH; h++) {
+        chartLabels.push((h < 10 ? '0' + h : h) + ':00');
     }
 
-    if (mcpRow) {
-        for (let h = 1; h <= 24; h++) {
-            let startT = (h - 1) * 4 + 1;
-            if (mcpRow['T' + startT] !== undefined) {
-                let q1 = parseFloat(mcpRow['T' + startT]) || 0;
-                let q2 = parseFloat(mcpRow['T' + (startT + 1)]) || 0;
-                let q3 = parseFloat(mcpRow['T' + (startT + 2)]) || 0;
-                let q4 = parseFloat(mcpRow['T' + (startT + 3)]) || 0;
-                dailyMcp[h-1] = (q1 + q2 + q3 + q4) / 4;
-            } else {
-                let k = h + ':00';
-                dailyMcp[h-1] = parseFloat(String(mcpRow[k]).replace(',', '.')) || 0;
-            }
+    const dailyMcpRaw = getMcpHoursFromRow(mcpRow, nH);
+    let prevDayLast = dailyMcpRaw[0]; // fallback αν δεν υπάρχει προηγούμενη ημέρα
+    if (mcpRow && mcpShiftEnabled) {
+        const prevDate = new Date(selectedDate + 'T00:00:00Z');
+        prevDate.setUTCDate(prevDate.getUTCDate() - 1);
+        const prevStr = prevDate.toISOString().substring(0, 10);
+        const prevRow = mcpData.find(item => {
+            let d = item["Ημερομηνία"] || item["date"];
+            return d && String(d).substring(0, 10) === prevStr;
+        });
+        if (prevRow) {
+            const nPrev = (prevRow['25:00'] !== undefined && prevRow['25:00'] !== null) ? 25 : 24;
+            const prevHours = getMcpHoursFromRow(prevRow, nPrev);
+            prevDayLast = prevHours[nPrev - 1];
+            if (nPrev === 24 && (prevRow['24:00'] === null || prevRow['24:00'] === undefined)) prevDayLast = prevHours[22]; // ημέρα 23 ωρών
         }
     }
+    const dailyMcp = alignMcpToScadaHours(dailyMcpRaw, prevDayLast, mcpShiftEnabled);
 
     const datasets = [];
     const colorPalette = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
@@ -708,7 +763,7 @@ function renderArbitrageTab() {
         let dailyRevenue = 0;
         let dailyCost = 0;
 
-        for (let h = 1; h <= 24; h++) {
+        for (let h = 1; h <= nH; h++) {
             let key1 = h + ':00';                     
             let key2 = (h < 10 ? '0' + h : h) + ':00'; 
             let key3 = key1 + ':00';                   
@@ -758,7 +813,7 @@ function renderArbitrageTab() {
 
     if (mcpRow) {
         datasets.push({
-            label: mcpLegendLabel,
+            label: mcpLegendLabelFinal,
             data: dailyMcp,
             borderColor: '#eab308', 
             backgroundColor: '#eab308',
