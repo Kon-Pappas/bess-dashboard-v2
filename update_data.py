@@ -278,10 +278,11 @@ def process_isp(df, date_str, db):
     if df is None or df.empty:
         return
     rows, surplus_val = parse_isp(df, date_str)
-    if not rows:
-        print(f"   ⚠ ISP {date_str}: δεν βρέθηκαν μονάδες BESS - διατηρούνται τα παλιά δεδομένα.")
-        return
+    # Το surplus αποθηκεύεται πάντα (ανεξάρτητο από το αν υπάρχουν μονάδες BESS, π.χ. πριν την έναρξη καταγραφής)
     db["surplus"] = _replace_date(db["surplus"], date_str) + [{"Ημερομηνία": date_str, "Daily Surplus (MWh)": surplus_val}]
+    if not rows:
+        print(f"   ℹ ISP {date_str}: δεν βρέθηκαν μονάδες BESS - διατηρούνται τα παλιά δεδομένα BESS (αν υπάρχουν).")
+        return
     db["isp"] = _replace_date(db["isp"], date_str) + rows
 
 
@@ -290,10 +291,11 @@ def process_scada(df, date_str, db):
         return
     _, _, n_hours = day_window_utc(date_str)
     rows, hourly, pump_val = parse_scada(df, date_str, n_hours)
-    if not rows:
-        print(f"   ⚠ SCADA {date_str}: δεν βρέθηκαν μονάδες BESS - διατηρούνται τα παλιά δεδομένα.")
-        return
+    # Το pumping αποθηκεύεται πάντα (το SCADA BESS ξεκινά 18/6, το TOTAL PUMPING υπάρχει και πριν)
     db["pump"] = _replace_date(db["pump"], date_str) + [{"Ημερομηνία": date_str, "Daily Pumping (MWh)": pump_val}]
+    if not rows:
+        print(f"   ℹ SCADA {date_str}: δεν βρέθηκαν μονάδες BESS - διατηρούνται τα παλιά δεδομένα BESS (αν υπάρχουν).")
+        return
     db["scada"] = _replace_date(db["scada"], date_str) + rows
     db["bessHourly"] = _replace_date(db["bessHourly"], date_str) + hourly
 
