@@ -421,6 +421,11 @@
             <div class="bg-slate-800/40 p-6 rounded-xl border border-slate-700">
                 <h3 id="arbitrageChartTitle" class="text-lg font-semibold text-slate-200 mb-1">Hourly BESS Operation per Unit (MWh)</h3>
                 <p id="arbitrageChartSub" class="text-xs text-slate-400 mb-4">Negative values = Charging, Positive values = Discharging</p>
+                <div class="flex flex-wrap items-center gap-2 mb-1">
+                    <input type="checkbox" id="mcpShiftToggle" class="accent-emerald-500 cursor-pointer" onchange="setMcpShift(this.checked)" checked>
+                    <label for="mcpShiftToggle" id="mcpShiftLabel" class="text-xs text-slate-300 cursor-pointer">Align MCP to SCADA hours (MCP hour h−1 ↔ SCADA hour h)</label>
+                </div>
+                <p id="arbitrageAlignNote" class="text-[11px] text-slate-500 mb-4"></p>
                 <div class="relative h-96"><canvas id="arbitrageDualChart"></canvas></div>
             </div>
 
