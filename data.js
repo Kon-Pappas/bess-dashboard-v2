@@ -1,7 +1,7 @@
 // Πλέον διαβάζουμε το τοπικό αρχείο που παράγει το Python script!
 const API_URL = "data/historical.json";
 
-let rawData = { isp: [], scada: [], surplus: [], pump: [], bessHourly: [], mcpHourly: [] };
+let rawData = { isp: [], scada: [], surplus: [], pump: [], bessHourly: [], mcpHourly: [], surplusHourly: [], pumpHourly: [] };
 let currentLang = 'en';
 
 const i18n = {
@@ -46,6 +46,15 @@ const i18n = {
         surplusBadgeTip: "Το % απορρόφησης υπολογίζεται επί του Θεωρητικού Αρχικού Πλεονάσματος (Surplus + BESS Charge + PUMP Charge)",
         surplusCumulativeTitle: "Αθροιστική Εξέλιξη Ευελιξίας (Cumulative BESS & PUMP vs Surplus)",
         surplusCumulativeSub: "Σύγκριση της αθροιστικής φόρτισης SCADA (Μπαταρίες + Αντλησιοταμίευση) με το αθροιστικό υπολειπόμενο ISP Surplus",
+        surplusHourlyTitle: "Ωριαίο Προφίλ: Πλεόνασμα (ISP) vs Φόρτιση BESS & PUMP",
+        surplusHourlySub: "Μέσος όρος ημέρας του επιλεγμένου μήνα (MWh ανά ώρα). Δείχνει αν η φόρτιση της ευελιξίας συμπίπτει με τις ώρες του πλεονάσματος.",
+        surplusHourlyAll: "Όλες οι μέρες",
+        surplusHourlyHigh: "Μέρες υψηλού πλεονάσματος (άνω 25%)",
+        surplusHourlyKpiResidual: "Μέσο residual ISP / ημέρα",
+        surplusHourlyKpiRatio: "Φόρτιση ευελιξίας ÷ residual",
+        surplusHourlyKpiBess: "BESS σε ώρες πλεονάσματος",
+        surplusHourlyKpiPump: "PUMP σε ώρες πλεονάσματος",
+        surplusHourlyEmpty: "Δεν υπάρχουν αρκετά ωριαία δεδομένα για τον επιλεγμένο μήνα.",
         arbitrageMainTitle: "Arbitrage P&L & Ωριαίο Προφίλ Λειτουργίας",
         arbitrageDateLabel: "Ημερομηνία:",
         arbitrageChartTitle: "Ωριαία Κίνηση BESS ανά Μονάδα (MWh)",
@@ -99,6 +108,15 @@ const i18n = {
         surplusBadgeTip: "Absorption % is calculated on the Theoretical Initial Surplus (ISP Surplus + BESS + PUMP)",
         surplusCumulativeTitle: "Cumulative Flexibility Evolution (BESS & PUMP vs Surplus)",
         surplusCumulativeSub: "Comparison of cumulative SCADA charging (Batteries + Pumped Hydro) vs cumulative residual ISP Surplus",
+        surplusHourlyTitle: "Hourly Profile: Surplus (ISP) vs BESS & PUMP Charging",
+        surplusHourlySub: "Average day of the selected month (MWh per hour). Shows whether flexibility charging coincides with the surplus hours.",
+        surplusHourlyAll: "All days",
+        surplusHourlyHigh: "High-surplus days (top 25%)",
+        surplusHourlyKpiResidual: "Avg ISP residual / day",
+        surplusHourlyKpiRatio: "Flex charging ÷ residual",
+        surplusHourlyKpiBess: "BESS in surplus hours",
+        surplusHourlyKpiPump: "PUMP in surplus hours",
+        surplusHourlyEmpty: "Not enough hourly data for the selected month.",
         arbitrageMainTitle: "Arbitrage P&L & Hourly Operation Profile",
         arbitrageDateLabel: "Date:",
         arbitrageChartTitle: "Hourly BESS Operation per Unit (MWh)",
@@ -157,6 +175,12 @@ function setLang(lang) {
     document.getElementById('surplusBadge').title = t.surplusBadgeTip;
     document.getElementById('surplusCumulativeTitle').innerText = t.surplusCumulativeTitle;
     document.getElementById('surplusCumulativeSub').innerText = t.surplusCumulativeSub;
+
+    const setTxt = (id, txt) => { const e = document.getElementById(id); if (e && txt !== undefined) e.innerText = txt; };
+    setTxt('surplusHourlyTitle', t.surplusHourlyTitle);
+    setTxt('surplusHourlySub', t.surplusHourlySub);
+    setTxt('optHourlyAll', t.surplusHourlyAll);
+    setTxt('optHourlyHigh', t.surplusHourlyHigh);
 
     document.getElementById('arbitrageMainTitle').innerText = t.arbitrageMainTitle;
     document.getElementById('arbitrageDateLabel').innerText = t.arbitrageDateLabel;
@@ -235,6 +259,8 @@ async function init() {
         rawData.scada = normalizeData(json.scada);
         rawData.bessHourly = json.bessHourly || [];
         rawData.mcpHourly = json.mcpHourly || [];
+        rawData.surplusHourly = json.surplusHourly || [];
+        rawData.pumpHourly = json.pumpHourly || [];
         
         if (json.surplus) {
             rawData.surplus = json.surplus.map(d => ({
