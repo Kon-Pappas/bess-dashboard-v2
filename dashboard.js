@@ -7,6 +7,7 @@ let monthlyDischargeChartInst = null;
 let monthlyChargeChartInst = null;
 let surplusStackedChartInst = null;
 let surplusCumulativeChartInst = null;
+let surplusHourlyChartInst = null;
 let arbitrageDualChartInst = null;
 
 let currentlyIsolatedBess = null;
@@ -25,6 +26,7 @@ function setMcpShift(on) {
     renderArbitrageTab();
     // Το φίλτρο τιμής του Monthly tab χρησιμοποιεί την ίδια αντιστοίχιση ωρών
     if (typeof updateMonthlyDashboard === 'function') updateMonthlyDashboard();
+    if (typeof renderSurplusHourlyProfile === 'function') renderSurplusHourlyProfile();
 }
 
 // Ωριαίες τιμές MCP μιας εγγραφής (υποστηρίζει και τέταρτα T1..T96). Τιμές που λείπουν -> 0.
@@ -651,6 +653,163 @@ function updateSurplusDashboard() {
     populateKPI('pumpWorst', pumpMin);
 
     renderSurplusCharts(labels, dailyBess, dailyPump, dailySurp, cumBess, cumPump, cumSurp);
+    renderSurplusHourlyProfile();
+}
+
+
+// ==========================================
+// ΩΡΙΑΙΟ ΠΡΟΦΙΛ: ΠΛΕΟΝΑΣΜΑ (ISP) vs ΦΟΡΤΙΣΗ BESS & PUMP
+// Άξονας x = ώρα ημέρας σε ΕΛΛΗΝΙΚΗ ώρα (L = 0..23, διάστημα [L, L+1)).
+//  - SCADA (BESS, PUMP): ώρα h = [h-1, h) τοπικής ώρας  ->  κλειδί h = L+1
+//  - Δεδομένα αγοράς (MCP, ISP surplus): ώρα CET. Με ενεργό το checkbox ευθυγράμμισης ισχύει
+//    ότι ώρα αγοράς k = τοπική ώρα [k, k+1)  ->  κλειδί k = L (L=0 <- τελευταία ώρα προηγούμενης ημέρας).
+// Η παραδοχή ότι το ISP ακολουθεί το ρολόι της αγοράς (όπως το MCP) δεν έχει επιβεβαιωθεί από τεκμηρίωση ΑΔΜΗΕ.
+// ==========================================
+const SURPLUS_HOUR_MIN_MWH = 1;         // ώρα «πλεονάσματος» αν residual ISP >= 1 MWh
+const SURPLUS_HIGH_DAY_PERCENTILE = 0.75;
+
+function hourlyRowToArray(row, nMax) {
+    const arr = new Array(nMax).fill(0);
+    if (!row) return arr;
+    for (let h = 1; h <= nMax; h++) {
+        const v = parseFloat(row[(h < 10 ? '0' + h : h) + ':00']);
+        arr[h - 1] = isNaN(v) ? 0 : v;
+    }
+    return arr;
+}
+
+function localHourValue(arr, prevArr, L, keyShift) {
+    const k = L + 1 - keyShift;           // κλειδί ώρας (1-based)
+    if (k >= 1) return arr[k - 1] || 0;
+    return prevArr ? (prevArr[prevArr.length - 1] || 0) : 0;
+}
+
+function prevDateString(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate() - 1);
+    return d.toISOString().substring(0, 10);
+}
+
+function renderSurplusHourlyProfile() {
+    const monthEl = document.getElementById('monthSelectSurplus');
+    const canvas = document.getElementById('surplusHourlyChart');
+    if (!monthEl || !canvas || !rawData) return;
+    const month = monthEl.value;
+    const lang = typeof currentLang !== 'undefined' ? currentLang : 'en';
+    const t = (typeof i18n !== 'undefined' && i18n[lang]) ? i18n[lang] : {};
+    const mode = (document.getElementById('surplusHourlyMode') || {}).value || 'all';
+    const kpiBox = document.getElementById('surplusHourlyKpis');
+    const noteEl = document.getElementById('surplusHourlyNote');
+
+    // --- δεδομένα ανά ημερομηνία ---
+    const dateOf = r => String(r["Ημερομηνία"] || r["date"] || '').substring(0, 10);
+    const bessByDate = {};
+    getHourlyData().forEach(r => {
+        const date = dateOf(r);
+        if (!date) return;
+        if (!bessByDate[date]) bessByDate[date] = new Array(25).fill(0);
+        for (let h = 1; h <= 25; h++) {
+            const v = parseFloat(r[(h < 10 ? '0' + h : h) + ':00']);
+            if (!isNaN(v) && v < 0) bessByDate[date][h - 1] += -v; // μόνο φόρτιση
+        }
+    });
+    const pumpByDate = {}, surpByDate = {}, mcpByDate = {};
+    (rawData.pumpHourly || []).forEach(r => { pumpByDate[dateOf(r)] = hourlyRowToArray(r, 25); });
+    (rawData.surplusHourly || []).forEach(r => { surpByDate[dateOf(r)] = hourlyRowToArray(r, 25); });
+    getMcpData().forEach(r => { mcpByDate[dateOf(r)] = getMcpHoursFromRow(r, 24); });
+
+    // Μόνο ημέρες όπου υπάρχουν ΚΑΙ οι τέσσερις πηγές (ώστε οι μέσοι όροι να αφορούν τις ίδιες ημέρες)
+    let days = Object.keys(bessByDate).filter(d => d.startsWith(month) && pumpByDate[d] && surpByDate[d] && mcpByDate[d]).sort();
+
+    const resetChart = () => { if (surplusHourlyChartInst) { surplusHourlyChartInst.destroy(); surplusHourlyChartInst = null; } };
+    if (days.length === 0) {
+        resetChart();
+        if (kpiBox) kpiBox.innerHTML = '';
+        if (noteEl) noteEl.textContent = t.surplusHourlyEmpty || 'Not enough hourly data for the selected month.';
+        return;
+    }
+
+    const dayTotal = d => surpByDate[d].reduce((a, b) => a + b, 0);
+    let usedDays = days;
+    if (mode === 'high' && days.length >= 4) {
+        const totals = days.map(dayTotal).sort((a, b) => a - b);
+        const thr = totals[Math.min(totals.length - 1, Math.floor(SURPLUS_HIGH_DAY_PERCENTILE * (totals.length - 1)))];
+        usedDays = days.filter(d => dayTotal(d) >= thr);
+    }
+
+    const marketShift = (typeof mcpShiftEnabled !== 'undefined' && mcpShiftEnabled) ? 1 : 0;
+    const n = usedDays.length;
+    const bessAvg = new Array(24).fill(0), pumpAvg = new Array(24).fill(0), surpAvg = new Array(24).fill(0), mcpAvg = new Array(24).fill(0);
+    let sumBess = 0, sumPump = 0, sumSurp = 0, bessIn = 0, pumpIn = 0;
+
+    usedDays.forEach(d => {
+        const prev = prevDateString(d);
+        for (let L = 0; L < 24; L++) {
+            const b = localHourValue(bessByDate[d], null, L, 0);
+            const p = localHourValue(pumpByDate[d], null, L, 0);
+            const sv = localHourValue(surpByDate[d], surpByDate[prev], L, marketShift);
+            const m = localHourValue(mcpByDate[d], mcpByDate[prev], L, marketShift);
+            bessAvg[L] += b / n; pumpAvg[L] += p / n; surpAvg[L] += sv / n; mcpAvg[L] += m / n;
+            sumBess += b; sumPump += p; sumSurp += sv;
+            if (sv >= SURPLUS_HOUR_MIN_MWH) { bessIn += b; pumpIn += p; }
+        }
+    });
+
+    // --- KPIs ---
+    const fmt = v => (typeof formatMWh === 'function') ? formatMWh(v) : Math.round(v).toLocaleString();
+    const pct = v => (isFinite(v) ? v.toFixed(0) + '%' : '–');
+    const tile = (label, value, sub, color) => `
+        <div class="bg-slate-900/60 border border-slate-700 rounded-lg px-3 py-2">
+            <div class="text-[10px] uppercase tracking-wide text-slate-400">${label}</div>
+            <div class="text-xl font-bold ${color}">${value}</div>
+            <div class="text-[10px] text-slate-500">${sub}</div>
+        </div>`;
+    const flexPerDay = (sumBess + sumPump) / n;
+    if (kpiBox) {
+        kpiBox.innerHTML =
+            tile(t.surplusHourlyKpiResidual || 'Avg ISP residual / day', fmt(sumSurp / n) + ' MWh', n + (lang === 'el' ? ' ημέρες' : ' days'), 'text-red-400') +
+            tile(t.surplusHourlyKpiRatio || 'Flex charging ÷ residual', pct(sumSurp > 0 ? (flexPerDay / (sumSurp / n)) * 100 : NaN), fmt(flexPerDay) + ' MWh / ' + (lang === 'el' ? 'ημέρα' : 'day'), 'text-slate-200') +
+            tile(t.surplusHourlyKpiBess || 'BESS in surplus hours', pct(sumBess > 0 ? (bessIn / sumBess) * 100 : NaN), (lang === 'el' ? 'της φόρτισης BESS' : 'of BESS charging'), 'text-emerald-400') +
+            tile(t.surplusHourlyKpiPump || 'PUMP in surplus hours', pct(sumPump > 0 ? (pumpIn / sumPump) * 100 : NaN), (lang === 'el' ? 'της φόρτισης PUMP' : 'of PUMP charging'), 'text-blue-400');
+    }
+
+    // --- Γράφημα ---
+    const labels = []; for (let L = 0; L < 24; L++) labels.push((L < 10 ? '0' + L : L) + ':00');
+    resetChart();
+    surplusHourlyChartInst = new Chart(canvas.getContext('2d'), {
+        data: {
+            labels: labels,
+            datasets: [
+                { type: 'bar', label: 'BESS Charge (SCADA)', data: bessAvg, backgroundColor: '#34d399', stack: 'flex', yAxisID: 'y', order: 3 },
+                { type: 'bar', label: 'PUMP Charge (SCADA)', data: pumpAvg, backgroundColor: '#3b82f6', stack: 'flex', yAxisID: 'y', order: 3 },
+                { type: 'line', label: 'Residual Surplus (ISP)', data: surpAvg, borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.15)', fill: true, tension: 0.25, pointRadius: 2, yAxisID: 'y', order: 1 },
+                { type: 'line', label: (lang === 'el' ? 'Τιμή MCP (€/MWh)' : 'MCP Price (€/MWh)'), data: mcpAvg, borderColor: '#fbbf24', borderDash: [5, 4], borderWidth: 2, pointRadius: 0, tension: 0.2, yAxisID: 'y2', order: 2 },
+                { type: 'line', label: (lang === 'el' ? 'Όριο 5 €/MWh' : '€5/MWh threshold'), data: new Array(24).fill(CURTAILMENT_PRICE_THRESHOLD), borderColor: 'rgba(251,191,36,0.45)', borderDash: [2, 3], borderWidth: 1, pointRadius: 0, yAxisID: 'y2', order: 2 }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { position: 'top' },
+                tooltip: { callbacks: { label: ctx => ctx.dataset.yAxisID === 'y2' ? `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}` : `${ctx.dataset.label}: ${fmt(ctx.parsed.y)} MWh` } }
+            },
+            scales: {
+                x: { stacked: true, grid: { display: false }, title: { display: true, text: (lang === 'el' ? 'Ώρα ημέρας (ελληνική ώρα)' : 'Hour of day (Greek local time)') } },
+                y: { stacked: true, grid: { color: '#334155' }, title: { display: true, text: 'MWh / h' }, beginAtZero: true },
+                y2: { position: 'right', grid: { display: false }, title: { display: true, text: '€/MWh' } }
+            }
+        }
+    });
+
+    if (noteEl) {
+        const first = usedDays[0], last = usedDays[n - 1];
+        noteEl.textContent = (lang === 'el')
+            ? `Μέσος όρος ${n} ημερών (${first} έως ${last}), μόνο ημέρες με δεδομένα BESS, PUMP, ISP και MCP. Το ISP είναι προγραμματισμός (όχι μέτρηση) και δεν περιλαμβάνει εξαγωγές. ` +
+              (marketShift ? 'Δεδομένα αγοράς (MCP, ISP) και SCADA ευθυγραμμίζονται με μετατόπιση μίας ώρας (CET → ελληνική ώρα), παραδοχή που δεν έχει επιβεβαιωθεί από τον ΑΔΜΗΕ.' : 'Χωρίς μετατόπιση ώρας ανάμεσα σε αγορά και SCADA.')
+            : `Average of ${n} days (${first} to ${last}), only days with BESS, PUMP, ISP and MCP data. ISP is a schedule (not a measurement) and excludes exports. ` +
+              (marketShift ? 'Market data (MCP, ISP) and SCADA are aligned with a one-hour shift (CET → Greek local time), an assumption not yet confirmed by IPTO.' : 'No hour shift applied between market data and SCADA.');
+    }
 }
 
 function renderSurplusCharts(labels, dailyBess, dailyPump, dailySurplus, cumBess, cumPump, cumSurplus) {
