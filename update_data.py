@@ -22,8 +22,9 @@ UTC = timezone.utc
 
 DB_KEYS = ["isp", "scada", "surplus", "pump", "bessHourly", "mcpHourly"]
 
-# Τα αρχεία SystemRealizationSCADA πριν από αυτή την ημερομηνία είναι κενά πρότυπα (placeholders XDO_?XDOFIELD..?,
-# χωρίς δεδομένα). Το «pump = 0» που είχε γραφτεί για αυτές τις μέρες δεν ήταν μέτρηση αλλά απουσία δεδομένων.
+# Πριν από αυτή την ημερομηνία τα αρχεία SCADA δεν περιέχουν μονάδες BESS (η καταγραφή BESS ξεκινά 18/6).
+# Το TOTAL PUMPING υπάρχει όμως και πριν. Αν δεν βρεθεί γραμμή TOTAL PUMPING πριν αυτή την ημερομηνία,
+# αφαιρούμε τυχόν παλιά «ψεύτικα» μηδενικά που γράφτηκαν όταν διαβαζόταν λάθος φύλλο (XDO_METADATA).
 SCADA_FIRST_VALID_DATE = "2026-06-18"
 
 
@@ -105,7 +106,38 @@ def day_window_utc(date_str):
 # ---------------------------------------------------------------------------
 # ADMIE
 # ---------------------------------------------------------------------------
-def fetch_admie_excel(date_str, category):
+def _sheet_has_marker(df, markers):
+    """True αν κάποιο κελί στις πρώτες 4 στήλες περιέχει κάποιο από τα markers (case-insensitive)."""
+    if not markers:
+        return True
+    head = df.iloc[:, :4].astype(str)
+    for m in markers:
+        if head.apply(lambda c: c.str.upper().str.contains(m.upper(), regex=False)).any().any():
+            return True
+    return False
+
+
+def read_excel_smart(content, markers=(), prefer_sheets=()):
+    """Διαβάζει το σωστό φύλλο του αρχείου.
+
+    ΣΗΜΑΝΤΙΚΟ: η σειρά των φύλλων ΔΕΝ είναι σταθερή. Σε αρχεία πριν τις 18/6 το πρώτο φύλλο είναι το
+    «XDO_METADATA» (μεταδεδομένα του Oracle BI Publisher, χωρίς δεδομένα) και τα δεδομένα βρίσκονται στο
+    «System_Production». Γι' αυτό δεν διαβάζουμε ποτέ «το πρώτο φύλλο»: παραλείπουμε το XDO_METADATA και
+    διαλέγουμε το φύλλο που περιέχει τα markers."""
+    xl = pd.ExcelFile(BytesIO(content))
+    names = [n for n in xl.sheet_names if not str(n).upper().startswith("XDO_METADATA")]
+    ordered = [n for n in prefer_sheets if n in names] + [n for n in names if n not in prefer_sheets]
+    first_df = None
+    for name in ordered:
+        df = pd.read_excel(xl, sheet_name=name, header=None)
+        if first_df is None:
+            first_df = df
+        if _sheet_has_marker(df, markers):
+            return df
+    return first_df
+
+
+def fetch_admie_excel(date_str, category, markers=(), prefer_sheets=()):
     url = f"{ADMIE_URL}?dateStart={date_str}&dateEnd={date_str}&FileCategory={category}"
     res = http_get(url)
     if res is None or not res.ok:
@@ -124,7 +156,7 @@ def fetch_admie_excel(date_str, category):
         excel_res = http_get(file_url, timeout=120)
         if excel_res is None or not excel_res.ok:
             return None
-        return pd.read_excel(BytesIO(excel_res.content), header=None, sheet_name=0)
+        return read_excel_smart(excel_res.content, markers=markers, prefer_sheets=prefer_sheets)
     except Exception as e:
         print(f"   ⚠ {category}: αποτυχία ανάγνωσης αρχείου ({type(e).__name__})")
         return None
@@ -451,12 +483,12 @@ def main():
     for target_date in target_dates:
         print(f"\n--- Επεξεργασία: {target_date} ---")
 
-        df_isp = fetch_admie_excel(target_date, "ISP2ISPResults")
+        df_isp = fetch_admie_excel(target_date, "ISP2ISPResults", markers=("Energy Surplus",))
         if df_isp is None:
             print("   ℹ ISP: δεν βρέθηκε/διαβάστηκε αρχείο.")
         process_isp(df_isp, target_date, db)
 
-        df_scada = fetch_admie_excel(target_date, "SystemRealizationSCADA")
+        df_scada = fetch_admie_excel(target_date, "SystemRealizationSCADA", markers=("TOTAL PUMPING",), prefer_sheets=("System_Production",))
         if df_scada is None:
             print("   ℹ SCADA: δεν βρέθηκε/διαβάστηκε αρχείο.")
         process_scada(df_scada, target_date, db)
