@@ -23,6 +23,8 @@ let mcpShiftEnabled = true;
 function setMcpShift(on) {
     mcpShiftEnabled = !!on;
     renderArbitrageTab();
+    // Το φίλτρο τιμής του Monthly tab χρησιμοποιεί την ίδια αντιστοίχιση ωρών
+    if (typeof updateMonthlyDashboard === 'function') updateMonthlyDashboard();
 }
 
 // Ωριαίες τιμές MCP μιας εγγραφής (υποστηρίζει και τέταρτα T1..T96). Τιμές που λείπουν -> 0.
@@ -39,6 +41,58 @@ function getMcpHoursFromRow(row, nH) {
             out[h - 1] = parseFloat(String(row[h + ':00']).replace(',', '.')) || 0;
         }
     }
+    return out;
+}
+
+// ==========================================
+// ΠΙΘΑΝΗ ΑΠΟΦΥΓΗ ΠΕΡΙΚΟΠΩΝ: μόνο φόρτιση BESS σε ώρες με τιμή MCP <= όριο
+// Φόρτιση όταν η τιμή είναι >5 €/MWh (π.χ. νυχτερινό arbitrage) δεν μετράει ως αποφυγή περικοπής,
+// γιατί οι περικοπές συμβαίνουν μόνο όταν οι ΑΠΕ κορέσουν την αγορά (τιμή ≈ 0 ή αρνητική).
+// ==========================================
+const CURTAILMENT_PRICE_THRESHOLD = 5; // €/MWh
+
+function getPrevDayLastPrice(dateStr, mcpData, fallback) {
+    const prev = new Date(dateStr + 'T00:00:00Z');
+    prev.setUTCDate(prev.getUTCDate() - 1);
+    const prevStr = prev.toISOString().substring(0, 10);
+    const prevRow = mcpData.find(item => {
+        const d = item["Ημερομηνία"] || item["date"];
+        return d && String(d).substring(0, 10) === prevStr;
+    });
+    if (!prevRow) return fallback;
+    const nPrev = (prevRow['25:00'] !== undefined && prevRow['25:00'] !== null) ? 25 : 24;
+    const hours = getMcpHoursFromRow(prevRow, nPrev);
+    if (nPrev === 24 && (prevRow['24:00'] === null || prevRow['24:00'] === undefined)) return hours[22]; // ημέρα 23 ωρών
+    return hours[nPrev - 1];
+}
+
+// Επιστρέφει { 'YYYY-MM-DD': MWh } με τη φόρτιση BESS σε ώρες όπου η (ευθυγραμμισμένη) τιμή MCP <= όριο.
+function computeCheapChargeByDate(selectedMonth) {
+    const out = {};
+    const mcpData = getMcpData();
+    const mcpByDate = {};
+    mcpData.forEach(item => {
+        const d = item["Ημερομηνία"] || item["date"];
+        if (d) mcpByDate[String(d).substring(0, 10)] = item;
+    });
+
+    getHourlyData().forEach(row => {
+        const date = String(row["Ημερομηνία"] || row["date"] || '').substring(0, 10);
+        if (!date.startsWith(selectedMonth)) return;
+        const mcpRow = mcpByDate[date];
+        if (!mcpRow) return; // χωρίς τιμές MCP δεν μπορούμε να ταξινομήσουμε τις ώρες
+
+        const nH = (row['25:00'] !== undefined && row['25:00'] !== null) ? 25 : 24;
+        const raw = getMcpHoursFromRow(mcpRow, nH);
+        const prices = alignMcpToScadaHours(raw, mcpShiftEnabled ? getPrevDayLastPrice(date, mcpData, raw[0]) : raw[0], mcpShiftEnabled);
+
+        for (let h = 1; h <= nH; h++) {
+            const v = parseFloat(row[(h < 10 ? '0' + h : h) + ':00']);
+            if (!isNaN(v) && v < 0 && prices[h - 1] <= CURTAILMENT_PRICE_THRESHOLD) {
+                out[date] = (out[date] || 0) + (-v);
+            }
+        }
+    });
     return out;
 }
 
@@ -410,13 +464,15 @@ function updateMonthlyDashboard() {
 
     const monthData = rawData.scada.filter(d => d.date.startsWith(selectedMonth));
     const dailyTotals = {};
+    const cheapCharge = computeCheapChargeByDate(selectedMonth);
     
     monthData.forEach(d => {
         if (d.unit === "TOTAL BESS") return;
         if (!dailyTotals[d.date]) dailyTotals[d.date] = { charge: 0, discharge: 0 };
-        dailyTotals[d.date].charge += d.charge;
         dailyTotals[d.date].discharge += d.discharge;
     });
+    // Φόρτιση = μόνο ώρες με τιμή MCP <= CURTAILMENT_PRICE_THRESHOLD (πιθανή αποφυγή περικοπής)
+    Object.keys(dailyTotals).forEach(date => { dailyTotals[date].charge = cheapCharge[date] || 0; });
 
     const sortedDates = Object.keys(dailyTotals).sort();
     let cumCharge = 0, cumDischarge = 0;
