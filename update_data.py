@@ -20,7 +20,7 @@ DAYS_TO_FETCH = 5
 MARKET_TZ = ZoneInfo("Europe/Brussels")
 UTC = timezone.utc
 
-DB_KEYS = ["isp", "scada", "surplus", "pump", "bessHourly", "mcpHourly"]
+DB_KEYS = ["isp", "scada", "surplus", "pump", "bessHourly", "mcpHourly", "surplusHourly", "pumpHourly"]
 
 # Πριν από αυτή την ημερομηνία τα αρχεία SCADA δεν περιέχουν μονάδες BESS (η καταγραφή BESS ξεκινά 18/6).
 # Το TOTAL PUMPING υπάρχει όμως και πριν. Αν δεν βρεθεί γραμμή TOTAL PUMPING πριν αυτή την ημερομηνία,
@@ -201,15 +201,29 @@ def _last_value(row):
 
 def parse_isp(df, date_str):
     """ISP: 96 τέταρτα (MW) ανά μονάδα + στήλη TOTAL (MWh) που ΔΕΝ πρέπει να προστεθεί.
-    Επιστρέφει (aggregate_rows, surplus_value)."""
+    Επιστρέφει (aggregate_rows, surplus_value, surplus_hourly)."""
     surplus_val = 0.0
+    surplus_hourly = None  # {ώρα: MWh} (θετικές τιμές), από τα τέταρτα της γραμμής Energy Surplus
+    _, total_col = _find_header_cols(df, "TOTAL")
     surplus_row = df[df.apply(lambda r: r.astype(str).str.contains("Energy Surplus").any(), axis=1)]
-    if not surplus_row.empty:
-        v = _last_value(surplus_row.iloc[0])
+    for _, srow in surplus_row.iterrows():
+        v = _last_value(srow)
+        srow_list = srow.tolist()
+        # Η γραμμή «Energy Surplus» εμφανίζεται πολλές φορές· κρατάμε την πρώτη που έχει αριθμητικά τέταρτα
+        name_idx = next((c for c in range(min(len(srow_list), 4)) if "ENERGY SURPLUS" in str(srow_list[c]).upper()), None)
+        if name_idx is None or total_col is None or total_col <= name_idx:
+            if v is not None and surplus_val == 0.0:
+                surplus_val = v
+            continue
+        q = [to_num(x) for x in srow_list[name_idx + 1: total_col]]
+        if sum(1 for x in q if x is not None) == 0:
+            continue  # γραμμή τίτλου χωρίς δεδομένα
+        q = [x or 0.0 for x in q]
         if v is not None:
             surplus_val = v
-
-    _, total_col = _find_header_cols(df, "TOTAL")
+        n_h = len(q) // 4
+        surplus_hourly = {h + 1: round(abs(sum(q[h * 4: h * 4 + 4])) / 4, 2) for h in range(n_h)}
+        break
     units = []
     total_row_net = None
     for _, row in df.iterrows():
@@ -243,19 +257,12 @@ def parse_isp(df, date_str):
         rows.append(_bess_row(date_str, "TOTAL BESS",
                               sum(u["Φόρτιση (MWh)"] for u in units),
                               sum(u["Αποφόρτιση (MWh)"] for u in units)))
-    return rows, surplus_val
+    return rows, surplus_val, surplus_hourly
 
 
 def parse_scada(df, date_str, n_hours):
     """SCADA: στήλες ωρών 01..24 (+ '25' για ημέρα 25 ωρών) και στήλη SUM (καθαρό σύνολο) που ΔΕΝ προστίθεται.
-    Επιστρέφει (aggregate_rows, hourly_rows, pump_value)."""
-    pump_val = None  # None = δεν βρέθηκε γραμμή TOTAL PUMPING (άγνωστο, ΟΧΙ μηδέν)
-    pump_row = df[df.apply(lambda r: r.astype(str).str.upper().str.contains("TOTAL PUMPING").any(), axis=1)]
-    if not pump_row.empty:
-        v = _last_value(pump_row.iloc[0])
-        if v is not None:
-            pump_val = abs(v)
-
+    Επιστρέφει (aggregate_rows, hourly_rows, pump_value, pump_hourly)."""
     header, sum_col = _find_header_cols(df, "SUM")
     hour_cols = []  # (στήλη, ώρα)
     if header is not None:
@@ -263,6 +270,21 @@ def parse_scada(df, date_str, n_hours):
             n = to_num(v)
             if n is not None and float(n).is_integer() and 1 <= n <= 25:
                 hour_cols.append((c, int(n)))
+
+    pump_val = None  # None = δεν βρέθηκε γραμμή TOTAL PUMPING (άγνωστο, ΟΧΙ μηδέν)
+    pump_hourly = None  # {ώρα: MWh}
+    pump_row = df[df.apply(lambda r: r.astype(str).str.upper().str.contains("TOTAL PUMPING").any(), axis=1)]
+    if not pump_row.empty:
+        prow = pump_row.iloc[0].tolist()
+        v = _last_value(pump_row.iloc[0])
+        if v is not None:
+            pump_val = abs(v)
+        if hour_cols:
+            pump_hourly = {h: abs(to_num(prow[c]) or 0.0) for c, h in hour_cols}
+            if pump_val is not None and sum_col is not None:
+                s_file = to_num(prow[sum_col])
+                if s_file is not None and abs(sum(pump_hourly.values()) - abs(s_file)) > 2:
+                    print(f"   ⚠ SCADA {date_str}: pump ωριαίο άθροισμα {sum(pump_hourly.values()):.0f} ≠ SUM αρχείου {abs(s_file):.0f}")
 
     units, hourly = [], []
     total_row_net = None
@@ -303,7 +325,7 @@ def parse_scada(df, date_str, n_hours):
         rows.append(_bess_row(date_str, "TOTAL BESS",
                               sum(u["Φόρτιση (MWh)"] for u in units),
                               sum(u["Αποφόρτιση (MWh)"] for u in units)))
-    return rows, hourly, pump_val
+    return rows, hourly, pump_val, pump_hourly
 
 
 def _replace_date(lst, date_str):
@@ -313,7 +335,13 @@ def _replace_date(lst, date_str):
 def process_isp(df, date_str, db):
     if df is None or df.empty:
         return
-    rows, surplus_val = parse_isp(df, date_str)
+    rows, surplus_val, surplus_hourly = parse_isp(df, date_str)
+    if surplus_hourly is not None:
+        _, _, n_hours = day_window_utc(date_str)
+        entry = {"Ημερομηνία": date_str}
+        for h in range(1, max(24, n_hours) + 1):
+            entry[f"{h:02d}:00"] = surplus_hourly.get(h, 0.0)
+        db["surplusHourly"] = _replace_date(db["surplusHourly"], date_str) + [entry]
     # Το surplus αποθηκεύεται πάντα (ανεξάρτητο από το αν υπάρχουν μονάδες BESS, π.χ. πριν την έναρξη καταγραφής)
     db["surplus"] = _replace_date(db["surplus"], date_str) + [{"Ημερομηνία": date_str, "Daily Surplus (MWh)": surplus_val}]
     if not rows:
@@ -326,7 +354,12 @@ def process_scada(df, date_str, db):
     if df is None or df.empty:
         return
     _, _, n_hours = day_window_utc(date_str)
-    rows, hourly, pump_val = parse_scada(df, date_str, n_hours)
+    rows, hourly, pump_val, pump_hourly = parse_scada(df, date_str, n_hours)
+    if pump_hourly is not None:
+        entry = {"Ημερομηνία": date_str}
+        for h in range(1, max(24, n_hours) + 1):
+            entry[f"{h:02d}:00"] = pump_hourly.get(h, 0.0)
+        db["pumpHourly"] = _replace_date(db["pumpHourly"], date_str) + [entry]
     # Το pumping αποθηκεύεται όποτε βρέθηκε η γραμμή TOTAL PUMPING (και η τιμή 0 είναι έγκυρη μέτρηση).
     if pump_val is not None:
         db["pump"] = _replace_date(db["pump"], date_str) + [{"Ημερομηνία": date_str, "Daily Pumping (MWh)": pump_val}]
