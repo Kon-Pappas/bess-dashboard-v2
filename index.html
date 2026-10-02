@@ -357,6 +357,22 @@
 
         <!-- VIEW 3: SURPLUS & FLEXIBILITY -->
         <div id="viewSurplus" class="space-y-8 hidden">
+            <div class="bg-slate-800/40 p-6 rounded-xl border border-slate-700">
+                <div class="flex flex-wrap justify-between items-start gap-3 mb-1">
+                    <div>
+                        <h2 class="text-lg font-semibold text-slate-200 mb-1" id="surplusHourlyTitle">Hourly Profile: Surplus (ISP) vs BESS & PUMP Charging</h2>
+                        <p class="text-xs text-slate-400" id="surplusHourlySub">Average day of the selected month (MWh per hour). Shows whether flexibility charging coincides with the surplus hours.</p>
+                    </div>
+                    <select id="surplusHourlyMode" onchange="renderSurplusHourlyProfile()" class="bg-slate-900 border border-slate-600 text-slate-200 text-xs rounded px-2 py-1 outline-none cursor-pointer">
+                        <option value="all" id="optHourlyAll">All days</option>
+                        <option value="high" id="optHourlyHigh">High-surplus days (top 25%)</option>
+                    </select>
+                </div>
+                <div id="surplusHourlyKpis" class="grid grid-cols-2 md:grid-cols-4 gap-3 my-4"></div>
+                <div class="relative h-96"><canvas id="surplusHourlyChart"></canvas></div>
+                <p id="surplusHourlyNote" class="text-[11px] text-slate-500 mt-3"></p>
+            </div>
+
             <div class="bg-slate-800/40 p-6 rounded-xl border border-slate-700 mt-4">
                 <div class="flex items-center gap-2 mb-1">
                     <h2 class="text-lg font-semibold text-slate-200" id="surplusStackedTitle">Daily Energy Surplus & Flexibility Absorption (GWh)</h2>
@@ -409,22 +425,6 @@
                 <h2 class="text-lg font-semibold text-slate-200 mb-1" id="surplusCumulativeTitle">Cumulative Flexibility Evolution (BESS & PUMP vs Surplus)</h2>
                 <p class="text-xs text-slate-400 mb-4" id="surplusCumulativeSub">Comparison of cumulative SCADA charging (Batteries + Pumped Hydro) vs cumulative residual ISP Surplus</p>
                 <div class="relative h-80"><canvas id="surplusCumulativeChart"></canvas></div>
-            </div>
-
-            <div class="bg-slate-800/40 p-6 rounded-xl border border-slate-700">
-                <div class="flex flex-wrap justify-between items-start gap-3 mb-1">
-                    <div>
-                        <h2 class="text-lg font-semibold text-slate-200 mb-1" id="surplusHourlyTitle">Hourly Profile: Surplus (ISP) vs BESS & PUMP Charging</h2>
-                        <p class="text-xs text-slate-400" id="surplusHourlySub">Average day of the selected month (MWh per hour). Shows whether flexibility charging coincides with the surplus hours.</p>
-                    </div>
-                    <select id="surplusHourlyMode" onchange="renderSurplusHourlyProfile()" class="bg-slate-900 border border-slate-600 text-slate-200 text-xs rounded px-2 py-1 outline-none cursor-pointer">
-                        <option value="all" id="optHourlyAll">All days</option>
-                        <option value="high" id="optHourlyHigh">High-surplus days (top 25%)</option>
-                    </select>
-                </div>
-                <div id="surplusHourlyKpis" class="grid grid-cols-2 md:grid-cols-4 gap-3 my-4"></div>
-                <div class="relative h-96"><canvas id="surplusHourlyChart"></canvas></div>
-                <p id="surplusHourlyNote" class="text-[11px] text-slate-500 mt-3"></p>
             </div>
         </div>
 
