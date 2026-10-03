@@ -29,6 +29,8 @@ const i18n = {
         source: "Πηγή δεδομένων: Επίσημα αρχεία ISP & SCADA - ΑΔΜΗΕ (IPTO)",
         scopeTooltip: "Αφορά αποκλειστικά τις μονάδες BESS στο Σύστημα Μεταφοράς (ΑΔΜΗΕ). Δεν περιλαμβάνονται τα συστήματα στο Δίκτυο Διανομής (ΔΕΔΔΗΕ).",
         lastUpdate: "Τελευταία Ενημέρωση:",
+        lastUpdateShort: "Ενημέρωση",
+        nextUpdateShort: "Επόμενη",
         nextUpdate: "Επόμενη Ενημέρωση:",
         dateLabel: "Ημερομηνία:",
         monthLabel: "Μήνας:",
@@ -42,6 +44,7 @@ const i18n = {
             <p class="mb-1 text-slate-300">Ανεξάρτητο εργαλείο πάνω σε ανοιχτά δεδομένα. Τα νούμερα είναι εκτιμήσεις και ενδείξεις, όχι επίσημα στοιχεία.</p>
             <h3 class="mt-4 mb-2 text-[11px] font-bold uppercase tracking-wider text-emerald-400">Όλα τα tabs</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
+                <li><strong class="text-slate-200">Εύρος:</strong> μόνο οι μονάδες BESS του Συστήματος Μεταφοράς (ΑΔΜΗΕ). Δεν περιλαμβάνονται συστήματα στο Δίκτυο Διανομής (ΔΕΔΔΗΕ).</li>
                 <li><strong class="text-slate-200">Πηγές:</strong> ΑΔΜΗΕ (ISP = πρόγραμμα, SCADA = πραγματική λειτουργία, μη πιστοποιημένο) και ENTSO-E (τιμές MCP). Ενημέρωση καθημερινά. Μετρήσεις SCADA για BESS υπάρχουν από 18/6.</li>
                 <li><strong class="text-slate-200">⏱ Ευθυγράμμιση ωρών:</strong> το SCADA είναι μία ώρα μπροστά από την αγορά. Με το checkbox ενεργό (προεπιλογή), η ώρα SCADA h αντιστοιχεί στην ώρα MCP h−1. Στηρίζεται σε στατιστική συσχέτιση, όχι σε τεκμηρίωση του ΑΔΜΗΕ.</li>
             </ul>
@@ -66,6 +69,7 @@ const i18n = {
             <p class="mb-1 text-slate-300">Το Dashboard είναι ένα ανεξάρτητο εργαλείο παρακολούθησης των μονάδων αποθήκευσης (BESS) στην ελληνική αγορά, βασισμένο σε ανοιχτά δεδομένα. Τα νούμερα είναι εκτιμήσεις και ενδείξεις, όχι επίσημα στοιχεία.</p>
             <h3 class="mt-4 mb-2 text-[11px] font-bold uppercase tracking-wider text-emerald-400">Όλα τα tabs</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
+                <li><strong class="text-slate-200">Εύρος:</strong> αφορά αποκλειστικά τις μονάδες BESS που είναι συνδεδεμένες στο Σύστημα Μεταφοράς (ΑΔΜΗΕ) και εμφανίζονται στα αρχεία του. Δεν περιλαμβάνονται συστήματα στο Δίκτυο Διανομής (ΔΕΔΔΗΕ).</li>
                 <li><strong class="text-slate-200">Πηγές:</strong> ΑΔΜΗΕ ISP (προγραμματισμός), ΑΔΜΗΕ System Realization SCADA (πραγματική λειτουργία, με στοιχεία που ο ΑΔΜΗΕ χαρακτηρίζει μη πιστοποιημένα) και ENTSO-E (τιμές Αγοράς Επόμενης Ημέρας, MCP).</li>
                 <li><strong class="text-slate-200">Ενημέρωση:</strong> καθημερινά το πρωί. Οι τελευταίες 5 ημέρες ελέγχονται ξανά, ώστε να πιάνονται καθυστερημένες δημοσιεύσεις και διορθώσεις.</li>
                 <li><strong class="text-slate-200">Διαθεσιμότητα:</strong> ISP και MCP από 1/6/2026. SCADA για τις μονάδες BESS από 18/6/2026 (πριν από αυτή την ημερομηνία δεν υπάρχουν μετρήσεις). SCADA για την άντληση (PUMP) από 1/6/2026.</li>
@@ -153,6 +157,8 @@ const i18n = {
         source: "Data source: IPTO (ADMIE) official ISP & SCADA files",
         scopeTooltip: "Refers exclusively to BESS units connected to the Transmission System (IPTO/ADMIE). Excludes distributed systems on the Distribution Network (HEDNO).",
         lastUpdate: "Last Update:",
+        lastUpdateShort: "Updated",
+        nextUpdateShort: "Next",
         nextUpdate: "Next Update:",
         dateLabel: "Date:",
         monthLabel: "Month:",
@@ -166,6 +172,7 @@ const i18n = {
             <p class="mb-1 text-slate-300">An independent tool built on open data. Figures are estimates and indications, not official statistics.</p>
             <h3 class="mt-4 mb-2 text-[11px] font-bold uppercase tracking-wider text-emerald-400">All tabs</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
+                <li><strong class="text-slate-200">Scope:</strong> only BESS units on the Transmission System (IPTO/ADMIE). Systems on the Distribution Network (HEDNO) are not included.</li>
                 <li><strong class="text-slate-200">Sources:</strong> IPTO/ADMIE (ISP = schedule, SCADA = actual operation, uncertified) and ENTSO-E (MCP prices). Updated daily. BESS SCADA measurements exist from 18/6.</li>
                 <li><strong class="text-slate-200">⏱ Hour alignment:</strong> SCADA runs one hour ahead of the market. With the checkbox on (default), SCADA hour h is matched with MCP hour h−1. Based on statistical correlation, not on IPTO documentation.</li>
             </ul>
@@ -190,6 +197,7 @@ const i18n = {
             <p class="mb-1 text-slate-300">This Dashboard is an independent tool for monitoring battery energy storage (BESS) in the Greek market, built on open data. Figures are estimates and indications, not official statistics.</p>
             <h3 class="mt-4 mb-2 text-[11px] font-bold uppercase tracking-wider text-emerald-400">All tabs</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
+                <li><strong class="text-slate-200">Scope:</strong> refers exclusively to BESS units connected to the Transmission System (IPTO/ADMIE) that appear in its files. Systems on the Distribution Network (HEDNO) are not included.</li>
                 <li><strong class="text-slate-200">Sources:</strong> IPTO/ADMIE ISP (scheduling), IPTO/ADMIE System Realization SCADA (actual operation, data that IPTO labels as uncertified) and ENTSO-E (Day-Ahead prices, MCP).</li>
                 <li><strong class="text-slate-200">Updates:</strong> daily in the morning. The last 5 days are re-checked to catch late publications and corrections.</li>
                 <li><strong class="text-slate-200">Availability:</strong> ISP and MCP from 1/6/2026. SCADA for BESS units from 18/6/2026 (no measurements exist before that date). SCADA for pumping (PUMP) from 1/6/2026.</li>
@@ -279,9 +287,9 @@ function setLang(lang) {
     const t = i18n[lang];
     
     document.getElementById('mainTitle').innerText = t.title;
-    document.getElementById('dataSourceText').innerText = t.source;
-    document.getElementById('scopeBadge').title = t.scopeTooltip;
     document.getElementById('lastUpdateLabel').innerText = t.lastUpdate;
+    const lus = document.getElementById('lastUpdateLabelShort'); if (lus) lus.innerText = t.lastUpdateShort;
+    const nus = document.getElementById('nextUpdateLabelShort'); if (nus) nus.innerText = t.nextUpdateShort;
     document.getElementById('nextUpdateLabel').innerText = t.nextUpdate;
     document.getElementById('dateLabel').innerText = t.dateLabel;
     document.getElementById('monthLabel').innerText = t.monthLabel;
@@ -391,6 +399,10 @@ function updateFreshness(dates) {
     }
     document.getElementById('lastUpdateVal').innerText = formattedLatest;
     document.getElementById('nextUpdateVal').innerText = formattedNext;
+    // Μορφή κινητού: χωρίς έτος, ώστε η ένδειξη να χωράει σε μία γραμμή
+    const short = v => v.replace(/^(\d{2}\/\d{2})\/\d{4}/, '$1');
+    const lvs = document.getElementById('lastUpdateValShort'); if (lvs) lvs.innerText = short(formattedLatest);
+    const nvs = document.getElementById('nextUpdateValShort'); if (nvs) nvs.innerText = short(formattedNext);
 }
 
 async function init() {
@@ -422,7 +434,6 @@ async function init() {
             }));
         }
         
-        document.getElementById('scopeBadge').title = i18n[currentLang].scopeTooltip;
 
         const dates = [...new Set([
             ...rawData.isp.map(d => d.date),
