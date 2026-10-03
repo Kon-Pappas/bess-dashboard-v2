@@ -151,6 +151,13 @@
                             <select id="arbitrageDateSelect" onchange="renderArbitrageTab()" class="bg-slate-900 border border-slate-600 text-slate-200 text-sm md:text-xs rounded px-2 py-0.5 outline-none cursor-pointer w-28 sm:w-36 md:w-auto truncate"></select>
                         </div>
 
+                        <div id="globalAlignContainer" class="hidden items-center gap-2 min-w-0">
+                            <label class="flex items-center gap-1.5 text-sm md:text-xs text-slate-300 font-semibold whitespace-nowrap cursor-pointer" title="">
+                                <input type="checkbox" class="mcp-shift-toggle accent-emerald-500 cursor-pointer" onchange="setMcpShift(this.checked)" checked>
+                                <span class="mcp-shift-label">⏱ Hour alignment</span>
+                            </label>
+                        </div>
+
                         <!-- DYNAMIC DATA STATUS BADGE -->
                         <div id="dataStatusBadge" class="flex shrink-0 items-center gap-1.5 px-2 py-0.5 rounded border border-emerald-500/30 bg-emerald-500/10 text-[10px] md:text-xs font-bold text-emerald-400 shadow-sm">
                             <div class="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-emerald-500 shrink-0"></div>
@@ -351,6 +358,10 @@
 
                 <h2 class="text-base sm:text-lg font-semibold text-slate-200 mb-1" id="monthlyChargeTitle">Potential Avoided RES Curtailment (Cumulative Charge)</h2>
                 <p class="text-xs text-slate-400 mb-4" id="monthlyChargeSub">SCADA Data - Energy saved from curtailment</p>
+                <div class="mb-2"><label class="mcp-shift-chip inline-flex items-center gap-1.5 text-[11px] text-slate-400 cursor-pointer" title="">
+                        <input type="checkbox" class="mcp-shift-toggle accent-emerald-500 cursor-pointer" onchange="setMcpShift(this.checked)" checked>
+                        <span class="mcp-shift-label">⏱ Hour alignment</span>
+                    </label></div>
                 <div class="relative h-64 sm:h-80"><canvas id="monthlyChargeChart"></canvas></div>
             </div>
         </div>
@@ -363,10 +374,16 @@
                         <h2 class="text-lg font-semibold text-slate-200 mb-1" id="surplusHourlyTitle">Hourly Profile: Surplus (ISP) vs BESS & PUMP Charging</h2>
                         <p class="text-xs text-slate-400" id="surplusHourlySub">Average day of the selected month (MWh per hour). Shows whether flexibility charging coincides with the surplus hours.</p>
                     </div>
-                    <select id="surplusHourlyMode" onchange="renderSurplusHourlyProfile()" class="bg-slate-900 border border-slate-600 text-slate-200 text-xs rounded px-2 py-1 outline-none cursor-pointer">
-                        <option value="all" id="optHourlyAll">All days</option>
-                        <option value="high" id="optHourlyHigh">High-surplus days (top 25%)</option>
-                    </select>
+                    <div class="flex items-center gap-3">
+                        <label class="mcp-shift-chip inline-flex items-center gap-1.5 text-[11px] text-slate-400 cursor-pointer" title="">
+                        <input type="checkbox" class="mcp-shift-toggle accent-emerald-500 cursor-pointer" onchange="setMcpShift(this.checked)" checked>
+                        <span class="mcp-shift-label">⏱ Hour alignment</span>
+                    </label>
+                        <select id="surplusHourlyMode" onchange="renderSurplusHourlyProfile()" class="bg-slate-900 border border-slate-600 text-slate-200 text-xs rounded px-2 py-1 outline-none cursor-pointer">
+                            <option value="all" id="optHourlyAll">All days</option>
+                            <option value="high" id="optHourlyHigh">High-surplus days (top 25%)</option>
+                        </select>
+                    </div>
                 </div>
                 <div id="surplusHourlyKpis" class="grid grid-cols-2 md:grid-cols-4 gap-3 my-4"></div>
                 <div class="relative h-96"><canvas id="surplusHourlyChart"></canvas></div>
@@ -380,6 +397,10 @@
                 </div>
                 <p class="text-xs text-slate-400 mb-4" id="surplusStackedSub">Absolute values. Days with no red bar (Surplus = 0) indicate purely market-driven arbitrage charging.</p>
                 
+                <div class="mb-3"><label class="mcp-shift-chip inline-flex items-center gap-1.5 text-[11px] text-slate-400 cursor-pointer" title="">
+                        <input type="checkbox" class="mcp-shift-toggle accent-emerald-500 cursor-pointer" onchange="setMcpShift(this.checked)" checked>
+                        <span class="mcp-shift-label">⏱ Hour alignment</span>
+                    </label></div>
                 <div id="surplusKpiGrid" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6"></div>
                 <div class="relative h-96"><canvas id="surplusStackedChart"></canvas></div>
             </div>
@@ -401,7 +422,7 @@
                 <h3 id="arbitrageChartTitle" class="text-lg font-semibold text-slate-200 mb-1">Hourly BESS Operation per Unit (MWh)</h3>
                 <p id="arbitrageChartSub" class="text-xs text-slate-400 mb-4">Negative values = Charging, Positive values = Discharging</p>
                 <div class="flex flex-wrap items-center gap-2 mb-1">
-                    <input type="checkbox" id="mcpShiftToggle" class="accent-emerald-500 cursor-pointer" onchange="setMcpShift(this.checked)" checked>
+                    <input type="checkbox" id="mcpShiftToggle" class="mcp-shift-toggle accent-emerald-500 cursor-pointer" onchange="setMcpShift(this.checked)" checked>
                     <label for="mcpShiftToggle" id="mcpShiftLabel" class="text-xs text-slate-300 cursor-pointer">Align MCP to SCADA hours (MCP hour h−1 ↔ SCADA hour h)</label>
                 </div>
                 <p id="arbitrageAlignNote" class="text-[11px] text-slate-500 mb-4"></p>
