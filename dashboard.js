@@ -30,7 +30,7 @@ function syncMcpShiftControls() {
         : 'The market day (MCP, ISP) is defined in CET, while SCADA hours follow Greek local time (+1h). On: hours are aligned with a one-hour shift. Affects the Monthly, Surplus and Arbitrage tabs.';
     document.querySelectorAll('.mcp-shift-toggle').forEach(el => { el.checked = !!mcpShiftEnabled; });
     document.querySelectorAll('.mcp-shift-label').forEach(el => { el.textContent = label; });
-    document.querySelectorAll('.mcp-shift-chip, #globalAlignContainer label').forEach(el => { el.title = tip; });
+    document.querySelectorAll('.mcp-shift-chip').forEach(el => { el.title = tip; });
 }
 
 function setMcpShift(on) {
@@ -239,7 +239,7 @@ function switchTab(tabName) {
     document.getElementById('viewSurplus').classList.add('hidden');
     document.getElementById('viewArbitrage').classList.add('hidden');
 
-    const inactiveClass = "w-full text-slate-400 bg-slate-800 border border-slate-700 rounded-xl py-3 px-3 text-center text-sm font-medium hover:bg-slate-700/50 transition-colors shadow-sm md:w-auto md:bg-transparent md:border-0 md:border-b-2 md:border-transparent md:rounded-none md:hover:bg-transparent md:hover:text-emerald-300 md:py-2 md:pb-2 md:px-2 whitespace-nowrap md:shadow-none";
+    const inactiveClass = "w-full text-slate-400 bg-slate-800 border border-slate-700 rounded-xl py-3 px-3 text-center text-sm font-medium hover:bg-slate-700/50 transition-colors shadow-sm md:w-full md:bg-transparent md:border-0 md:border-b-2 md:border-transparent md:rounded-none md:hover:bg-transparent md:hover:text-emerald-300 md:py-2 md:pb-2 md:px-2 whitespace-nowrap md:shadow-none";
 
     document.getElementById('tabBtnDaily').className = inactiveClass;
     document.getElementById('tabBtnMonthly').className = inactiveClass;
@@ -258,13 +258,7 @@ function switchTab(tabName) {
     document.getElementById('globalArbitrageContainer').classList.remove('flex');
     document.getElementById('globalArbitrageContainer').classList.add('hidden');
 
-    const activeClass = "w-full text-white bg-indigo-600 font-bold border border-transparent rounded-xl py-3 px-3 text-center text-sm transition-colors shadow-md md:w-auto md:text-emerald-400 md:bg-transparent md:border-0 md:border-b-2 md:border-emerald-400 md:rounded-none md:py-2 md:pb-2 md:px-2 whitespace-nowrap md:shadow-none";
-
-    const alignBox = document.getElementById('globalAlignContainer');
-    if (alignBox) {
-        alignBox.classList.remove('flex', 'hidden');
-        alignBox.classList.add(tabName === 'daily' ? 'hidden' : 'flex');
-    }
+    const activeClass = "w-full text-white bg-indigo-600 font-bold border border-transparent rounded-xl py-3 px-3 text-center text-sm transition-colors shadow-md md:w-full md:text-emerald-400 md:bg-transparent md:border-0 md:border-b-2 md:border-emerald-400 md:rounded-none md:py-2 md:pb-2 md:px-2 whitespace-nowrap md:shadow-none";
 
     if (tabName === 'daily') {
         document.getElementById('viewDaily').classList.remove('hidden');
