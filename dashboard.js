@@ -26,7 +26,8 @@ function setMcpShift(on) {
     renderArbitrageTab();
     // Το φίλτρο τιμής του Monthly tab χρησιμοποιεί την ίδια αντιστοίχιση ωρών
     if (typeof updateMonthlyDashboard === 'function') updateMonthlyDashboard();
-    if (typeof renderSurplusHourlyProfile === 'function') renderSurplusHourlyProfile();
+    // Ο χωρισμός «σε ώρες πλεονάσματος / εκτός» και το ωριαίο προφίλ εξαρτώνται από την ίδια ευθυγράμμιση ωρών
+    if (typeof updateSurplusDashboard === 'function') updateSurplusDashboard();
 }
 
 // Ωριαίες τιμές MCP μιας εγγραφής (υποστηρίζει και τέταρτα T1..T96). Τιμές που λείπουν -> 0.
@@ -552,9 +553,50 @@ function renderMonthlyCharts(labels, chargeData, dischargeData) {
 // ==========================================
 // 3. SURPLUS DASHBOARD
 // ==========================================
+// Χωρισμός της ημερήσιας φόρτισης BESS/PUMP σε «ώρες πλεονάσματος» και «εκτός ωρών πλεονάσματος».
+// Ώρα πλεονάσματος = ώρα όπου το (ευθυγραμμισμένο στην ελληνική ώρα) residual του ISP είναι >= SURPLUS_HOUR_MIN_MWH.
+// Επιστρέφει { 'YYYY-MM-DD': { bessIn, bessOut, pumpIn, pumpOut, hasBess, hasPump } } για ημέρες με ωριαίο surplus.
+function computeSurplusHourSplit(selectedMonth) {
+    const dateOf = r => String(r["Ημερομηνία"] || r["date"] || '').substring(0, 10);
+    const marketShift = (typeof mcpShiftEnabled !== 'undefined' && mcpShiftEnabled) ? 1 : 0;
+
+    const bessByDate = {};
+    getHourlyData().forEach(r => {
+        const date = dateOf(r);
+        if (!date) return;
+        if (!bessByDate[date]) bessByDate[date] = new Array(25).fill(0);
+        for (let h = 1; h <= 25; h++) {
+            const v = parseFloat(r[(h < 10 ? '0' + h : h) + ':00']);
+            if (!isNaN(v) && v < 0) bessByDate[date][h - 1] += -v;
+        }
+    });
+    const pumpByDate = {}, surpByDate = {};
+    (rawData.pumpHourly || []).forEach(r => { pumpByDate[dateOf(r)] = hourlyRowToArray(r, 25); });
+    (rawData.surplusHourly || []).forEach(r => { surpByDate[dateOf(r)] = hourlyRowToArray(r, 25); });
+
+    const out = {};
+    Object.keys(surpByDate).filter(d => d.startsWith(selectedMonth)).forEach(date => {
+        const prevSurp = surpByDate[prevDateString(date)];
+        const inS = [];
+        for (let L = 0; L < 24; L++) inS.push(localHourValue(surpByDate[date], prevSurp, L, marketShift) >= SURPLUS_HOUR_MIN_MWH);
+        const split = arr => {
+            const total = arr.reduce((a, b) => a + b, 0);
+            let inside = 0;
+            for (let L = 0; L < 24; L++) if (inS[L]) inside += arr[L];   // SCADA: ώρα h -> L = h-1
+            return { inside, outside: total - inside };
+        };
+        const r = { bessIn: 0, bessOut: 0, pumpIn: 0, pumpOut: 0, hasBess: false, hasPump: false };
+        if (bessByDate[date]) { const x = split(bessByDate[date]); r.bessIn = x.inside; r.bessOut = x.outside; r.hasBess = true; }
+        if (pumpByDate[date]) { const x = split(pumpByDate[date]); r.pumpIn = x.inside; r.pumpOut = x.outside; r.hasPump = true; }
+        out[date] = r;
+    });
+    return out;
+}
+
 function updateSurplusDashboard() {
     const selectedMonth = document.getElementById('monthSelectSurplus').value;
     if (!selectedMonth || !rawData || !rawData.surplus) return;
+    const lang = typeof currentLang !== 'undefined' ? currentLang : 'en';
 
     const monthScada = rawData.scada ? rawData.scada.filter(d => d.date.startsWith(selectedMonth)) : [];
     const scadaTotals = {};
@@ -572,88 +614,94 @@ function updateSurplusDashboard() {
     const surpTotals = {};
     monthSurplus.forEach(d => { surpTotals[d.date] = d.val; });
 
+    const split = computeSurplusHourSplit(selectedMonth);
     const allDates = [...new Set([...Object.keys(scadaTotals), ...Object.keys(pumpTotals), ...Object.keys(surpTotals)])].sort();
-    
+
     const labels = [];
-    const dailyBess = [];
-    const dailyPump = [];
-    const dailySurp = [];
-    
-    const cumBess = [];
-    const cumPump = [];
-    const cumSurp = [];
-    
+    const dailyBess = [], dailyPump = [], dailySurp = [];      // «σε ώρες πλεονάσματος»
+    const dailyOut = [], dailyBessOut = [], dailyPumpOut = []; // «εκτός ωρών πλεονάσματος» (arbitrage)
+    const cumBess = [], cumPump = [], cumSurp = [];
     let runBess = 0, runPump = 0, runSurp = 0;
 
+    // Συγκεντρωτικά για τα KPI (μόνο ημέρες με πλήρη ωριαία δεδομένα BESS, PUMP, ISP)
+    const kpi = { n: 0, bessIn: 0, pumpIn: 0, res: 0 };
+    let bigDays = 0, daysWithSurplus = 0;
+    let peak = { res: -1, date: '', flexIn: 0 };
+
     allDates.forEach(date => {
-        let parts = date.split('-');
-        if (parts.length >= 3) labels.push(`${parts[2]}/${parts[1]}`);
-        else labels.push(date);
+        const parts = date.split('-');
+        labels.push(parts.length >= 3 ? `${parts[2]}/${parts[1]}` : date);
 
-        let bessDay = (scadaTotals[date] || 0);
-        let pumpDay = (pumpTotals[date] || 0);
-        let surpDay = Math.abs(surpTotals[date] || 0);
-        
-        dailyBess.push(bessDay);
-        dailyPump.push(pumpDay);
+        const bessTotal = scadaTotals[date] || 0;
+        const pumpTotal = pumpTotals[date] || 0;
+        const surpDay = Math.abs(surpTotals[date] || 0);
+        const sp = split[date];
+
+        // Χωρίς ωριαία δεδομένα για την ημέρα: δεν μπορούμε να χωρίσουμε, οπότε όλη η φόρτιση μετράει «σε ώρες πλεονάσματος»
+        const bessIn = (sp && sp.hasBess) ? sp.bessIn : bessTotal;
+        const bessOut = (sp && sp.hasBess) ? sp.bessOut : 0;
+        const pumpIn = (sp && sp.hasPump) ? sp.pumpIn : pumpTotal;
+        const pumpOut = (sp && sp.hasPump) ? sp.pumpOut : 0;
+
+        dailyBess.push(bessIn);
+        dailyPump.push(pumpIn);
         dailySurp.push(surpDay);
+        dailyBessOut.push(bessOut);
+        dailyPumpOut.push(pumpOut);
+        dailyOut.push(bessOut + pumpOut);
 
-        runBess += bessDay;
-        runPump += pumpDay;
-        runSurp += surpDay;
-        
-        cumBess.push(runBess);
-        cumPump.push(runPump);
-        cumSurp.push(runSurp);
+        runBess += bessIn; runPump += pumpIn; runSurp += surpDay;
+        cumBess.push(runBess); cumPump.push(runPump); cumSurp.push(runSurp);
+
+        if (surpTotals[date] !== undefined) {
+            daysWithSurplus++;
+            if (surpDay >= 1000) bigDays++;
+            if (surpDay > peak.res) peak = { res: surpDay, date: labels[labels.length - 1], flexIn: bessIn + pumpIn };
+        }
+        if (sp && sp.hasBess && sp.hasPump) {
+            kpi.n++; kpi.bessIn += sp.bessIn; kpi.pumpIn += sp.pumpIn; kpi.res += surpDay;
+        }
     });
 
-    let bessMax = { pct: -1, val: 0, date: '' };
-    let bessMin = { pct: 101, val: 0, date: '' };
-    let pumpMax = { pct: -1, val: 0, date: '' };
-    let pumpMin = { pct: 101, val: 0, date: '' };
-
-    for (let i = 0; i < labels.length; i++) {
-        let b = dailyBess[i];
-        let p = dailyPump[i];
-        let s = dailySurp[i];
-        let total = b + p + s;
-        let dateLbl = labels[i];
-
-        if (total > 0) {
-            let bPct = (b / total) * 100;
-            let pPct = (p / total) * 100;
-
-            if (bPct > 0 && bPct < 100) {
-                if (bPct > bessMax.pct) { bessMax = { pct: bPct, val: b, date: dateLbl }; }
-                if (bPct < bessMin.pct) { bessMin = { pct: bPct, val: b, date: dateLbl }; }
-            }
-            
-            if (pPct > 0 && pPct < 100) {
-                if (pPct > pumpMax.pct) { pumpMax = { pct: pPct, val: p, date: dateLbl }; }
-                if (pPct < pumpMin.pct) { pumpMin = { pct: pPct, val: p, date: dateLbl }; }
-            }
-        }
-    }
-
-    const populateKPI = (prefix, data) => {
-        if (data.pct === -1 || data.pct === 101) {
-            document.getElementById(`${prefix}Pct`).innerText = '-';
-            document.getElementById(`${prefix}Date`).innerText = '';
-            document.getElementById(`${prefix}Mwh`).innerText = '';
-        } else {
-            document.getElementById(`${prefix}Pct`).innerText = formatPct(data.pct);
-            document.getElementById(`${prefix}Date`).innerText = data.date;
-            document.getElementById(`${prefix}Mwh`).innerText = formatMWh(data.val) + ' MWh';
-        }
-    };
-
-    populateKPI('bessBest', bessMax);
-    populateKPI('bessWorst', bessMin);
-    populateKPI('pumpBest', pumpMax);
-    populateKPI('pumpWorst', pumpMin);
-
-    renderSurplusCharts(labels, dailyBess, dailyPump, dailySurp, cumBess, cumPump, cumSurp);
+    renderSurplusKpis(kpi, bigDays, daysWithSurplus, peak, lang);
+    renderSurplusCharts(labels, dailyBess, dailyPump, dailySurp, cumBess, cumPump, cumSurp, dailyOut, dailyBessOut, dailyPumpOut);
     renderSurplusHourlyProfile();
+}
+
+// KPI πάνω από το ημερήσιο γράφημα: μηνιαία, ενεργειακά σταθμισμένα μεγέθη μόνο για τις ώρες πλεονάσματος
+function renderSurplusKpis(kpi, bigDays, daysWithSurplus, peak, lang) {
+    const box = document.getElementById('surplusKpiGrid');
+    if (!box) return;
+    const el = lang === 'el';
+    const fmt = v => (typeof formatMWh === 'function') ? formatMWh(v) : Math.round(v).toLocaleString();
+    const pct = v => (isFinite(v) ? v.toFixed(1) + '%' : '–');
+    const total = kpi.res + kpi.bessIn + kpi.pumpIn;
+    const half = (label, value, sub, color, subColor) => `
+        <div class="w-1/2">
+            <span class="text-[10px] ${subColor} uppercase tracking-wider block mb-1">${label}</span>
+            <span class="text-xl font-bold ${color}">${value}</span>
+            <span class="text-xs text-slate-400 block mt-0.5">${sub}</span>
+        </div>`;
+    const card = (cls, border, left, right) => `
+        <div class="${cls} border ${border} rounded-lg p-3 flex justify-between items-center shadow-sm gap-4">${left}${right}</div>`;
+
+    const perDay = v => kpi.n > 0 ? fmt(v / kpi.n) : '–';
+    const nTxt = kpi.n > 0 ? `${kpi.n} ${el ? 'ημέρες' : 'days'}` : (el ? 'χωρίς δεδομένα' : 'no data');
+
+    const bessCard = card('bg-emerald-900/10', 'border-emerald-500/20',
+        half(el ? 'BESS σε ώρες πλεονάσματος' : 'BESS in surplus hours', perDay(kpi.bessIn), `MWh/${el ? 'ημέρα' : 'day'} · ${nTxt}`, 'text-emerald-400', 'text-emerald-400/70'),
+        half(el ? 'Μερίδιο απορρόφησης' : 'Absorption share', total > 0 && kpi.n > 0 ? pct(kpi.bessIn / total * 100) : '–', el ? 'του πλεονάσματος των ωρών' : 'of surplus-hour energy', 'text-emerald-400', 'text-emerald-400/70'));
+    const pumpCard = card('bg-blue-900/10', 'border-blue-500/20',
+        half(el ? 'PUMP σε ώρες πλεονάσματος' : 'PUMP in surplus hours', perDay(kpi.pumpIn), `MWh/${el ? 'ημέρα' : 'day'} · ${nTxt}`, 'text-blue-400', 'text-blue-400/70'),
+        half(el ? 'Μερίδιο απορρόφησης' : 'Absorption share', total > 0 && kpi.n > 0 ? pct(kpi.pumpIn / total * 100) : '–', el ? 'του πλεονάσματος των ωρών' : 'of surplus-hour energy', 'text-blue-400', 'text-blue-400/70'));
+    const peakTxt = peak.res > 0 ? `${(peak.res / 1000).toFixed(1)} GWh` : '–';
+    const peakSub = peak.res > 0
+        ? `${peak.date} · ${el ? 'ευελιξία' : 'flex'} ${(peak.flexIn / peak.res * 100).toFixed(0)}%`
+        : '';
+    const surpCard = card('bg-red-900/10', 'border-red-500/20',
+        half(el ? 'Μέρες με residual > 1 GWh' : 'Days with residual > 1 GWh', daysWithSurplus > 0 ? `${bigDays} / ${daysWithSurplus}` : '–', el ? 'ημέρες του μήνα' : 'days of the month', 'text-red-400', 'text-red-400/70'),
+        half(el ? 'Μέρα μέγιστου πλεονάσματος' : 'Peak surplus day', peakTxt, peakSub, 'text-red-400', 'text-red-400/70'));
+    box.innerHTML = bessCard + pumpCard + surpCard;
 }
 
 
@@ -812,7 +860,8 @@ function renderSurplusHourlyProfile() {
     }
 }
 
-function renderSurplusCharts(labels, dailyBess, dailyPump, dailySurplus, cumBess, cumPump, cumSurplus) {
+function renderSurplusCharts(labels, dailyBess, dailyPump, dailySurplus, cumBess, cumPump, cumSurplus, dailyOut, dailyBessOut, dailyPumpOut) {
+    dailyOut = dailyOut || []; dailyBessOut = dailyBessOut || []; dailyPumpOut = dailyPumpOut || [];
     const ctxStacked = document.getElementById('surplusStackedChart').getContext('2d');
     if (surplusStackedChartInst) surplusStackedChartInst.destroy();
     
@@ -823,9 +872,10 @@ function renderSurplusCharts(labels, dailyBess, dailyPump, dailySurplus, cumBess
         data: {
             labels: labels,
             datasets: [
-                { label: 'BESS Charge (SCADA)', data: dailyBess, backgroundColor: '#34d399', stack: 'Stack 0' },
-                { label: 'PUMP Charge (SCADA)', data: dailyPump, backgroundColor: '#3b82f6', stack: 'Stack 0' },
-                { label: 'Residual Surplus (ISP)', data: dailySurplus, backgroundColor: '#ef4444', stack: 'Stack 0' }
+                { label: (lang === 'el') ? 'Φόρτιση BESS σε ώρες πλεονάσματος' : 'BESS Charge in surplus hours', data: dailyBess, backgroundColor: '#34d399', stack: 'Stack 0' },
+                { label: (lang === 'el') ? 'Φόρτιση PUMP σε ώρες πλεονάσματος' : 'PUMP Charge in surplus hours', data: dailyPump, backgroundColor: '#3b82f6', stack: 'Stack 0' },
+                { label: 'Residual Surplus (ISP)', data: dailySurplus, backgroundColor: '#ef4444', stack: 'Stack 0' },
+                { label: (lang === 'el') ? 'Φόρτιση εκτός ωρών πλεονάσματος (arbitrage)' : 'Charging outside surplus hours (arbitrage)', data: dailyOut, backgroundColor: '#64748b', stack: 'Stack 0' }
             ]
         },
         options: {
@@ -840,21 +890,28 @@ function renderSurplusCharts(labels, dailyBess, dailyPump, dailySurplus, cumBess
                             let bess = dailyBess[idx];
                             let pump = dailyPump[idx];
                             let surp = dailySurplus[idx];
-                            
+                            let outBess = dailyBessOut[idx] || 0;
+                            let outPump = dailyPumpOut[idx] || 0;
+                            let outTxt = (outBess + outPump > 0)
+                                ? ((lang === 'el')
+                                    ? `\n\nΕκτός ωρών πλεονάσματος (arbitrage): ${formatMWh(outBess + outPump)} MWh\n(BESS ${formatMWh(outBess)}, PUMP ${formatMWh(outPump)}) - δεν μετράει ως απορρόφηση πλεονάσματος.`
+                                    : `\n\nOutside surplus hours (arbitrage): ${formatMWh(outBess + outPump)} MWh\n(BESS ${formatMWh(outBess)}, PUMP ${formatMWh(outPump)}) - not counted as surplus absorption.`)
+                                : '';
+
                             if (surp === 0) {
-                                return (lang === 'el') 
-                                    ? "Zero ISP Surplus\nΠιθανή καθαρή λειτουργία Market Arbitrage." 
-                                    : "Zero ISP Surplus\nPotential pure Market Arbitrage operation.";
+                                return ((lang === 'el')
+                                    ? "Zero ISP Surplus\nΠιθανή καθαρή λειτουργία Market Arbitrage."
+                                    : "Zero ISP Surplus\nPotential pure Market Arbitrage operation.") + outTxt;
                             }
-                            
+
                             let total = bess + pump + surp;
                             let pctBess = formatPct((bess / total) * 100);
                             let pctPump = formatPct((pump / total) * 100);
                             let pctSurp = formatPct((surp / total) * 100);
-                            
-                            return (lang === 'el') ? 
+
+                            return ((lang === 'el') ?
                                 `\n💡 Επίλυση Θεωρητικού Πλεονάσματος:\n- Αντλησιοταμίευση (PUMP): ${pctPump}\n- Μπαταρίες (BESS): ${pctBess}\n- Τελικό Πλεόνασμα (Surplus): ${pctSurp}` :
-                                `\n💡 Theoretical Surplus Resolution:\n- Pumped Hydro (PUMP): ${pctPump}\n- Batteries (BESS): ${pctBess}\n- Residual Surplus: ${pctSurp}`;
+                                `\n💡 Theoretical Surplus Resolution:\n- Pumped Hydro (PUMP): ${pctPump}\n- Batteries (BESS): ${pctBess}\n- Residual Surplus: ${pctSurp}`) + outTxt;
                         }
                     }
                 }
