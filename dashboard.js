@@ -21,8 +21,21 @@ let currentlyIsolatedBess = null;
 // ==========================================
 let mcpShiftEnabled = true;
 
+// Συγχρονίζει ΟΛΑ τα checkbox ευθυγράμμισης ωρών (header + κάρτες) και τα κείμενά τους με την τρέχουσα κατάσταση/γλώσσα.
+function syncMcpShiftControls() {
+    const lang = typeof currentLang !== 'undefined' ? currentLang : 'en';
+    const label = (lang === 'el') ? '⏱ Ευθυγράμμιση ωρών' : '⏱ Hour alignment';
+    const tip = (lang === 'el')
+        ? 'Η ημέρα της αγοράς (MCP, ISP) ορίζεται σε CET, ενώ οι ώρες SCADA ακολουθούν την ελληνική ώρα (+1h). Ενεργό: οι ώρες ευθυγραμμίζονται με μετατόπιση μίας ώρας. Επηρεάζει τα tabs Monthly, Surplus και Arbitrage.'
+        : 'The market day (MCP, ISP) is defined in CET, while SCADA hours follow Greek local time (+1h). On: hours are aligned with a one-hour shift. Affects the Monthly, Surplus and Arbitrage tabs.';
+    document.querySelectorAll('.mcp-shift-toggle').forEach(el => { el.checked = !!mcpShiftEnabled; });
+    document.querySelectorAll('.mcp-shift-label').forEach(el => { el.textContent = label; });
+    document.querySelectorAll('.mcp-shift-chip, #globalAlignContainer label').forEach(el => { el.title = tip; });
+}
+
 function setMcpShift(on) {
     mcpShiftEnabled = !!on;
+    syncMcpShiftControls();
     renderArbitrageTab();
     // Το φίλτρο τιμής του Monthly tab χρησιμοποιεί την ίδια αντιστοίχιση ωρών
     if (typeof updateMonthlyDashboard === 'function') updateMonthlyDashboard();
@@ -247,6 +260,12 @@ function switchTab(tabName) {
 
     const activeClass = "w-full text-white bg-indigo-600 font-bold border border-transparent rounded-xl py-3 px-3 text-center text-sm transition-colors shadow-md md:w-auto md:text-emerald-400 md:bg-transparent md:border-0 md:border-b-2 md:border-emerald-400 md:rounded-none md:py-2 md:pb-2 md:px-2 whitespace-nowrap md:shadow-none";
 
+    const alignBox = document.getElementById('globalAlignContainer');
+    if (alignBox) {
+        alignBox.classList.remove('flex', 'hidden');
+        alignBox.classList.add(tabName === 'daily' ? 'hidden' : 'flex');
+    }
+
     if (tabName === 'daily') {
         document.getElementById('viewDaily').classList.remove('hidden');
         document.getElementById('tabBtnDaily').className = activeClass;
@@ -462,6 +481,7 @@ function renderDailyCharts(labels, ispDischarge, scadaDischarge, ispCharge, scad
 // 2. MONTHLY DASHBOARD
 // ==========================================
 function updateMonthlyDashboard() {
+    if (typeof syncMcpShiftControls === 'function') syncMcpShiftControls();
     const selectedMonth = document.getElementById('monthSelect').value;
     if (!selectedMonth || !rawData || !rawData.scada || rawData.scada.length === 0) return;
 
@@ -594,6 +614,7 @@ function computeSurplusHourSplit(selectedMonth) {
 }
 
 function updateSurplusDashboard() {
+    if (typeof syncMcpShiftControls === 'function') syncMcpShiftControls();
     const selectedMonth = document.getElementById('monthSelectSurplus').value;
     if (!selectedMonth || !rawData || !rawData.surplus) return;
     const lang = typeof currentLang !== 'undefined' ? currentLang : 'en';
@@ -620,12 +641,12 @@ function updateSurplusDashboard() {
     const labels = [];
     const dailyBess = [], dailyPump = [], dailySurp = [];      // «σε ώρες πλεονάσματος»
     const dailyOut = [], dailyBessOut = [], dailyPumpOut = []; // «εκτός ωρών πλεονάσματος» (arbitrage)
-    const cumBess = [], cumPump = [], cumSurp = [];
-    let runBess = 0, runPump = 0, runSurp = 0;
+    const cumBess = [], cumPump = [], cumSurp = [], cumOut = [];
+    let runBess = 0, runPump = 0, runSurp = 0, runOut = 0;
 
     // Συγκεντρωτικά για τα KPI (μόνο ημέρες με πλήρη ωριαία δεδομένα BESS, PUMP, ISP)
     const kpi = { n: 0, bessIn: 0, pumpIn: 0, res: 0 };
-    let bigDays = 0, daysWithSurplus = 0;
+    let bigDays = 0;
     let peak = { res: -1, date: '', flexIn: 0 };
 
     allDates.forEach(date => {
@@ -651,20 +672,21 @@ function updateSurplusDashboard() {
         dailyOut.push(bessOut + pumpOut);
 
         runBess += bessIn; runPump += pumpIn; runSurp += surpDay;
-        cumBess.push(runBess); cumPump.push(runPump); cumSurp.push(runSurp);
+        runOut += bessOut + pumpOut;
+        cumBess.push(runBess); cumPump.push(runPump); cumSurp.push(runSurp); cumOut.push(runOut);
 
         if (surpTotals[date] !== undefined) {
-            daysWithSurplus++;
-            if (surpDay >= 1000) bigDays++;
             if (surpDay > peak.res) peak = { res: surpDay, date: labels[labels.length - 1], flexIn: bessIn + pumpIn };
         }
         if (sp && sp.hasBess && sp.hasPump) {
             kpi.n++; kpi.bessIn += sp.bessIn; kpi.pumpIn += sp.pumpIn; kpi.res += surpDay;
+            // Ημέρα όπου το residual ξεπέρασε όλη την ενέργεια που απορρόφησαν BESS+PUMP στις ώρες πλεονάσματος
+            if (surpDay > sp.bessIn + sp.pumpIn) bigDays++;
         }
     });
 
-    renderSurplusKpis(kpi, bigDays, daysWithSurplus, peak, lang);
-    renderSurplusCharts(labels, dailyBess, dailyPump, dailySurp, cumBess, cumPump, cumSurp, dailyOut, dailyBessOut, dailyPumpOut);
+    renderSurplusKpis(kpi, bigDays, kpi.n, peak, lang);
+    renderSurplusCharts(labels, dailyBess, dailyPump, dailySurp, cumBess, cumPump, cumSurp, dailyOut, dailyBessOut, dailyPumpOut, cumOut);
     renderSurplusHourlyProfile();
 }
 
@@ -699,7 +721,7 @@ function renderSurplusKpis(kpi, bigDays, daysWithSurplus, peak, lang) {
         ? `${peak.date} · ${el ? 'ευελιξία' : 'flex'} ${(peak.flexIn / peak.res * 100).toFixed(0)}%`
         : '';
     const surpCard = card('bg-red-900/10', 'border-red-500/20',
-        half(el ? 'Μέρες με residual > 1 GWh' : 'Days with residual > 1 GWh', daysWithSurplus > 0 ? `${bigDays} / ${daysWithSurplus}` : '–', el ? 'ημέρες του μήνα' : 'days of the month', 'text-red-400', 'text-red-400/70'),
+        half(el ? 'Μέρες residual > ευελιξία' : 'Days residual > flex', daysWithSurplus > 0 ? `${bigDays} / ${daysWithSurplus}` : '–', el ? 'residual μεγαλύτερο από BESS+PUMP σε ώρες πλεονάσματος' : 'residual above BESS+PUMP in surplus hours', 'text-red-400', 'text-red-400/70'),
         half(el ? 'Μέρα μέγιστου πλεονάσματος' : 'Peak surplus day', peakTxt, peakSub, 'text-red-400', 'text-red-400/70'));
     box.innerHTML = bessCard + pumpCard + surpCard;
 }
@@ -860,8 +882,8 @@ function renderSurplusHourlyProfile() {
     }
 }
 
-function renderSurplusCharts(labels, dailyBess, dailyPump, dailySurplus, cumBess, cumPump, cumSurplus, dailyOut, dailyBessOut, dailyPumpOut) {
-    dailyOut = dailyOut || []; dailyBessOut = dailyBessOut || []; dailyPumpOut = dailyPumpOut || [];
+function renderSurplusCharts(labels, dailyBess, dailyPump, dailySurplus, cumBess, cumPump, cumSurplus, dailyOut, dailyBessOut, dailyPumpOut, cumOut) {
+    dailyOut = dailyOut || []; dailyBessOut = dailyBessOut || []; dailyPumpOut = dailyPumpOut || []; cumOut = cumOut || [];
     const ctxStacked = document.getElementById('surplusStackedChart').getContext('2d');
     if (surplusStackedChartInst) surplusStackedChartInst.destroy();
     
@@ -933,7 +955,8 @@ function renderSurplusCharts(labels, dailyBess, dailyPump, dailySurplus, cumBess
             datasets: [
                 { label: 'Cum. BESS Charge', data: cumBess, borderColor: '#34d399', backgroundColor: 'rgba(52, 211, 153, 0.1)', fill: true, tension: 0.3 },
                 { label: 'Cum. PUMP Charge', data: cumPump, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.3 },
-                { label: 'Cum. Residual Surplus', data: cumSurplus, borderColor: '#ef4444', backgroundColor: 'transparent', fill: false, tension: 0.3 }
+                { label: 'Cum. Residual Surplus', data: cumSurplus, borderColor: '#ef4444', backgroundColor: 'transparent', fill: false, tension: 0.3 },
+                { label: (lang === 'el') ? 'Αθροιστική φόρτιση εκτός ωρών πλεονάσματος (arbitrage)' : 'Cum. charging outside surplus hours (arbitrage)', data: cumOut, borderColor: '#64748b', backgroundColor: 'transparent', borderDash: [6, 4], fill: false, tension: 0.3 }
             ]
         },
         options: {
@@ -951,6 +974,7 @@ function renderSurplusCharts(labels, dailyBess, dailyPump, dailySurplus, cumBess
 // 4. ARBITRAGE P&L & HOURLY OPERATIONS
 // ==========================================
 function renderArbitrageTab() {
+    if (typeof syncMcpShiftControls === 'function') syncMcpShiftControls();
     updateStatusBadge();
     currentlyIsolatedBess = null; 
 
