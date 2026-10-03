@@ -4,6 +4,25 @@ const API_URL = "data/historical.json";
 let rawData = { isp: [], scada: [], surplus: [], pump: [], bessHourly: [], mcpHourly: [], surplusHourly: [], pumpHourly: [] };
 let currentLang = 'en';
 
+// Μεθοδολογία: δύο εκδόσεις κειμένου (σύντομη / αναλυτική)
+let methodologyView = 'short';
+function renderMethodologyBody() {
+    const t = i18n[currentLang] || i18n.en;
+    const body = document.getElementById('modalBody');
+    if (body) body.innerHTML = (methodologyView === 'full') ? t.modalBodyFull : t.modalBodyShort;
+    const on = 'flex-1 px-3 py-1.5 rounded-md text-xs font-semibold bg-emerald-600 text-white transition';
+    const off = 'flex-1 px-3 py-1.5 rounded-md text-xs font-semibold text-slate-400 hover:text-slate-200 transition';
+    const bs = document.getElementById('methodTabShort'), bf = document.getElementById('methodTabFull');
+    if (bs) { bs.className = (methodologyView === 'short') ? on : off; bs.setAttribute('aria-pressed', methodologyView === 'short'); }
+    if (bf) { bf.className = (methodologyView === 'full') ? on : off; bf.setAttribute('aria-pressed', methodologyView === 'full'); }
+}
+function setMethodologyView(view) {
+    methodologyView = (view === 'full') ? 'full' : 'short';
+    renderMethodologyBody();
+    const body = document.getElementById('modalBody');
+    if (body) body.scrollTop = 0;
+}
+
 const i18n = {
     el: {
         title: "Greek BESS Market Analytics",
@@ -19,15 +38,77 @@ const i18n = {
         tabArbitrage: "Arbitrage P&L",
         btnMethodology: "Μεθοδολογία & Παραδοχές",
         modalTitle: "Μεθοδολογία & Βασικές Παραδοχές",
-        modalBody: `
-            <p class="mb-3">Το παρόν Dashboard αποτελεί ένα ανεξάρτητο εργαλείο παρακολούθησης και ανάλυσης της δραστηριότητας των μονάδων Αποθήκευσης Ενέργειας (BESS) στην Ελληνική Αγορά, βασισμένο σε ανοιχτά δεδομένα.</p>
-            <ul class="list-disc pl-5 space-y-2 mb-4 text-slate-400">
-                <li><strong class="text-slate-200">Πηγές Δεδομένων:</strong> Τα δεδομένα αντλούνται καθημερινά από τα επίσημα αρχεία του ΑΔΜΗΕ (ISP Results & System Realization SCADA) και του ENTSO-E (Day-Ahead Market Prices).</li>
-                <li><strong class="text-slate-200">Οικονομικό Μοντέλο (P&L):</strong> Η εκτίμηση εσόδων (Arbitrage) αφορά <strong>αποκλειστικά τη λειτουργία στην Αγορά Επόμενης Ημέρας (DAM)</strong>. Ως price-takers, τα συστήματα θεωρείται ότι αγοράζουν και πωλούν στην Τιμή Εκκαθάρισης Αγοράς (MCP). <em>Δεν συμπεριλαμβάνονται</em> τα έσοδα από την Αγορά Εξισορρόπησης (Balancing Market), Επικουρικές Υπηρεσίες (FCR, aFRR) ή μηχανισμούς ισχύος.</li>
-                <li><strong class="text-slate-200">Απόδοση Κύκλου (RTE):</strong> Υπολογίζεται σε ημερήσια βάση (AC-to-AC) από τα δεδομένα SCADA. Ακραίες τιμές (π.χ. >92% ή <83%) οφείλονται συχνά στο φαινόμενο <em>Inter-day SoC Carryover</em>, όπου η μπαταρία διατηρεί απόθεμα ενέργειας για να το εγχύσει την επόμενη μέρα, εμφανίζοντας τεχνητά αλλοιωμένο ημερήσιο κλάσμα.</li>
-                <li><strong class="text-slate-200">Περιβαλλοντικός Αντίκτυπος:</strong> Οι μετρικές μηνιαίας υποκατάστασης είναι θεωρητικές. Βασίζονται στην υπόθεση ότι κάθε παραγόμενη MWh από BESS υποκαθιστά ακριβότερη και ρυπογόνο θερμική παραγωγή (Φυσικό Αέριο/Λιγνίτη), ενώ κάθε MWh φόρτισης αφορά δυνητική απορρόφηση πλεονάσματος ΑΠΕ που αλλιώς θα περικόπτονταν.</li>
+        modalBodyShort: `
+            <p class="mb-1 text-slate-300">Ανεξάρτητο εργαλείο πάνω σε ανοιχτά δεδομένα. Τα νούμερα είναι εκτιμήσεις και ενδείξεις, όχι επίσημα στοιχεία.</p>
+            <h3 class="mt-4 mb-2 text-[11px] font-bold uppercase tracking-wider text-emerald-400">Όλα τα tabs</h3>
+            <ul class="list-disc pl-5 space-y-2 text-slate-400">
+                <li><strong class="text-slate-200">Πηγές:</strong> ΑΔΜΗΕ (ISP = πρόγραμμα, SCADA = πραγματική λειτουργία, μη πιστοποιημένο) και ENTSO-E (τιμές MCP). Ενημέρωση καθημερινά. Μετρήσεις SCADA για BESS υπάρχουν από 18/6.</li>
+                <li><strong class="text-slate-200">⏱ Ευθυγράμμιση ωρών:</strong> το SCADA είναι μία ώρα μπροστά από την αγορά. Με το checkbox ενεργό (προεπιλογή), η ώρα SCADA h αντιστοιχεί στην ώρα MCP h−1. Στηρίζεται σε στατιστική συσχέτιση, όχι σε τεκμηρίωση του ΑΔΜΗΕ.</li>
+            </ul>
+            <h3 class="mt-4 mb-2 text-[11px] font-bold uppercase tracking-wider text-emerald-400">Ημερήσια Ανάλυση</h3>
+            <ul class="list-disc pl-5 space-y-2 text-slate-400">
+                <li><strong class="text-slate-200">Σύνολα &amp; RTE:</strong> το «TOTAL BESS» είναι το άθροισμα των μονάδων. Το ημερήσιο RTE αλλοιώνεται από μεταφορά φόρτισης στην επόμενη μέρα, οπότε διάβασέ το σε μεγαλύτερα διαστήματα.</li>
+            </ul>
+            <h3 class="mt-4 mb-2 text-[11px] font-bold uppercase tracking-wider text-emerald-400">Μηνιαίος Αντίκτυπος</h3>
+            <ul class="list-disc pl-5 space-y-2 text-slate-400">
+                <li><strong class="text-slate-200">Αποφυγή περικοπών:</strong> μετράει μόνο φόρτιση όταν η τιμή MCP είναι ≤ 5 €/MWh. Η υποκατάσταση θερμικών μονάδων είναι θεωρητική.</li>
+            </ul>
+            <h3 class="mt-4 mb-2 text-[11px] font-bold uppercase tracking-wider text-emerald-400">Πλεόνασμα &amp; Ευελιξία</h3>
+            <ul class="list-disc pl-5 space-y-2 text-slate-400">
+                <li><strong class="text-slate-200">Residual &amp; απορρόφηση:</strong> το residual προέρχεται από το ISP (πρόγραμμα, χωρίς εξαγωγές). Μετράει μόνο η φόρτιση BESS και PUMP στις ώρες πλεονάσματος· η υπόλοιπη (γκρι) θεωρείται arbitrage. Η εικόνα είναι ενδεικτική.</li>
+            </ul>
+            <h3 class="mt-4 mb-2 text-[11px] font-bold uppercase tracking-wider text-emerald-400">Arbitrage P&amp;L</h3>
+            <ul class="list-disc pl-5 space-y-2 text-slate-400">
+                <li><strong class="text-slate-200">Έσοδα:</strong> μόνο Αγορά Επόμενης Ημέρας, στο MCP. Δεν περιλαμβάνονται εξισορρόπηση, επικουρικές υπηρεσίες, χρεώσεις και φόροι. Είναι ακαθάριστη εκτίμηση, όχι λογιστικό αποτέλεσμα.</li>
             </ul>
         `,
+        modalBodyFull: `
+            <p class="mb-1 text-slate-300">Το Dashboard είναι ένα ανεξάρτητο εργαλείο παρακολούθησης των μονάδων αποθήκευσης (BESS) στην ελληνική αγορά, βασισμένο σε ανοιχτά δεδομένα. Τα νούμερα είναι εκτιμήσεις και ενδείξεις, όχι επίσημα στοιχεία.</p>
+            <h3 class="mt-4 mb-2 text-[11px] font-bold uppercase tracking-wider text-emerald-400">Όλα τα tabs</h3>
+            <ul class="list-disc pl-5 space-y-2 text-slate-400">
+                <li><strong class="text-slate-200">Πηγές:</strong> ΑΔΜΗΕ ISP (προγραμματισμός), ΑΔΜΗΕ System Realization SCADA (πραγματική λειτουργία, με στοιχεία που ο ΑΔΜΗΕ χαρακτηρίζει μη πιστοποιημένα) και ENTSO-E (τιμές Αγοράς Επόμενης Ημέρας, MCP).</li>
+                <li><strong class="text-slate-200">Ενημέρωση:</strong> καθημερινά το πρωί. Οι τελευταίες 5 ημέρες ελέγχονται ξανά, ώστε να πιάνονται καθυστερημένες δημοσιεύσεις και διορθώσεις.</li>
+                <li><strong class="text-slate-200">Διαθεσιμότητα:</strong> ISP και MCP από 1/6/2026. SCADA για τις μονάδες BESS από 18/6/2026 (πριν από αυτή την ημερομηνία δεν υπάρχουν μετρήσεις). SCADA για την άντληση (PUMP) από 1/6/2026.</li>
+                <li><strong class="text-slate-200">Ώρες και τιμές:</strong> η αγορά (MCP, ISP) χρησιμοποιεί την ώρα CET, ενώ το SCADA την ελληνική ώρα (μία ώρα μπροστά). Η αγορά λειτουργεί με 15λεπτα και η τιμή κάθε ώρας είναι ο μέσος όρος των τεσσάρων τετάρτων.</li>
+                <li><strong class="text-slate-200">⏱ Ευθυγράμμιση ωρών:</strong> όταν είναι ενεργή, που είναι και η προεπιλογή, η ώρα SCADA h αντιστοιχεί στην ώρα MCP h−1, και το ISP ακολουθεί το ρολόι της αγοράς. Η παραδοχή στηρίζεται σε στατιστική συσχέτιση: οι ώρες πλεονάσματος του ISP συμπίπτουν με τις ώρες χαμηλής τιμής χωρίς μετατόπιση, ενώ η φόρτιση BESS και η άντληση ταιριάζουν καλύτερα με την τιμή της προηγούμενης ώρας. Δεν έχει επιβεβαιωθεί από τεκμηρίωση του ΑΔΜΗΕ. Επηρεάζει τα tabs Μηνιαίος Αντίκτυπος, Πλεόνασμα &amp; Ευελιξία και Arbitrage P&amp;L.</li>
+            </ul>
+            <h3 class="mt-4 mb-2 text-[11px] font-bold uppercase tracking-wider text-emerald-400">Ημερήσια Ανάλυση</h3>
+            <ul class="list-disc pl-5 space-y-2 text-slate-400">
+                <li><strong class="text-slate-200">ISP και SCADA:</strong> το ISP δείχνει τι προγραμματίστηκε και το SCADA τι πραγματοποιήθηκε. Διαφορές ανάμεσά τους είναι αναμενόμενες.</li>
+                <li><strong class="text-slate-200">Σύνολα:</strong> η ημερήσια φόρτιση και αποφόρτιση κάθε μονάδας είναι το άθροισμα των ωριαίων τιμών (στο ISP, των τετάρτων). Το «TOTAL BESS» είναι το άθροισμα των μονάδων, δηλαδή η πραγματική φυσική φόρτιση και αποφόρτιση. Δεν είναι η γραμμή TOTAL του ΑΔΜΗΕ, που συμψηφίζει τις μονάδες ανά ώρα και δίνει χαμηλότερες τιμές.</li>
+                <li><strong class="text-slate-200">Απόδοση κύκλου (RTE):</strong> ημερήσιο AC-to-AC, δηλαδή αποφόρτιση ÷ φόρτιση. Ακραίες τιμές (πάνω από ~92% ή κάτω από ~83%, και μερικές φορές πάνω από 100% σε μία μονάδα) οφείλονται συχνά στο φαινόμενο <em>Inter-day SoC Carryover</em>, όπου η μπαταρία κρατά ενέργεια για την επόμενη μέρα. Το RTE είναι πιο αξιόπιστο σε μεγαλύτερα διαστήματα ή στο σύνολο του στόλου.</li>
+            </ul>
+            <h3 class="mt-4 mb-2 text-[11px] font-bold uppercase tracking-wider text-emerald-400">Μηνιαίος Αντίκτυπος</h3>
+            <ul class="list-disc pl-5 space-y-2 text-slate-400">
+                <li><strong class="text-slate-200">Αποφόρτιση και θερμική υποκατάσταση:</strong> θεωρητική μετρική. Υποθέτει ότι κάθε MWh αποφόρτισης BESS υποκαθιστά ακριβότερη θερμική παραγωγή (φυσικό αέριο ή λιγνίτη). Δεν μετράται η πραγματική υποκατάσταση.</li>
+                <li><strong class="text-slate-200">Φόρτιση και αποφυγή περικοπών ΑΠΕ:</strong> μετράει μόνο η φόρτιση σε ώρες με τιμή MCP ≤ 5 €/MWh, δηλαδή όταν οι ΑΠΕ κορέννυνται και η τιμή πέφτει περίπου στο μηδέν. Η φόρτιση σε υψηλότερες τιμές (π.χ. νυχτερινό arbitrage) δεν μετράει. Το όριο των 5 € είναι σταθερό.</li>
+            </ul>
+            <h3 class="mt-4 mb-2 text-[11px] font-bold uppercase tracking-wider text-emerald-400">Πλεόνασμα &amp; Ευελιξία</h3>
+            <ul class="list-disc pl-5 space-y-2 text-slate-400">
+                <li><strong class="text-slate-200">Residual surplus:</strong> προέρχεται από τη γραμμή <em>Energy Surplus</em> του ISP και είναι το πλεόνασμα που απομένει μετά τον προγραμματισμό. Είναι πρόγραμμα και όχι μέτρηση, και δεν λαμβάνει υπόψη τις εξαγωγές.</li>
+                <li><strong class="text-slate-200">Θεωρητικό πλεόνασμα:</strong> residual + φόρτιση BESS + φόρτιση PUMP στις ώρες πλεονάσματος. «Ώρα πλεονάσματος» είναι κάθε ώρα με residual ISP τουλάχιστον 1 MWh, με τις ώρες ευθυγραμμισμένες στην ελληνική ώρα.</li>
+                <li><strong class="text-slate-200">Φόρτιση εκτός ωρών πλεονάσματος (γκρι):</strong> θεωρείται arbitrage και δεν μετράει ως απορρόφηση πλεονάσματος.</li>
+                <li><strong class="text-slate-200">Μερίδια απορρόφησης:</strong> το μερίδιο του BESS ή της άντλησης στο θεωρητικό πλεόνασμα, ανά μήνα στα KPI και ανά ημέρα στο tooltip. Τα KPI υπολογίζονται μόνο σε ημέρες με πλήρη δεδομένα BESS, PUMP και ISP.</li>
+                <li><strong class="text-slate-200">«Μέρες residual &gt; ευελιξία»:</strong> ημέρες όπου το residual ξεπέρασε όση ενέργεια απορρόφησαν BESS και PUMP στις ώρες πλεονάσματος. Δεν σημαίνει ότι η ευελιξία είχε εξαντλήσει τη δυναμικότητά της.</li>
+                <li><strong class="text-slate-200">Ωριαίο προφίλ:</strong> μέση ημέρα του μήνα σε ελληνική ώρα, μόνο από ημέρες με δεδομένα και από τις τέσσερις πηγές (BESS, PUMP, ISP, MCP). «Μέρες υψηλού πλεονάσματος» είναι το ανώτερο 25% του μήνα με βάση το ημερήσιο residual.</li>
+                <li><strong class="text-slate-200">Πώς να διαβάζεται:</strong> ενδεικτικά. Οι εξαγωγές δεν περιλαμβάνονται, άρα η απορρόφηση υποτιμάται. Η φόρτιση arbitrage που πέφτει σε ώρες πλεονάσματος μετράει ως απορρόφηση, άρα υπερτιμάται.</li>
+            </ul>
+            <h3 class="mt-4 mb-2 text-[11px] font-bold uppercase tracking-wider text-emerald-400">Arbitrage P&amp;L</h3>
+            <ul class="list-disc pl-5 space-y-2 text-slate-400">
+                <li><strong class="text-slate-200">Έσοδα:</strong> αποκλειστικά από την Αγορά Επόμενης Ημέρας (DAM). Ως price-taker, κάθε μονάδα αγοράζει και πουλά στο MCP: ωριαίο καθαρό ποσό (αποφόρτιση − φόρτιση) × MCP. Δεν περιλαμβάνονται έσοδα από την Αγορά Εξισορρόπησης, τις Επικουρικές Υπηρεσίες (FCR, aFRR) ή μηχανισμούς ισχύος.</li>
+                <li><strong class="text-slate-200">Αντιστοίχιση ωρών:</strong> με ενεργή την ευθυγράμμιση, η ώρα SCADA h αποτιμάται με την τιμή της ώρας h−1 (η ώρα 1 με την ώρα 24 της προηγούμενης ημέρας). Χωρίς αυτήν, με την ίδια ώρα. Η διαφορά στο συνολικό P&amp;L Ιουνίου–Σεπτεμβρίου είναι ενδεικτικά περίπου 10%.</li>
+                <li><strong class="text-slate-200">Τι δεν περιλαμβάνεται:</strong> χρεώσεις δικτύου, φόροι, κόστος λειτουργίας και φθοράς, χρηματοδοτικό κόστος. Το P&amp;L είναι ακαθάριστη εκτίμηση αξίας ενέργειας, όχι λογιστικό αποτέλεσμα.</li>
+            </ul>
+            <h3 class="mt-4 mb-2 text-[11px] font-bold uppercase tracking-wider text-emerald-400">Περιορισμοί</h3>
+            <ul class="list-disc pl-5 space-y-2 text-slate-400">
+                <li><strong class="text-slate-200">Δεδομένα:</strong> τα στοιχεία SCADA είναι μη πιστοποιημένα και μπορεί να αναθεωρηθούν. Το ISP είναι προγραμματισμός.</li>
+                <li><strong class="text-slate-200">Αλλαγή ώρας:</strong> οι ημέρες αλλαγής ώρας (25 ώρες στις 25/10, 23 ώρες τον Μάρτιο) χειρίζονται ειδικά, αλλά δεν έχουν ακόμα δοκιμαστεί με πραγματικά δεδομένα.</li>
+                <li><strong class="text-slate-200">Χαρακτήρας:</strong> ανεξάρτητη ανάλυση πάνω σε ανοιχτά δεδομένα. Δεν αποτελεί επίσημη θέση κάποιου φορέα.</li>
+            </ul>
+        `,
+        methodTabShort: "Σύντομη",
+        methodTabFull: "Αναλυτική",
+        modalClose: "Κλείσιμο",
         dischargeTitle: "Αποφόρτιση (Discharge) Ανά Μονάδα BESS (MWh)",
         totalDischarge: "Συνολική Αποφόρτιση",
         chargeTitle: "Φόρτιση (Charge) Ανά Μονάδα BESS (MWh)",
@@ -81,15 +162,77 @@ const i18n = {
         tabArbitrage: "Arbitrage P&L",
         btnMethodology: "Methodology & Assumptions",
         modalTitle: "Methodology & Core Assumptions",
-        modalBody: `
-            <p class="mb-3">This Dashboard serves as an independent tool for monitoring and analyzing Battery Energy Storage Systems (BESS) activity in the Greek Energy Market, based entirely on open data.</p>
-            <ul class="list-disc pl-5 space-y-2 mb-4 text-slate-400">
-                <li><strong class="text-slate-200">Data Sources:</strong> Data is fetched daily from IPTO's (ADMIE) official reports (ISP Results & System Realization SCADA) and ENTSO-E (Day-Ahead Market Prices).</li>
-                <li><strong class="text-slate-200">Financial Model (P&L):</strong> The estimated Arbitrage revenue is based <strong>strictly on the Day-Ahead Market (DAM)</strong>. Assuming a price-taker behavior, units charge/discharge at the Market Clearing Price (MCP). <em>Revenues from the Balancing Market, Ancillary Services (FCR, aFRR), or Capacity Mechanisms are entirely excluded.</em></li>
-                <li><strong class="text-slate-200">Round Trip Efficiency (RTE):</strong> Calculated on a daily AC-to-AC basis from SCADA telemetry. Extreme outliers (e.g., >92% or <83%) are typically caused by the <em>Inter-day SoC Carryover</em> effect, where a battery holds state-of-charge to inject on a subsequent day, artificially skewing the daily ratio.</li>
-                <li><strong class="text-slate-200">Environmental Impact:</strong> Monthly displacement metrics are theoretical. They rely on the assumption that BESS discharge displaces expensive/polluting thermal generation (Gas/Lignite), while BESS charging absorbs surplus RES generation that would otherwise face curtailment.</li>
+        modalBodyShort: `
+            <p class="mb-1 text-slate-300">An independent tool built on open data. Figures are estimates and indications, not official statistics.</p>
+            <h3 class="mt-4 mb-2 text-[11px] font-bold uppercase tracking-wider text-emerald-400">All tabs</h3>
+            <ul class="list-disc pl-5 space-y-2 text-slate-400">
+                <li><strong class="text-slate-200">Sources:</strong> IPTO/ADMIE (ISP = schedule, SCADA = actual operation, uncertified) and ENTSO-E (MCP prices). Updated daily. BESS SCADA measurements exist from 18/6.</li>
+                <li><strong class="text-slate-200">⏱ Hour alignment:</strong> SCADA runs one hour ahead of the market. With the checkbox on (default), SCADA hour h is matched with MCP hour h−1. Based on statistical correlation, not on IPTO documentation.</li>
+            </ul>
+            <h3 class="mt-4 mb-2 text-[11px] font-bold uppercase tracking-wider text-emerald-400">Daily Analytics</h3>
+            <ul class="list-disc pl-5 space-y-2 text-slate-400">
+                <li><strong class="text-slate-200">Totals &amp; RTE:</strong> “TOTAL BESS” is the sum of the units. Daily RTE is distorted by energy carried over to the next day, so read it over longer periods.</li>
+            </ul>
+            <h3 class="mt-4 mb-2 text-[11px] font-bold uppercase tracking-wider text-emerald-400">Monthly Impact</h3>
+            <ul class="list-disc pl-5 space-y-2 text-slate-400">
+                <li><strong class="text-slate-200">Avoided curtailment:</strong> counts only charging when the MCP price is ≤ €5/MWh. Thermal displacement is theoretical.</li>
+            </ul>
+            <h3 class="mt-4 mb-2 text-[11px] font-bold uppercase tracking-wider text-emerald-400">Surplus &amp; Flexibility</h3>
+            <ul class="list-disc pl-5 space-y-2 text-slate-400">
+                <li><strong class="text-slate-200">Residual &amp; absorption:</strong> residual comes from the ISP (a schedule, excluding exports). Only BESS and PUMP charging in surplus hours counts; the rest (grey) is treated as arbitrage. The picture is indicative.</li>
+            </ul>
+            <h3 class="mt-4 mb-2 text-[11px] font-bold uppercase tracking-wider text-emerald-400">Arbitrage P&amp;L</h3>
+            <ul class="list-disc pl-5 space-y-2 text-slate-400">
+                <li><strong class="text-slate-200">Revenue:</strong> Day-Ahead Market only, at the MCP. Balancing, ancillary services, charges and taxes are excluded. It is a gross estimate, not an accounting result.</li>
             </ul>
         `,
+        modalBodyFull: `
+            <p class="mb-1 text-slate-300">This Dashboard is an independent tool for monitoring battery energy storage (BESS) in the Greek market, built on open data. Figures are estimates and indications, not official statistics.</p>
+            <h3 class="mt-4 mb-2 text-[11px] font-bold uppercase tracking-wider text-emerald-400">All tabs</h3>
+            <ul class="list-disc pl-5 space-y-2 text-slate-400">
+                <li><strong class="text-slate-200">Sources:</strong> IPTO/ADMIE ISP (scheduling), IPTO/ADMIE System Realization SCADA (actual operation, data that IPTO labels as uncertified) and ENTSO-E (Day-Ahead prices, MCP).</li>
+                <li><strong class="text-slate-200">Updates:</strong> daily in the morning. The last 5 days are re-checked to catch late publications and corrections.</li>
+                <li><strong class="text-slate-200">Availability:</strong> ISP and MCP from 1/6/2026. SCADA for BESS units from 18/6/2026 (no measurements exist before that date). SCADA for pumping (PUMP) from 1/6/2026.</li>
+                <li><strong class="text-slate-200">Hours and prices:</strong> the market (MCP, ISP) uses CET, while SCADA uses Greek local time (one hour ahead). The market runs on 15-minute intervals and each hourly price is the average of its four quarters.</li>
+                <li><strong class="text-slate-200">⏱ Hour alignment:</strong> when on, which is the default, SCADA hour h is matched with MCP hour h−1, and the ISP follows the market clock. The assumption rests on statistical correlation: ISP surplus hours coincide with low-price hours without any shift, while BESS charging and pumping fit the price of the previous hour better. It has not been confirmed by IPTO documentation. It affects the Monthly Impact, Surplus &amp; Flexibility and Arbitrage P&amp;L tabs.</li>
+            </ul>
+            <h3 class="mt-4 mb-2 text-[11px] font-bold uppercase tracking-wider text-emerald-400">Daily Analytics</h3>
+            <ul class="list-disc pl-5 space-y-2 text-slate-400">
+                <li><strong class="text-slate-200">ISP and SCADA:</strong> the ISP shows what was scheduled and SCADA what actually happened. Differences between them are expected.</li>
+                <li><strong class="text-slate-200">Totals:</strong> a unit’s daily charge and discharge is the sum of its hourly values (quarter-hourly in the ISP). “TOTAL BESS” is the sum of the units, i.e. the actual physical charge and discharge. It is not IPTO’s TOTAL row, which nets the units hour by hour and gives lower values.</li>
+                <li><strong class="text-slate-200">Round-trip efficiency (RTE):</strong> daily AC-to-AC, i.e. discharge ÷ charge. Extreme values (above ~92% or below ~83%, and sometimes above 100% for a single unit) are often caused by <em>Inter-day SoC Carryover</em>, where the battery holds energy for the next day. RTE is more reliable over longer periods or for the whole fleet.</li>
+            </ul>
+            <h3 class="mt-4 mb-2 text-[11px] font-bold uppercase tracking-wider text-emerald-400">Monthly Impact</h3>
+            <ul class="list-disc pl-5 space-y-2 text-slate-400">
+                <li><strong class="text-slate-200">Discharge and thermal displacement:</strong> a theoretical metric. It assumes every MWh of BESS discharge displaces more expensive thermal generation (gas or lignite). Actual displacement is not measured.</li>
+                <li><strong class="text-slate-200">Charging and avoided RES curtailment:</strong> only charging in hours with an MCP price ≤ €5/MWh counts, i.e. when RES saturate the market and the price drops to about zero. Charging at higher prices (e.g. overnight arbitrage) does not count. The €5 threshold is fixed.</li>
+            </ul>
+            <h3 class="mt-4 mb-2 text-[11px] font-bold uppercase tracking-wider text-emerald-400">Surplus &amp; Flexibility</h3>
+            <ul class="list-disc pl-5 space-y-2 text-slate-400">
+                <li><strong class="text-slate-200">Residual surplus:</strong> comes from the <em>Energy Surplus</em> row of the ISP and is the surplus left after scheduling. It is a schedule, not a measurement, and it ignores exports.</li>
+                <li><strong class="text-slate-200">Theoretical surplus:</strong> residual + BESS charging + PUMP charging in surplus hours. A “surplus hour” is any hour with ISP residual of at least 1 MWh, with hours aligned to Greek local time.</li>
+                <li><strong class="text-slate-200">Charging outside surplus hours (grey):</strong> treated as arbitrage and not counted as surplus absorption.</li>
+                <li><strong class="text-slate-200">Absorption shares:</strong> the share of BESS or pumping in the theoretical surplus, monthly in the KPIs and daily in the tooltip. KPIs use only days with complete BESS, PUMP and ISP data.</li>
+                <li><strong class="text-slate-200">“Days residual &gt; flex”:</strong> days when the residual exceeded the energy absorbed by BESS and PUMP in surplus hours. It does not mean flexibility had used up its capacity.</li>
+                <li><strong class="text-slate-200">Hourly profile:</strong> average day of the month in Greek local time, using only days with data from all four sources (BESS, PUMP, ISP, MCP). “High-surplus days” are the top 25% of the month by daily residual.</li>
+                <li><strong class="text-slate-200">How to read it:</strong> indicative. Exports are not included, so absorption is understated. Arbitrage charging that falls in surplus hours counts as absorption, so it is overstated.</li>
+            </ul>
+            <h3 class="mt-4 mb-2 text-[11px] font-bold uppercase tracking-wider text-emerald-400">Arbitrage P&amp;L</h3>
+            <ul class="list-disc pl-5 space-y-2 text-slate-400">
+                <li><strong class="text-slate-200">Revenue:</strong> exclusively from the Day-Ahead Market (DAM). As a price-taker, each unit buys and sells at the MCP: hourly net amount (discharge − charge) × MCP. Revenue from the Balancing Market, Ancillary Services (FCR, aFRR) or capacity mechanisms is not included.</li>
+                <li><strong class="text-slate-200">Hour matching:</strong> with alignment on, SCADA hour h is valued at the price of hour h−1 (hour 1 uses hour 24 of the previous day). Without it, the same hour is used. The difference in total June–September P&amp;L is roughly 10%, indicatively.</li>
+                <li><strong class="text-slate-200">What is not included:</strong> network charges, taxes, operating and degradation costs, financing costs. P&amp;L is a gross estimate of energy value, not an accounting result.</li>
+            </ul>
+            <h3 class="mt-4 mb-2 text-[11px] font-bold uppercase tracking-wider text-emerald-400">Limitations</h3>
+            <ul class="list-disc pl-5 space-y-2 text-slate-400">
+                <li><strong class="text-slate-200">Data:</strong> SCADA data is uncertified and may be revised. The ISP is a schedule.</li>
+                <li><strong class="text-slate-200">Clock changes:</strong> clock-change days (25 hours on 25/10, 23 hours in March) are handled specifically but have not yet been tested with real data.</li>
+                <li><strong class="text-slate-200">Nature:</strong> independent analysis of open data. It is not the official position of any organisation.</li>
+            </ul>
+        `,
+        methodTabShort: "Short",
+        methodTabFull: "Detailed",
+        modalClose: "Close",
         dischargeTitle: "Discharge Per BESS Unit (MWh)",
         totalDischarge: "Total Discharge",
         chargeTitle: "Charge Per BESS Unit (MWh)",
@@ -146,7 +289,10 @@ function setLang(lang) {
     
     if(document.getElementById('btnMethodologyText')) document.getElementById('btnMethodologyText').innerText = t.btnMethodology;
     if(document.getElementById('modalTitle')) document.getElementById('modalTitle').innerText = t.modalTitle;
-    if(document.getElementById('modalBody')) document.getElementById('modalBody').innerHTML = t.modalBody;
+    if (typeof renderMethodologyBody === 'function') renderMethodologyBody();
+    const mtShort = document.getElementById('methodTabShort'); if (mtShort) mtShort.innerText = t.methodTabShort;
+    const mtFull = document.getElementById('methodTabFull'); if (mtFull) mtFull.innerText = t.methodTabFull;
+    const mClose = document.getElementById('modalCloseBtn'); if (mClose) mClose.innerText = t.modalClose;
 
     document.getElementById('tabBtnDaily').innerText = t.tabDaily;
     document.getElementById('tabBtnMonthly').innerText = t.tabMonthly;
