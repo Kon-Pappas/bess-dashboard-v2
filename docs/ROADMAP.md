@@ -24,9 +24,11 @@ Order of work for aligning this dashboard with the hub house style (live-greekpo
 - Language switch repaired (D27)
 - Methodology modal as in live: boxed X, focus handling (D28); "Methodology →" in every tab (D29); footer (D30)
 
-## Phase 4: texts
+## Phase 4: texts (batch 8, 21 Oct 2026) — done
 
-- Greek page fully in Greek; Greek casing; no all-caps labels (K03, K04, C01, C02)
+- No all-caps; casing rule for Greek and English (D32)
+- Greek page fully Greek, with the glossary and the Greek title (D33)
+- Legends, axis texts, mobile captions and tab title translated (D34); the (GWh) title corrected (D35)
 
 ## Phase 5: charts
 

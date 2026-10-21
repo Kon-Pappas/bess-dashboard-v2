@@ -29,6 +29,11 @@ const COLORS = {
     mcp:          '#f1f5f9',  // τιμή MCP: ουδέτερη γραμμή αναφοράς
     mcpThreshold: '#94a3b8'   // όριο 5 €/MWh
 };
+// Ετικέτα γραφήματος στη γλώσσα της σελίδας (κλειδιά lbl… του i18n στο data.js)
+function L(key, fallback) {
+    const t = (typeof i18n !== 'undefined' && i18n[currentLang]) || {};
+    return t[key] || fallback;
+}
 function rgba(hex, a) {
     const n = parseInt(hex.slice(1), 16);
     return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
@@ -106,7 +111,7 @@ function syncMcpShiftControls() {
     const lang = typeof currentLang !== 'undefined' ? currentLang : 'en';
     const label = (lang === 'el') ? '⏱ Ευθυγράμμιση ωρών' : '⏱ Hour alignment';
     const tip = (lang === 'el')
-        ? 'Η ημέρα της αγοράς (MCP, ISP) ορίζεται σε CET, ενώ οι ώρες SCADA ακολουθούν την ελληνική ώρα (+1h). Ενεργό: οι ώρες ευθυγραμμίζονται με μετατόπιση μίας ώρας. Επηρεάζει τα tabs Monthly, Surplus και Arbitrage.'
+        ? 'Η ημέρα της αγοράς (MCP, ISP) ορίζεται σε CET, ενώ οι ώρες SCADA ακολουθούν την ελληνική ώρα (+1h). Ενεργό: οι ώρες ευθυγραμμίζονται με μετατόπιση μίας ώρας. Επηρεάζει τις καρτέλες Μηνιαίος αντίκτυπος, Πλεόνασμα & ευελιξία και Arbitrage P&L.'
         : 'The market day (MCP, ISP) is defined in CET, while SCADA hours follow Greek local time (+1h). On: hours are aligned with a one-hour shift. Affects the Monthly, Surplus and Arbitrage tabs.';
     document.querySelectorAll('.mcp-shift-toggle').forEach(el => { el.checked = !!mcpShiftEnabled; });
     document.querySelectorAll('.mcp-shift-label').forEach(el => { el.textContent = label; });
@@ -779,7 +784,7 @@ function renderSurplusKpis(kpi, bigDays, daysWithSurplus, peak, lang) {
     const total = kpi.res + kpi.bessIn + kpi.pumpIn;
     const half = (label, value, sub, color, subColor) => `
         <div class="w-1/2">
-            <span class="text-[10px] ${subColor} uppercase tracking-wider block mb-1">${label}</span>
+            <span class="text-[11px] ${subColor} block mb-1">${label}</span>
             <span class="text-xl font-bold ${color}">${value}</span>
             <span class="text-xs text-slate-400 block mt-0.5">${sub}</span>
         </div>`;
@@ -793,14 +798,14 @@ function renderSurplusKpis(kpi, bigDays, daysWithSurplus, peak, lang) {
         half(el ? 'BESS σε ώρες πλεονάσματος' : 'BESS in surplus hours', perDay(kpi.bessIn), `MWh/${el ? 'ημέρα' : 'day'} · ${nTxt}`, 'text-orange-400', 'text-orange-400/70'),
         half(el ? 'Μερίδιο απορρόφησης' : 'Absorption share', total > 0 && kpi.n > 0 ? pct(kpi.bessIn / total * 100) : '–', el ? 'του πλεονάσματος των ωρών' : 'of surplus-hour energy', 'text-orange-400', 'text-orange-400/70'));
     const pumpCard = card('bg-blue-900/10', 'border-blue-500/20',
-        half(el ? 'PUMP σε ώρες πλεονάσματος' : 'PUMP in surplus hours', perDay(kpi.pumpIn), `MWh/${el ? 'ημέρα' : 'day'} · ${nTxt}`, 'text-blue-400', 'text-blue-400/70'),
+        half(el ? 'Άντληση σε ώρες πλεονάσματος' : 'PUMP in surplus hours', perDay(kpi.pumpIn), `MWh/${el ? 'ημέρα' : 'day'} · ${nTxt}`, 'text-blue-400', 'text-blue-400/70'),
         half(el ? 'Μερίδιο απορρόφησης' : 'Absorption share', total > 0 && kpi.n > 0 ? pct(kpi.pumpIn / total * 100) : '–', el ? 'του πλεονάσματος των ωρών' : 'of surplus-hour energy', 'text-blue-400', 'text-blue-400/70'));
     const peakTxt = peak.res > 0 ? `${(peak.res / 1000).toFixed(1)} GWh` : '–';
     const peakSub = peak.res > 0
         ? `${peak.date} · ${el ? 'ευελιξία' : 'flex'} ${(peak.flexIn / peak.res * 100).toFixed(0)}%`
         : '';
     const surpCard = card('bg-fuchsia-900/10', 'border-fuchsia-500/20',
-        half(el ? 'Μέρες residual > ευελιξία' : 'Days residual > flex', daysWithSurplus > 0 ? `${bigDays} / ${daysWithSurplus}` : '–', el ? 'residual μεγαλύτερο από BESS+PUMP σε ώρες πλεονάσματος' : 'residual above BESS+PUMP in surplus hours', 'text-fuchsia-400', 'text-fuchsia-400/70'),
+        half(el ? 'Μέρες πλεονάσματος > ευελιξία' : 'Days residual > flex', daysWithSurplus > 0 ? `${bigDays} / ${daysWithSurplus}` : '–', el ? 'υπολειπόμενο πλεόνασμα μεγαλύτερο από BESS και άντληση σε ώρες πλεονάσματος' : 'residual above BESS+PUMP in surplus hours', 'text-fuchsia-400', 'text-fuchsia-400/70'),
         half(el ? 'Μέρα μέγιστου πλεονάσματος' : 'Peak surplus day', peakTxt, peakSub, 'text-fuchsia-400', 'text-fuchsia-400/70'));
     box.innerHTML = bessCard + pumpCard + surpCard;
 }
@@ -909,7 +914,7 @@ function renderSurplusHourlyProfile() {
     const pct = v => (isFinite(v) ? v.toFixed(0) + '%' : '–');
     const tile = (label, value, sub, color) => `
         <div class="bg-slate-900/60 border border-slate-700 rounded-lg px-3 py-2">
-            <div class="text-[10px] uppercase tracking-wide text-slate-400">${label}</div>
+            <div class="text-[11px] text-slate-400">${label}</div>
             <div class="text-xl font-bold ${color}">${value}</div>
             <div class="text-[10px] text-slate-500">${sub}</div>
         </div>`;
@@ -919,7 +924,7 @@ function renderSurplusHourlyProfile() {
             tile(t.surplusHourlyKpiResidual || 'Avg ISP residual / day', fmt(sumSurp / n) + ' MWh', n + (lang === 'el' ? ' ημέρες' : ' days'), 'text-fuchsia-400') +
             tile(t.surplusHourlyKpiRatio || 'Flex charging ÷ residual', pct(sumSurp > 0 ? (flexPerDay / (sumSurp / n)) * 100 : NaN), fmt(flexPerDay) + ' MWh / ' + (lang === 'el' ? 'ημέρα' : 'day'), 'text-slate-200') +
             tile(t.surplusHourlyKpiBess || 'BESS in surplus hours', pct(sumBess > 0 ? (bessIn / sumBess) * 100 : NaN), (lang === 'el' ? 'της φόρτισης BESS' : 'of BESS charging'), 'text-orange-400') +
-            tile(t.surplusHourlyKpiPump || 'PUMP in surplus hours', pct(sumPump > 0 ? (pumpIn / sumPump) * 100 : NaN), (lang === 'el' ? 'της φόρτισης PUMP' : 'of PUMP charging'), 'text-blue-400');
+            tile(t.surplusHourlyKpiPump || 'PUMP in surplus hours', pct(sumPump > 0 ? (pumpIn / sumPump) * 100 : NaN), (lang === 'el' ? 'της φόρτισης άντλησης' : 'of PUMP charging'), 'text-blue-400');
     }
 
     // --- Γράφημα ---
@@ -929,9 +934,9 @@ function renderSurplusHourlyProfile() {
         data: {
             labels: labels,
             datasets: [
-                { type: 'bar', label: 'BESS Charge (SCADA)', data: bessAvg, backgroundColor: COLORS.charge, stack: 'flex', yAxisID: 'y', order: 3 },
-                { type: 'bar', label: 'PUMP Charge (SCADA)', data: pumpAvg, backgroundColor: COLORS.pump, stack: 'flex', yAxisID: 'y', order: 3 },
-                { type: 'line', label: 'Residual Surplus (ISP)', data: surpAvg, borderColor: COLORS.residual, backgroundColor: rgba(COLORS.residual, 0.15), fill: true, tension: 0.25, pointRadius: 2, yAxisID: 'y', order: 1 },
+                { type: 'bar', label: L('lblBessCharge', 'BESS Charge (SCADA)'), data: bessAvg, backgroundColor: COLORS.charge, stack: 'flex', yAxisID: 'y', order: 3 },
+                { type: 'bar', label: L('lblPumpCharge', 'PUMP Charge (SCADA)'), data: pumpAvg, backgroundColor: COLORS.pump, stack: 'flex', yAxisID: 'y', order: 3 },
+                { type: 'line', label: L('lblResidual', 'Residual Surplus (ISP)'), data: surpAvg, borderColor: COLORS.residual, backgroundColor: rgba(COLORS.residual, 0.15), fill: true, tension: 0.25, pointRadius: 2, yAxisID: 'y', order: 1 },
                 { type: 'line', label: (lang === 'el' ? 'Τιμή MCP (€/MWh)' : 'MCP Price (€/MWh)'), data: mcpAvg, borderColor: COLORS.mcp, borderDash: [5, 4], borderWidth: 2, pointRadius: 0, tension: 0.2, yAxisID: 'y2', order: 2 },
                 { type: 'line', label: (lang === 'el' ? 'Όριο 5 €/MWh' : '€5/MWh threshold'), data: new Array(24).fill(CURTAILMENT_PRICE_THRESHOLD), borderColor: rgba(COLORS.mcpThreshold, 0.7), borderDash: [2, 3], borderWidth: 1, pointRadius: 0, yAxisID: 'y2', order: 2 }
             ]
@@ -954,7 +959,7 @@ function renderSurplusHourlyProfile() {
     if (noteEl) {
         const first = usedDays[0], last = usedDays[n - 1];
         noteEl.textContent = (lang === 'el')
-            ? `Μέσος όρος ${n} ημερών (${first} έως ${last}), μόνο ημέρες με δεδομένα BESS, PUMP, ISP και MCP. Το ISP είναι προγραμματισμός (όχι μέτρηση) και δεν περιλαμβάνει εξαγωγές. ` +
+            ? `Μέσος όρος ${n} ημερών (${first} έως ${last}), μόνο ημέρες με δεδομένα BESS, άντλησης, ISP και MCP. Το ISP είναι προγραμματισμός (όχι μέτρηση) και δεν περιλαμβάνει εξαγωγές. ` +
               (marketShift ? 'Δεδομένα αγοράς (MCP, ISP) και SCADA ευθυγραμμίζονται με μετατόπιση μίας ώρας (CET → ελληνική ώρα), παραδοχή που δεν έχει επιβεβαιωθεί από τον ΑΔΜΗΕ.' : 'Χωρίς μετατόπιση ώρας ανάμεσα σε αγορά και SCADA.')
             : `Average of ${n} days (${first} to ${last}), only days with BESS, PUMP, ISP and MCP data. ISP is a schedule (not a measurement) and excludes exports. ` +
               (marketShift ? 'Market data (MCP, ISP) and SCADA are aligned with a one-hour shift (CET → Greek local time), an assumption not yet confirmed by IPTO.' : 'No hour shift applied between market data and SCADA.');
@@ -974,8 +979,8 @@ function renderSurplusCharts(labels, dailyBess, dailyPump, dailySurplus, cumBess
             labels: labels,
             datasets: [
                 { label: (lang === 'el') ? 'Φόρτιση BESS σε ώρες πλεονάσματος' : 'BESS Charge in surplus hours', data: dailyBess, backgroundColor: COLORS.charge, stack: 'Stack 0' },
-                { label: (lang === 'el') ? 'Φόρτιση PUMP σε ώρες πλεονάσματος' : 'PUMP Charge in surplus hours', data: dailyPump, backgroundColor: COLORS.pump, stack: 'Stack 0' },
-                { label: 'Residual Surplus (ISP)', data: dailySurplus, backgroundColor: COLORS.residual, stack: 'Stack 0' },
+                { label: (lang === 'el') ? 'Φόρτιση άντλησης σε ώρες πλεονάσματος' : 'PUMP Charge in surplus hours', data: dailyPump, backgroundColor: COLORS.pump, stack: 'Stack 0' },
+                { label: L('lblResidual', 'Residual Surplus (ISP)'), data: dailySurplus, backgroundColor: COLORS.residual, stack: 'Stack 0' },
                 { label: (lang === 'el') ? 'Φόρτιση εκτός ωρών πλεονάσματος (arbitrage)' : 'Charging outside surplus hours (arbitrage)', data: dailyOut, backgroundColor: COLORS.offSurplus, stack: 'Stack 0' }
             ]
         },
@@ -995,13 +1000,13 @@ function renderSurplusCharts(labels, dailyBess, dailyPump, dailySurplus, cumBess
                             let outPump = dailyPumpOut[idx] || 0;
                             let outTxt = (outBess + outPump > 0)
                                 ? ((lang === 'el')
-                                    ? `\n\nΕκτός ωρών πλεονάσματος (arbitrage): ${formatMWh(outBess + outPump)} MWh\n(BESS ${formatMWh(outBess)}, PUMP ${formatMWh(outPump)}) - δεν μετράει ως απορρόφηση πλεονάσματος.`
+                                    ? `\n\nΕκτός ωρών πλεονάσματος (arbitrage): ${formatMWh(outBess + outPump)} MWh\n(BESS ${formatMWh(outBess)}, άντληση ${formatMWh(outPump)}) - δεν μετράει ως απορρόφηση πλεονάσματος.`
                                     : `\n\nOutside surplus hours (arbitrage): ${formatMWh(outBess + outPump)} MWh\n(BESS ${formatMWh(outBess)}, PUMP ${formatMWh(outPump)}) - not counted as surplus absorption.`)
                                 : '';
 
                             if (surp === 0) {
                                 return ((lang === 'el')
-                                    ? "Zero ISP Surplus\nΠιθανή καθαρή λειτουργία Market Arbitrage."
+                                    ? "Μηδενικό υπολειπόμενο πλεόνασμα ISP\nΠιθανή καθαρή λειτουργία arbitrage αγοράς."
                                     : "Zero ISP Surplus\nPotential pure Market Arbitrage operation.") + outTxt;
                             }
 
@@ -1011,7 +1016,7 @@ function renderSurplusCharts(labels, dailyBess, dailyPump, dailySurplus, cumBess
                             let pctSurp = formatPct((surp / total) * 100);
 
                             return ((lang === 'el') ?
-                                `\n💡 Επίλυση Θεωρητικού Πλεονάσματος:\n- Αντλησιοταμίευση (PUMP): ${pctPump}\n- Μπαταρίες (BESS): ${pctBess}\n- Τελικό Πλεόνασμα (Surplus): ${pctSurp}` :
+                                `\n💡 Επίλυση θεωρητικού πλεονάσματος:\n- Άντληση: ${pctPump}\n- Μπαταρίες (BESS): ${pctBess}\n- Υπολειπόμενο πλεόνασμα: ${pctSurp}` :
                                 `\n💡 Theoretical Surplus Resolution:\n- Pumped Hydro (PUMP): ${pctPump}\n- Batteries (BESS): ${pctBess}\n- Residual Surplus: ${pctSurp}`) + outTxt;
                         }
                     }
@@ -1032,9 +1037,9 @@ function renderSurplusCharts(labels, dailyBess, dailyPump, dailySurplus, cumBess
         data: {
             labels: labels,
             datasets: [
-                { label: 'Cum. BESS Charge', data: cumBess, borderColor: COLORS.charge, backgroundColor: rgba(COLORS.charge, 0.1), fill: true, tension: 0.3 },
-                { label: 'Cum. PUMP Charge', data: cumPump, borderColor: COLORS.pump, backgroundColor: rgba(COLORS.pump, 0.1), fill: true, tension: 0.3 },
-                { label: 'Cum. Residual Surplus', data: cumSurplus, borderColor: COLORS.residual, backgroundColor: 'transparent', fill: false, tension: 0.3 },
+                { label: L('lblCumBess', 'Cum. BESS Charge'), data: cumBess, borderColor: COLORS.charge, backgroundColor: rgba(COLORS.charge, 0.1), fill: true, tension: 0.3 },
+                { label: L('lblCumPump', 'Cum. PUMP Charge'), data: cumPump, borderColor: COLORS.pump, backgroundColor: rgba(COLORS.pump, 0.1), fill: true, tension: 0.3 },
+                { label: L('lblCumResidual', 'Cum. Residual Surplus'), data: cumSurplus, borderColor: COLORS.residual, backgroundColor: 'transparent', fill: false, tension: 0.3 },
                 { label: (lang === 'el') ? 'Αθροιστική φόρτιση εκτός ωρών πλεονάσματος (arbitrage)' : 'Cum. charging outside surplus hours (arbitrage)', data: cumOut, borderColor: COLORS.offSurplus, backgroundColor: 'transparent', borderDash: [6, 4], fill: false, tension: 0.3 }
             ]
         },
@@ -1325,17 +1330,17 @@ function renderArbitrageTab() {
                     <div class="flex flex-col bg-slate-900/40" style="border-left: 4px solid ${item.color};">
                         
                         <div class="flex justify-between items-center py-3 px-4 border-b border-slate-700/50">
-                            <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">RTE</span>
+                            <span class="text-xs font-semibold text-slate-500">${i18n[lang].thRte}</span>
                             <span class="${rteColorClass} text-sm font-semibold cursor-help" title="${rteTooltip}">${formatPct(item.rte)}</span>
                         </div>
                         
                         <div class="flex justify-between items-center py-3 px-4 border-b border-slate-700/50">
-                            <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Potential Daily P&L</span>
+                            <span class="text-xs font-semibold text-slate-500">${i18n[lang].thPnl}</span>
                             <span class="text-sm font-bold ${item.pnl >= 0 ? 'text-lime-400' : 'text-rose-400'}">${formatEur(item.pnl)}</span>
                         </div>
                         
                         <div class="flex justify-between items-center py-3 px-4">
-                            <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Profit / MWh</span>
+                            <span class="text-xs font-semibold text-slate-500">${i18n[lang].thProfit}</span>
                             <span class="text-sm font-bold text-slate-100">${formatEur(item.unitProfit)}</span>
                         </div>
 

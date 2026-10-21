@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title id="pageTitle">Daily Greek BESS Market Analytics</title>
+    <title id="pageTitle">Greek BESS Market Analytics</title>
     <script src="https://cdn.tailwindcss.com/3.4.17"></script>
     <script>
         // ΕΝΑ σημείο για το accent της σελίδας (D02: emerald, το χρώμα του BESS στο hub).
@@ -145,15 +145,15 @@
             <div class="hidden lg:grid grid-cols-3 gap-6">
                 <!-- 1. PC: Total Discharge -->
                 <div class="bg-slate-800/60 p-4 rounded-xl border border-slate-700 flex flex-col justify-center text-center shadow-sm">
-                    <h3 class="text-sm font-medium text-slate-400 mb-3 uppercase tracking-wider" id="pcLblDisp">Total Discharge</h3>
+                    <h3 class="text-sm font-medium text-slate-400 mb-3" id="pcLblDisp">Total discharge</h3>
                     <div class="flex justify-around items-center">
                         <div class="flex flex-col items-center">
-                            <div class="flex items-center gap-1.5 mb-1"><div class="w-2.5 h-2.5 bg-violet-300 rounded-sm"></div><span class="text-xs text-slate-500 font-semibold" id="pcDispIspText">SCHEDULED (ISP)</span></div>
+                            <div class="flex items-center gap-1.5 mb-1"><div class="w-2.5 h-2.5 bg-violet-300 rounded-sm"></div><span class="text-xs text-slate-500 font-semibold" id="pcDispIspText">Scheduled (ISP)</span></div>
                             <div class="flex items-baseline gap-1"><span id="kpiDischargeIsp" class="text-2xl font-bold text-violet-300">0</span><span class="text-xs text-slate-500">MWh</span></div>
                         </div>
                         <div class="h-10 w-px bg-slate-700/80"></div>
                         <div class="flex flex-col items-center">
-                            <div class="flex items-center gap-1.5 mb-1"><div class="w-2.5 h-2.5 bg-violet-400 rounded-sm"></div><span class="text-xs text-slate-500 font-semibold" id="pcDispScadaText">ACTUAL (SCADA)</span></div>
+                            <div class="flex items-center gap-1.5 mb-1"><div class="w-2.5 h-2.5 bg-violet-400 rounded-sm"></div><span class="text-xs text-slate-500 font-semibold" id="pcDispScadaText">Actual (SCADA)</span></div>
                             <div class="flex items-baseline gap-1"><span id="kpiDischargeScada" class="text-2xl font-bold text-violet-400">0</span><span class="text-xs text-slate-500">MWh</span></div>
                         </div>
                     </div>
@@ -161,15 +161,15 @@
 
                 <!-- 2. PC: Total Charge -->
                 <div class="bg-slate-800/60 p-4 rounded-xl border border-slate-700 flex flex-col justify-center text-center shadow-sm">
-                    <h3 class="text-sm font-medium text-slate-400 mb-3 uppercase tracking-wider" id="pcLblChg">Total Charge</h3>
+                    <h3 class="text-sm font-medium text-slate-400 mb-3" id="pcLblChg">Total charge</h3>
                     <div class="flex justify-around items-center">
                         <div class="flex flex-col items-center">
-                            <div class="flex items-center gap-1.5 mb-1"><div class="w-2.5 h-2.5 bg-orange-300 rounded-sm"></div><span class="text-xs text-slate-500 font-semibold" id="pcChgIspText">SCHEDULED (ISP)</span></div>
+                            <div class="flex items-center gap-1.5 mb-1"><div class="w-2.5 h-2.5 bg-orange-300 rounded-sm"></div><span class="text-xs text-slate-500 font-semibold" id="pcChgIspText">Scheduled (ISP)</span></div>
                             <div class="flex items-baseline gap-1"><span id="kpiChargeIsp" class="text-2xl font-bold text-orange-300">0</span><span class="text-xs text-slate-500">MWh</span></div>
                         </div>
                         <div class="h-10 w-px bg-slate-700/80"></div>
                         <div class="flex flex-col items-center">
-                            <div class="flex items-center gap-1.5 mb-1"><div class="w-2.5 h-2.5 bg-orange-400 rounded-sm"></div><span class="text-xs text-slate-500 font-semibold" id="pcChgScadaText">ACTUAL (SCADA)</span></div>
+                            <div class="flex items-center gap-1.5 mb-1"><div class="w-2.5 h-2.5 bg-orange-400 rounded-sm"></div><span class="text-xs text-slate-500 font-semibold" id="pcChgScadaText">Actual (SCADA)</span></div>
                             <div class="flex items-baseline gap-1"><span id="kpiChargeScada" class="text-2xl font-bold text-orange-400">0</span><span class="text-xs text-slate-500">MWh</span></div>
                         </div>
                     </div>
@@ -177,7 +177,7 @@
 
                 <!-- 3. PC: Round Trip Efficiency -->
                 <div class="bg-slate-800/60 p-4 rounded-xl border border-slate-700 flex flex-col justify-center text-center shadow-sm">
-                    <h3 class="text-sm font-medium text-slate-400 mb-3 uppercase tracking-wider" id="pcLblRte">Round Trip Efficiency</h3>
+                    <h3 class="text-sm font-medium text-slate-400 mb-3" id="pcLblRte">Round-trip efficiency</h3>
                     <div class="flex justify-around items-center h-full">
                         <div class="flex flex-col items-center justify-end">
                             <span class="text-xs text-slate-500 font-semibold mb-1" id="pcRteIspText">ISP RTE</span>
@@ -196,15 +196,15 @@
             <div class="bg-slate-800/40 p-4 sm:p-6 rounded-xl border border-slate-700">
                 <!-- MOBILE VIEW ONLY: Total Discharge Inside the Chart Card -->
                 <div class="block lg:hidden bg-slate-900/50 p-4 rounded-xl border border-slate-800 flex-col justify-center text-center shadow-inner mb-6">
-                    <h3 class="text-xs font-medium text-slate-400 mb-3 uppercase tracking-wider" id="mobLblDisp">Total Discharge</h3>
+                    <h3 class="text-xs font-medium text-slate-400 mb-3" id="mobLblDisp">Total discharge</h3>
                     <div class="flex justify-around items-center">
                         <div class="flex flex-col items-center">
-                            <div class="flex items-center gap-1.5 mb-1"><div class="w-2 h-2 bg-violet-300 rounded-sm"></div><span class="text-[10px] text-slate-500 font-semibold" id="mobDispIspText">SCHEDULED (ISP)</span></div>
+                            <div class="flex items-center gap-1.5 mb-1"><div class="w-2 h-2 bg-violet-300 rounded-sm"></div><span class="text-[10px] text-slate-500 font-semibold" id="mobDispIspText">Scheduled (ISP)</span></div>
                             <div class="flex items-baseline gap-1"><span id="kpiDischargeIsp_mob" class="text-xl font-bold text-violet-300">0</span><span class="text-[10px] text-slate-500">MWh</span></div>
                         </div>
                         <div class="h-8 w-px bg-slate-700/50"></div>
                         <div class="flex flex-col items-center">
-                            <div class="flex items-center gap-1.5 mb-1"><div class="w-2 h-2 bg-violet-400 rounded-sm"></div><span class="text-[10px] text-slate-500 font-semibold" id="mobDispScadaText">ACTUAL (SCADA)</span></div>
+                            <div class="flex items-center gap-1.5 mb-1"><div class="w-2 h-2 bg-violet-400 rounded-sm"></div><span class="text-[10px] text-slate-500 font-semibold" id="mobDispScadaText">Actual (SCADA)</span></div>
                             <div class="flex items-baseline gap-1"><span id="kpiDischargeScada_mob" class="text-xl font-bold text-violet-400">0</span><span class="text-[10px] text-slate-500">MWh</span></div>
                         </div>
                     </div>
@@ -218,15 +218,15 @@
             <div class="bg-slate-800/40 p-4 sm:p-6 rounded-xl border border-slate-700">
                 <!-- MOBILE VIEW ONLY: Total Charge Inside the Chart Card -->
                 <div class="block lg:hidden bg-slate-900/50 p-4 rounded-xl border border-slate-800 flex-col justify-center text-center shadow-inner mb-6">
-                    <h3 class="text-xs font-medium text-slate-400 mb-3 uppercase tracking-wider" id="mobLblChg">Total Charge</h3>
+                    <h3 class="text-xs font-medium text-slate-400 mb-3" id="mobLblChg">Total charge</h3>
                     <div class="flex justify-around items-center">
                         <div class="flex flex-col items-center">
-                            <div class="flex items-center gap-1.5 mb-1"><div class="w-2 h-2 bg-orange-300 rounded-sm"></div><span class="text-[10px] text-slate-500 font-semibold" id="mobChgIspText">SCHEDULED (ISP)</span></div>
+                            <div class="flex items-center gap-1.5 mb-1"><div class="w-2 h-2 bg-orange-300 rounded-sm"></div><span class="text-[10px] text-slate-500 font-semibold" id="mobChgIspText">Scheduled (ISP)</span></div>
                             <div class="flex items-baseline gap-1"><span id="kpiChargeIsp_mob" class="text-xl font-bold text-orange-300">0</span><span class="text-[10px] text-slate-500">MWh</span></div>
                         </div>
                         <div class="h-8 w-px bg-slate-700/50"></div>
                         <div class="flex flex-col items-center">
-                            <div class="flex items-center gap-1.5 mb-1"><div class="w-2 h-2 bg-orange-400 rounded-sm"></div><span class="text-[10px] text-slate-500 font-semibold" id="mobChgScadaText">ACTUAL (SCADA)</span></div>
+                            <div class="flex items-center gap-1.5 mb-1"><div class="w-2 h-2 bg-orange-400 rounded-sm"></div><span class="text-[10px] text-slate-500 font-semibold" id="mobChgScadaText">Actual (SCADA)</span></div>
                             <div class="flex items-baseline gap-1"><span id="kpiChargeScada_mob" class="text-xl font-bold text-orange-400">0</span><span class="text-[10px] text-slate-500">MWh</span></div>
                         </div>
                     </div>
@@ -238,7 +238,7 @@
 
             <!-- MOBILE VIEW ONLY: RTE Standalone Final Card -->
             <div class="block lg:hidden bg-slate-800/60 p-4 rounded-xl border border-slate-700 text-center mt-2 shadow-sm">
-                <h3 class="text-xs font-medium text-slate-400 mb-3 uppercase tracking-wider" id="mobLblRte">Round Trip Efficiency</h3>
+                <h3 class="text-xs font-medium text-slate-400 mb-3" id="mobLblRte">Round-trip efficiency</h3>
                 <div class="flex justify-around items-center">
                     <div class="flex flex-col items-center">
                         <span class="block text-[10px] text-slate-500 mb-1 font-semibold" id="mobRteIspText">ISP RTE</span>
@@ -262,7 +262,7 @@
             <div class="hidden lg:grid grid-cols-2 gap-6">
                 <!-- 1. PC: Monthly Displaced -->
                 <div class="bg-slate-800/60 p-4 rounded-xl border border-slate-700 flex flex-col justify-center text-center shadow-sm">
-                    <h3 class="text-sm font-medium text-slate-400 mb-2 uppercase tracking-wider" id="kpiLabelDisplaced">Monthly Displaced</h3>
+                    <h3 class="text-sm font-medium text-slate-400 mb-2" id="kpiLabelDisplaced">Monthly displaced</h3>
                     <div class="flex items-baseline justify-center gap-1">
                         <span id="kpiMonthlyDischarge" class="text-3xl font-bold text-violet-400">0</span>
                         <span class="text-sm text-slate-500">MWh</span>
@@ -271,7 +271,7 @@
 
                 <!-- 2. PC: Monthly Avoided -->
                 <div class="bg-slate-800/60 p-4 rounded-xl border border-slate-700 flex flex-col justify-center text-center shadow-sm">
-                    <h3 class="text-sm font-medium text-slate-400 mb-2 uppercase tracking-wider" id="kpiLabelAvoided">Monthly Avoided</h3>
+                    <h3 class="text-sm font-medium text-slate-400 mb-2" id="kpiLabelAvoided">Monthly avoided</h3>
                     <div class="flex items-baseline justify-center gap-1">
                         <span id="kpiMonthlyCharge" class="text-3xl font-bold text-orange-400">0</span>
                         <span class="text-sm text-slate-500">MWh</span>
@@ -283,7 +283,7 @@
             <div class="bg-slate-800/40 p-4 sm:p-6 rounded-xl border border-slate-700">
                 <!-- MOBILE VIEW ONLY: KPI Inside Chart Card -->
                 <div class="block lg:hidden bg-slate-900/50 p-4 rounded-xl border border-slate-800 flex-col justify-center text-center shadow-inner mb-6">
-                    <h3 class="text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider" id="mobKpiLabelDisplaced">Monthly Displaced</h3>
+                    <h3 class="text-xs font-medium text-slate-400 mb-2" id="mobKpiLabelDisplaced">Monthly displaced</h3>
                     <div class="flex items-baseline justify-center gap-1">
                         <span id="kpiMonthlyDischarge_mob" class="text-2xl font-bold text-violet-400">0</span>
                         <span class="text-xs text-slate-500">MWh</span>
@@ -299,7 +299,7 @@
             <div class="bg-slate-800/40 p-4 sm:p-6 rounded-xl border border-slate-700">
                 <!-- MOBILE VIEW ONLY: KPI Inside Chart Card -->
                 <div class="block lg:hidden bg-slate-900/50 p-4 rounded-xl border border-slate-800 flex-col justify-center text-center shadow-inner mb-6">
-                    <h3 class="text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider" id="mobKpiLabelAvoided">Monthly Avoided</h3>
+                    <h3 class="text-xs font-medium text-slate-400 mb-2" id="mobKpiLabelAvoided">Monthly avoided</h3>
                     <div class="flex items-baseline justify-center gap-1">
                         <span id="kpiMonthlyCharge_mob" class="text-2xl font-bold text-orange-400">0</span>
                         <span class="text-xs text-slate-500">MWh</span>
@@ -343,7 +343,7 @@
 
             <div class="bg-slate-800/40 p-6 rounded-xl border border-slate-700 mt-4">
                 <div class="flex items-center gap-2 mb-1">
-                    <h2 class="text-lg font-semibold text-slate-200" id="surplusStackedTitle">Daily Energy Surplus & Flexibility Absorption (GWh)</h2>
+                    <h2 class="text-lg font-semibold text-slate-200" id="surplusStackedTitle">Daily Energy Surplus & Flexibility Absorption (MWh)</h2>
                     <span class="cursor-help text-xs bg-slate-800 text-slate-300 px-2 py-1 rounded-full border border-slate-700 hover:border-acc-500 transition" id="surplusBadge" title="">[?]</span>
                 </div>
                 <p class="text-xs text-slate-400 mb-4" id="surplusStackedSub">Absolute values. Days with no red bar (Surplus = 0) indicate purely market-driven arbitrage charging.</p>
@@ -387,14 +387,14 @@
                 <h3 id="arbitrageTableTitle" class="text-lg font-semibold text-slate-200 mb-4">Daily Financial Performance & Arbitrage</h3>
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm text-slate-300">
-                        <thead class="bg-slate-900 text-slate-400 uppercase text-xs">
+                        <thead class="bg-slate-900 text-slate-400 text-xs">
                             <tr>
-                                <th id="thUnit" class="p-3 text-left">BESS UNIT</th>
-                                <th id="thCharge" class="p-3 text-right">TOTAL CHARGE (MWH)</th>
-                                <th id="thDischarge" class="p-3 text-right">TOTAL DISCHARGE (MWH)</th>
+                                <th id="thUnit" class="p-3 text-left">BESS unit</th>
+                                <th id="thCharge" class="p-3 text-right">Total charge (MWh)</th>
+                                <th id="thDischarge" class="p-3 text-right">Total discharge (MWh)</th>
                                 <th id="thRte" class="p-3 hidden md:table-cell text-right">RTE (%)</th>
-                                <th id="thPnl" class="p-3 hidden md:table-cell text-right">POTENTIAL DAILY P&L (€)</th>
-                                <th id="thProfit" class="p-3 hidden md:table-cell text-right">UNIT PROFIT (€/MWH)</th>
+                                <th id="thPnl" class="p-3 hidden md:table-cell text-right">Potential daily P&L (€)</th>
+                                <th id="thProfit" class="p-3 hidden md:table-cell text-right">Unit profit (€/MWh)</th>
                             </tr>
                         </thead>
                         <tbody id="arbitrageTableBody" class="divide-y divide-slate-700">
