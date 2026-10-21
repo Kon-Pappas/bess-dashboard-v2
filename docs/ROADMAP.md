@@ -41,7 +41,7 @@ Measured on 21 Oct 2026 (K05): ≈ 93 KB gzipped for 143 days. When the history 
 
 ## Checks with a date
 
-- 22 Oct 2026: first run from cron-job.org at 07:04; check `meta.json`, one run per day, and that the previous day's SCADA file was already there (K08)
+- 22 Oct 2026: first 07:04 run after batch 1; check that `data/meta.json` appears (K09), that there is one run per day, and that the previous day's SCADA file was already there (K08)
 - 26 Oct 2026: verify the 25-hour day of 25 Oct (K06)
 
 ## Later
