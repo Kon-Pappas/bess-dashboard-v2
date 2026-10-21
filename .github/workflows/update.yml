@@ -1,12 +1,10 @@
 name: Daily BESS Data Update
 
+# Εκκίνηση ΜΟΝΟ από το εξωτερικό cron-job.org, κάθε μέρα στις 07:04 ώρα Ελλάδος (D05).
+# Δεν υπάρχει block `schedule:`: το cron του GitHub καθυστερεί και, δίπλα στο εξωτερικό,
+# έτρεχε τη λήψη δεύτερη φορά κάθε μέρα. Χειροκίνητα: Actions → Run workflow (με ή χωρίς ημερομηνίες).
 on:
-  schedule:
-    # Τρέχει κάθε μέρα στις 05:00 UTC (08:00 ώρα Ελλάδας το καλοκαίρι, 07:00 τον χειμώνα)
-    - cron: '0 5 * * *'
-    # Τρέχει ξανά στις 05:30 UTC (08:30 ώρα Ελλάδας) ως backup
-    - cron: '30 5 * * *'
-  workflow_dispatch: # Σου επιτρέπει να το τρέχεις χειροκίνητα
+  workflow_dispatch:
     inputs:
       start_date:
         description: 'Start Date (π.χ. 2026-06-10)'
@@ -20,7 +18,7 @@ on:
 permissions:
   contents: write
 
-# Μία εκτέλεση τη φορά: αν τρέχει ήδη backfill ή cron, η επόμενη περιμένει (δεν ακυρώνει αυτή που τρέχει).
+# Μία εκτέλεση τη φορά: αν τρέχει ήδη backfill ή η καθημερινή λήψη, η επόμενη περιμένει (δεν ακυρώνει αυτή που τρέχει).
 # Έτσι δύο εκτελέσεις δεν γράφουν ταυτόχρονα στο data/historical.json.
 concurrency:
   group: update-bess-data
@@ -33,13 +31,13 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
-        
+
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
@@ -56,8 +54,8 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/historical.json
-          
+          git add data/historical.json data/meta.json
+
           if git diff --staged --quiet; then
             echo "Δεν βρέθηκαν νέα δεδομένα (ή δεν υπάρχει αλλαγή). Παράβλεψη commit."
           else
