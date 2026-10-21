@@ -13,6 +13,86 @@ let arbitrageDualChartInst = null;
 let currentlyIsolatedBess = null;
 
 // ==========================================
+// ΧΡΩΜΑΤΑ ΔΕΔΟΜΕΝΩΝ (D18-D20, φάση 2)
+// Ένα χρώμα ανά οντότητα σε ΟΛΑ τα tabs. Κανένα δεν είναι το accent (emerald)·
+// κίτρινο = εισαγωγές και κόκκινο = εξαγωγές σε όλο το hub, άρα δεν χρησιμοποιούνται για δεδομένα του BESS.
+// Το πρόγραμμα (ISP) έχει την ίδια απόχρωση με το πραγματικό (SCADA), πιο ανοιχτή.
+// ==========================================
+const COLORS = {
+    charge:       '#fb923c',  // φόρτιση BESS (SCADA): πορτοκαλί
+    chargeIsp:    '#fdba74',  // φόρτιση όπως προγραμματίστηκε (ISP)
+    discharge:    '#a78bfa',  // αποφόρτιση BESS (SCADA): βιολετί
+    dischargeIsp: '#c4b5fd',  // αποφόρτιση όπως προγραμματίστηκε (ISP)
+    pump:         '#3b82f6',  // άντληση: μπλε
+    residual:     '#e879f9',  // residual surplus (ISP): φούξια
+    offSurplus:   '#64748b',  // φόρτιση εκτός ωρών πλεονάσματος (arbitrage): γκρι
+    mcp:          '#f1f5f9',  // τιμή MCP: ουδέτερη γραμμή αναφοράς
+    mcpThreshold: '#94a3b8'   // όριο 5 €/MWh
+};
+function rgba(hex, a) {
+    const n = parseInt(hex.slice(1), 16);
+    return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
+}
+function hslToHex(h, s, l) {
+    s /= 100; l /= 100;
+    const k = (n) => (n + h / 30) % 12, a = s * Math.min(l, 1 - l);
+    const f = (n) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+    return '#' + [f(0), f(8), f(4)].map(x => Math.round(x * 255).toString(16).padStart(2, '0')).join('');
+}
+
+// Μονάδες (Arbitrage tab): το χρώμα το παίρνει ο ΣΤΑΘΜΟΣ (πρόθεμα ονόματος: SUS, STO, MYT…), η απόχρωση η μονάδα μέσα στον σταθμό.
+// Όλα βγαίνουν αυτόματα από τα δεδομένα, χωρίς αλλαγή κώδικα όταν μπαίνει νέα μονάδα, και δεν αλλάζουν ποτέ για όσα υπάρχουν ήδη:
+// η σειρά είναι «πρώτη εμφάνιση στα δεδομένα» (ημερομηνία, μετά όνομα). Νέος σταθμός παίρνει το επόμενο ελεύθερο χρώμα.
+// Μέχρι UNIT_MODE_MAX_UNITS μονάδες (και όσο όλοι οι σταθμοί έχουν χρώμα) το γράφημα δείχνει μονάδες· πέρα από αυτό, σταθμούς.
+const SITE_HUES = { SUS: 205, STO: 335, MYT: 275, OPT: 28, ENE: 240, PPC: null };  // null = ουδέτερο (γκρι-γαλάζιο)
+const SPARE_HUES = [185, 310];                                                    // για νέους σταθμούς, με σειρά εμφάνισης
+const UNIT_SHADES = [62, 78, 46, 34];                                             // πρώτη μονάδα: μεσαία, μετά ανοιχτότερη, σκουρότερη
+const UNIT_MODE_MAX_UNITS = 20;
+const SITE_OTHERS_COLOR = '#475569';
+
+let unitRegistryCache = null;
+function getUnitRegistry() {
+    const rows = getHourlyData();
+    if (unitRegistryCache && unitRegistryCache.rows === rows.length) return unitRegistryCache;
+    const first = {};
+    rows.forEach(r => {
+        const u = r["Μονάδα BESS"] || r["unit"], d = String(r["Ημερομηνία"] || r["date"] || '').substring(0, 10);
+        if (!u || u === 'TOTAL BESS' || !d) return;
+        if (!first[u] || d < first[u]) first[u] = d;
+    });
+    const units = Object.keys(first).sort((a, b) => first[a].localeCompare(first[b]) || a.localeCompare(b));
+    const siteOf = (u) => u.split('_')[0];
+    const sites = [];
+    units.forEach(u => { if (!sites.includes(siteOf(u))) sites.push(siteOf(u)); });
+    const hueOf = {}; let spare = 0;
+    sites.forEach(s => {
+        if (Object.prototype.hasOwnProperty.call(SITE_HUES, s)) hueOf[s] = SITE_HUES[s];
+        else if (spare < SPARE_HUES.length) hueOf[s] = SPARE_HUES[spare++];
+        // αλλιώς: χωρίς χρώμα (undefined)
+    });
+    const idx = {}, counter = {};
+    units.forEach(u => { const s = siteOf(u); idx[u] = counter[s] = (counter[s] === undefined ? 0 : counter[s] + 1); });
+    const allHaveColour = sites.every(s => hueOf[s] !== undefined);
+    unitRegistryCache = {
+        rows: rows.length, units, sites, hueOf, idx, siteOf,
+        unitMode: units.length <= UNIT_MODE_MAX_UNITS && allHaveColour
+    };
+    return unitRegistryCache;
+}
+function shadeColour(hue, shadeIdx) {
+    const L = UNIT_SHADES[shadeIdx % UNIT_SHADES.length];
+    return hue === null ? hslToHex(215, 16, L + 4) : hslToHex(hue, 80, L);
+}
+function unitColour(unit, reg) {
+    const site = reg.siteOf(unit), hue = reg.hueOf[site];
+    return hue === undefined ? SITE_OTHERS_COLOR : shadeColour(hue, reg.idx[unit] || 0);
+}
+function siteColour(site, reg) {
+    const hue = reg.hueOf[site];
+    return hue === undefined ? SITE_OTHERS_COLOR : shadeColour(hue, 0);
+}
+
+// ==========================================
 // ΑΝΤΙΣΤΟΙΧΙΣΗ ΩΡΩΝ MCP ↔ SCADA
 // Η ημέρα παράδοσης της Αγοράς Επόμενης Ημέρας ορίζεται σε CET, ενώ οι ώρες του SCADA ακολουθούν
 // την ελληνική ώρα (+1h). Εμπειρικά (συσχέτιση BESS-MCP, κάθε μήνας Ιούν-Σεπ) η ώρα SCADA h
@@ -223,8 +303,8 @@ function updateStatusBadge() {
         textEl.className = "whitespace-nowrap";
         textEl.innerText = lang === 'el' ? 'Pending SCADA' : 'Pending SCADA';
     } else {
-        badge.className = "flex shrink-0 items-center gap-1.5 px-2 py-0.5 rounded border border-emerald-500/30 bg-emerald-500/10 text-[10px] md:text-xs font-bold text-emerald-400 shadow-sm";
-        badge.querySelector('div').className = "w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-emerald-500 shrink-0";
+        badge.className = "flex shrink-0 items-center gap-1.5 px-2 py-0.5 rounded border border-lime-500/30 bg-lime-500/10 text-[10px] md:text-xs font-bold text-lime-400 shadow-sm";
+        badge.querySelector('div').className = "w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-lime-500 shrink-0";
         textEl.className = "whitespace-nowrap";
         textEl.innerText = lang === 'el' ? 'Complete Data' : 'Complete Data';
     }
@@ -323,7 +403,7 @@ function toggleBessIsolation(clickedUnit) {
             if (ds.yAxisID === 'yMcp') {
                 arbitrageDualChartInst.setDatasetVisibility(idx, true);
             } else {
-                arbitrageDualChartInst.setDatasetVisibility(idx, ds.label === clickedUnit);
+                arbitrageDualChartInst.setDatasetVisibility(idx, ds.label === clickedUnit || (ds.units && ds.units.includes(clickedUnit)));
             }
         });
         
@@ -440,8 +520,8 @@ function renderDailyCharts(labels, ispDischarge, scadaDischarge, ispCharge, scad
         data: { 
             labels: labels, 
             datasets: [
-                { label: 'ISP (MWh)', data: ispDischarge, backgroundColor: '#60a5fa', borderRadius: 4 }, 
-                { label: 'SCADA (MWh)', data: scadaDischarge, backgroundColor: '#34d399', borderRadius: 4 }
+                { label: 'ISP (MWh)', data: ispDischarge, backgroundColor: COLORS.dischargeIsp, borderRadius: 4 }, 
+                { label: 'SCADA (MWh)', data: scadaDischarge, backgroundColor: COLORS.discharge, borderRadius: 4 }
             ] 
         }, 
         options: { 
@@ -459,8 +539,8 @@ function renderDailyCharts(labels, ispDischarge, scadaDischarge, ispCharge, scad
         data: { 
             labels: labels, 
             datasets: [
-                { label: 'ISP (MWh)', data: ispCharge, backgroundColor: '#c084fc', borderRadius: 4 }, 
-                { label: 'SCADA (MWh)', data: scadaCharge, backgroundColor: '#fb923c', borderRadius: 4 }
+                { label: 'ISP (MWh)', data: ispCharge, backgroundColor: COLORS.chargeIsp, borderRadius: 4 }, 
+                { label: 'SCADA (MWh)', data: scadaCharge, backgroundColor: COLORS.charge, borderRadius: 4 }
             ] 
         }, 
         options: { 
@@ -535,8 +615,8 @@ function renderMonthlyCharts(labels, chargeData, dischargeData) {
         data: { 
             labels: labels, 
             datasets: [{ 
-                label: 'MWh', data: dischargeData, borderColor: '#34d399', 
-                backgroundColor: 'rgba(52, 211, 153, 0.2)', fill: true, tension: 0.3, pointRadius: 3, pointBackgroundColor: '#34d399' 
+                label: 'MWh', data: dischargeData, borderColor: COLORS.discharge, 
+                backgroundColor: rgba(COLORS.discharge, 0.2), fill: true, tension: 0.3, pointRadius: 3, pointBackgroundColor: COLORS.discharge 
             }] 
         }, 
         options: { 
@@ -553,8 +633,8 @@ function renderMonthlyCharts(labels, chargeData, dischargeData) {
         data: { 
             labels: labels, 
             datasets: [{ 
-                label: 'MWh', data: chargeData, borderColor: '#fb923c', 
-                backgroundColor: 'rgba(251, 146, 60, 0.2)', fill: true, tension: 0.3, pointRadius: 3, pointBackgroundColor: '#fb923c' 
+                label: 'MWh', data: chargeData, borderColor: COLORS.charge, 
+                backgroundColor: rgba(COLORS.charge, 0.2), fill: true, tension: 0.3, pointRadius: 3, pointBackgroundColor: COLORS.charge 
             }] 
         }, 
         options: { 
@@ -704,9 +784,9 @@ function renderSurplusKpis(kpi, bigDays, daysWithSurplus, peak, lang) {
     const perDay = v => kpi.n > 0 ? fmt(v / kpi.n) : '–';
     const nTxt = kpi.n > 0 ? `${kpi.n} ${el ? 'ημέρες' : 'days'}` : (el ? 'χωρίς δεδομένα' : 'no data');
 
-    const bessCard = card('bg-emerald-900/10', 'border-emerald-500/20',
-        half(el ? 'BESS σε ώρες πλεονάσματος' : 'BESS in surplus hours', perDay(kpi.bessIn), `MWh/${el ? 'ημέρα' : 'day'} · ${nTxt}`, 'text-emerald-400', 'text-emerald-400/70'),
-        half(el ? 'Μερίδιο απορρόφησης' : 'Absorption share', total > 0 && kpi.n > 0 ? pct(kpi.bessIn / total * 100) : '–', el ? 'του πλεονάσματος των ωρών' : 'of surplus-hour energy', 'text-emerald-400', 'text-emerald-400/70'));
+    const bessCard = card('bg-orange-900/10', 'border-orange-500/20',
+        half(el ? 'BESS σε ώρες πλεονάσματος' : 'BESS in surplus hours', perDay(kpi.bessIn), `MWh/${el ? 'ημέρα' : 'day'} · ${nTxt}`, 'text-orange-400', 'text-orange-400/70'),
+        half(el ? 'Μερίδιο απορρόφησης' : 'Absorption share', total > 0 && kpi.n > 0 ? pct(kpi.bessIn / total * 100) : '–', el ? 'του πλεονάσματος των ωρών' : 'of surplus-hour energy', 'text-orange-400', 'text-orange-400/70'));
     const pumpCard = card('bg-blue-900/10', 'border-blue-500/20',
         half(el ? 'PUMP σε ώρες πλεονάσματος' : 'PUMP in surplus hours', perDay(kpi.pumpIn), `MWh/${el ? 'ημέρα' : 'day'} · ${nTxt}`, 'text-blue-400', 'text-blue-400/70'),
         half(el ? 'Μερίδιο απορρόφησης' : 'Absorption share', total > 0 && kpi.n > 0 ? pct(kpi.pumpIn / total * 100) : '–', el ? 'του πλεονάσματος των ωρών' : 'of surplus-hour energy', 'text-blue-400', 'text-blue-400/70'));
@@ -714,9 +794,9 @@ function renderSurplusKpis(kpi, bigDays, daysWithSurplus, peak, lang) {
     const peakSub = peak.res > 0
         ? `${peak.date} · ${el ? 'ευελιξία' : 'flex'} ${(peak.flexIn / peak.res * 100).toFixed(0)}%`
         : '';
-    const surpCard = card('bg-red-900/10', 'border-red-500/20',
-        half(el ? 'Μέρες residual > ευελιξία' : 'Days residual > flex', daysWithSurplus > 0 ? `${bigDays} / ${daysWithSurplus}` : '–', el ? 'residual μεγαλύτερο από BESS+PUMP σε ώρες πλεονάσματος' : 'residual above BESS+PUMP in surplus hours', 'text-red-400', 'text-red-400/70'),
-        half(el ? 'Μέρα μέγιστου πλεονάσματος' : 'Peak surplus day', peakTxt, peakSub, 'text-red-400', 'text-red-400/70'));
+    const surpCard = card('bg-fuchsia-900/10', 'border-fuchsia-500/20',
+        half(el ? 'Μέρες residual > ευελιξία' : 'Days residual > flex', daysWithSurplus > 0 ? `${bigDays} / ${daysWithSurplus}` : '–', el ? 'residual μεγαλύτερο από BESS+PUMP σε ώρες πλεονάσματος' : 'residual above BESS+PUMP in surplus hours', 'text-fuchsia-400', 'text-fuchsia-400/70'),
+        half(el ? 'Μέρα μέγιστου πλεονάσματος' : 'Peak surplus day', peakTxt, peakSub, 'text-fuchsia-400', 'text-fuchsia-400/70'));
     box.innerHTML = bessCard + pumpCard + surpCard;
 }
 
@@ -831,9 +911,9 @@ function renderSurplusHourlyProfile() {
     const flexPerDay = (sumBess + sumPump) / n;
     if (kpiBox) {
         kpiBox.innerHTML =
-            tile(t.surplusHourlyKpiResidual || 'Avg ISP residual / day', fmt(sumSurp / n) + ' MWh', n + (lang === 'el' ? ' ημέρες' : ' days'), 'text-red-400') +
+            tile(t.surplusHourlyKpiResidual || 'Avg ISP residual / day', fmt(sumSurp / n) + ' MWh', n + (lang === 'el' ? ' ημέρες' : ' days'), 'text-fuchsia-400') +
             tile(t.surplusHourlyKpiRatio || 'Flex charging ÷ residual', pct(sumSurp > 0 ? (flexPerDay / (sumSurp / n)) * 100 : NaN), fmt(flexPerDay) + ' MWh / ' + (lang === 'el' ? 'ημέρα' : 'day'), 'text-slate-200') +
-            tile(t.surplusHourlyKpiBess || 'BESS in surplus hours', pct(sumBess > 0 ? (bessIn / sumBess) * 100 : NaN), (lang === 'el' ? 'της φόρτισης BESS' : 'of BESS charging'), 'text-emerald-400') +
+            tile(t.surplusHourlyKpiBess || 'BESS in surplus hours', pct(sumBess > 0 ? (bessIn / sumBess) * 100 : NaN), (lang === 'el' ? 'της φόρτισης BESS' : 'of BESS charging'), 'text-orange-400') +
             tile(t.surplusHourlyKpiPump || 'PUMP in surplus hours', pct(sumPump > 0 ? (pumpIn / sumPump) * 100 : NaN), (lang === 'el' ? 'της φόρτισης PUMP' : 'of PUMP charging'), 'text-blue-400');
     }
 
@@ -844,11 +924,11 @@ function renderSurplusHourlyProfile() {
         data: {
             labels: labels,
             datasets: [
-                { type: 'bar', label: 'BESS Charge (SCADA)', data: bessAvg, backgroundColor: '#34d399', stack: 'flex', yAxisID: 'y', order: 3 },
-                { type: 'bar', label: 'PUMP Charge (SCADA)', data: pumpAvg, backgroundColor: '#3b82f6', stack: 'flex', yAxisID: 'y', order: 3 },
-                { type: 'line', label: 'Residual Surplus (ISP)', data: surpAvg, borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.15)', fill: true, tension: 0.25, pointRadius: 2, yAxisID: 'y', order: 1 },
-                { type: 'line', label: (lang === 'el' ? 'Τιμή MCP (€/MWh)' : 'MCP Price (€/MWh)'), data: mcpAvg, borderColor: '#fbbf24', borderDash: [5, 4], borderWidth: 2, pointRadius: 0, tension: 0.2, yAxisID: 'y2', order: 2 },
-                { type: 'line', label: (lang === 'el' ? 'Όριο 5 €/MWh' : '€5/MWh threshold'), data: new Array(24).fill(CURTAILMENT_PRICE_THRESHOLD), borderColor: 'rgba(251,191,36,0.45)', borderDash: [2, 3], borderWidth: 1, pointRadius: 0, yAxisID: 'y2', order: 2 }
+                { type: 'bar', label: 'BESS Charge (SCADA)', data: bessAvg, backgroundColor: COLORS.charge, stack: 'flex', yAxisID: 'y', order: 3 },
+                { type: 'bar', label: 'PUMP Charge (SCADA)', data: pumpAvg, backgroundColor: COLORS.pump, stack: 'flex', yAxisID: 'y', order: 3 },
+                { type: 'line', label: 'Residual Surplus (ISP)', data: surpAvg, borderColor: COLORS.residual, backgroundColor: rgba(COLORS.residual, 0.15), fill: true, tension: 0.25, pointRadius: 2, yAxisID: 'y', order: 1 },
+                { type: 'line', label: (lang === 'el' ? 'Τιμή MCP (€/MWh)' : 'MCP Price (€/MWh)'), data: mcpAvg, borderColor: COLORS.mcp, borderDash: [5, 4], borderWidth: 2, pointRadius: 0, tension: 0.2, yAxisID: 'y2', order: 2 },
+                { type: 'line', label: (lang === 'el' ? 'Όριο 5 €/MWh' : '€5/MWh threshold'), data: new Array(24).fill(CURTAILMENT_PRICE_THRESHOLD), borderColor: rgba(COLORS.mcpThreshold, 0.7), borderDash: [2, 3], borderWidth: 1, pointRadius: 0, yAxisID: 'y2', order: 2 }
             ]
         },
         options: {
@@ -888,10 +968,10 @@ function renderSurplusCharts(labels, dailyBess, dailyPump, dailySurplus, cumBess
         data: {
             labels: labels,
             datasets: [
-                { label: (lang === 'el') ? 'Φόρτιση BESS σε ώρες πλεονάσματος' : 'BESS Charge in surplus hours', data: dailyBess, backgroundColor: '#34d399', stack: 'Stack 0' },
-                { label: (lang === 'el') ? 'Φόρτιση PUMP σε ώρες πλεονάσματος' : 'PUMP Charge in surplus hours', data: dailyPump, backgroundColor: '#3b82f6', stack: 'Stack 0' },
-                { label: 'Residual Surplus (ISP)', data: dailySurplus, backgroundColor: '#ef4444', stack: 'Stack 0' },
-                { label: (lang === 'el') ? 'Φόρτιση εκτός ωρών πλεονάσματος (arbitrage)' : 'Charging outside surplus hours (arbitrage)', data: dailyOut, backgroundColor: '#64748b', stack: 'Stack 0' }
+                { label: (lang === 'el') ? 'Φόρτιση BESS σε ώρες πλεονάσματος' : 'BESS Charge in surplus hours', data: dailyBess, backgroundColor: COLORS.charge, stack: 'Stack 0' },
+                { label: (lang === 'el') ? 'Φόρτιση PUMP σε ώρες πλεονάσματος' : 'PUMP Charge in surplus hours', data: dailyPump, backgroundColor: COLORS.pump, stack: 'Stack 0' },
+                { label: 'Residual Surplus (ISP)', data: dailySurplus, backgroundColor: COLORS.residual, stack: 'Stack 0' },
+                { label: (lang === 'el') ? 'Φόρτιση εκτός ωρών πλεονάσματος (arbitrage)' : 'Charging outside surplus hours (arbitrage)', data: dailyOut, backgroundColor: COLORS.offSurplus, stack: 'Stack 0' }
             ]
         },
         options: {
@@ -947,10 +1027,10 @@ function renderSurplusCharts(labels, dailyBess, dailyPump, dailySurplus, cumBess
         data: {
             labels: labels,
             datasets: [
-                { label: 'Cum. BESS Charge', data: cumBess, borderColor: '#34d399', backgroundColor: 'rgba(52, 211, 153, 0.1)', fill: true, tension: 0.3 },
-                { label: 'Cum. PUMP Charge', data: cumPump, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.3 },
-                { label: 'Cum. Residual Surplus', data: cumSurplus, borderColor: '#ef4444', backgroundColor: 'transparent', fill: false, tension: 0.3 },
-                { label: (lang === 'el') ? 'Αθροιστική φόρτιση εκτός ωρών πλεονάσματος (arbitrage)' : 'Cum. charging outside surplus hours (arbitrage)', data: cumOut, borderColor: '#64748b', backgroundColor: 'transparent', borderDash: [6, 4], fill: false, tension: 0.3 }
+                { label: 'Cum. BESS Charge', data: cumBess, borderColor: COLORS.charge, backgroundColor: rgba(COLORS.charge, 0.1), fill: true, tension: 0.3 },
+                { label: 'Cum. PUMP Charge', data: cumPump, borderColor: COLORS.pump, backgroundColor: rgba(COLORS.pump, 0.1), fill: true, tension: 0.3 },
+                { label: 'Cum. Residual Surplus', data: cumSurplus, borderColor: COLORS.residual, backgroundColor: 'transparent', fill: false, tension: 0.3 },
+                { label: (lang === 'el') ? 'Αθροιστική φόρτιση εκτός ωρών πλεονάσματος (arbitrage)' : 'Cum. charging outside surplus hours (arbitrage)', data: cumOut, borderColor: COLORS.offSurplus, backgroundColor: 'transparent', borderDash: [6, 4], fill: false, tension: 0.3 }
             ]
         },
         options: {
@@ -1039,8 +1119,8 @@ function renderArbitrageTab() {
     const dailyMcp = alignMcpToScadaHours(dailyMcpRaw, prevDayLast, mcpShiftEnabled);
 
     const datasets = [];
-    const colorPalette = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
-    let colorIdx = 0;
+    const reg = getUnitRegistry();
+    const unitSeries = {};      // μονάδα -> ωριαίες τιμές της ημέρας
     const pnlSummary = {};
 
     dayData.forEach(row => {
@@ -1086,27 +1166,46 @@ function renderArbitrageTab() {
             rte: rte,
             pnl: actualDailyPnl,
             unitProfit: unitProfit,
-            color: colorPalette[colorIdx % colorPalette.length]
+            color: reg.unitMode ? unitColour(unitName, reg) : siteColour(reg.siteOf(unitName), reg)
         };
-
-        datasets.push({
-            label: unitName,
-            data: dataPoints,
-            backgroundColor: colorPalette[colorIdx % colorPalette.length],
-            stack: 'bessStack',
-            borderRadius: 2,
-            type: 'bar',
-            yAxisID: 'y'
-        });
-        colorIdx++;
+        unitSeries[unitName] = dataPoints;
     });
+
+    // Μέχρι 20 μονάδες: μία στήλη ανά μονάδα. Πέρα από αυτό: μία ανά σταθμό (άθροισμα των μονάδων του)· ο πίνακας κάτω δείχνει πάντα κάθε μονάδα.
+    if (reg.unitMode) {
+        Object.keys(unitSeries).forEach(u => datasets.push({
+            label: u, data: unitSeries[u], backgroundColor: pnlSummary[u].color,
+            stack: 'bessStack', borderRadius: 2, type: 'bar', yAxisID: 'y', units: [u]
+        }));
+    } else {
+        const bySite = {};
+        Object.keys(unitSeries).forEach(u => {
+            const s = reg.hueOf[reg.siteOf(u)] === undefined ? '__others' : reg.siteOf(u);
+            if (!bySite[s]) bySite[s] = { data: new Array(nH).fill(0), units: [] };
+            unitSeries[u].forEach((v, i) => { bySite[s].data[i] += v; });
+            bySite[s].units.push(u);
+        });
+        Object.keys(bySite).sort().forEach(s => datasets.push({
+            label: s === '__others' ? ((lang === 'en') ? 'Other sites' : 'Λοιποί σταθμοί') : s,
+            data: bySite[s].data.map(v => Math.round(v * 1000) / 1000),
+            backgroundColor: s === '__others' ? SITE_OTHERS_COLOR : siteColour(s, reg),
+            stack: 'bessStack', borderRadius: 2, type: 'bar', yAxisID: 'y', units: bySite[s].units
+        }));
+    }
+    const modeNote = document.getElementById('arbitrageModeNote');
+    if (modeNote) {
+        modeNote.textContent = reg.unitMode ? '' : ((lang === 'en')
+            ? `With more than ${UNIT_MODE_MAX_UNITS} units the chart shows one column per site (the sum of its units). The table below lists every unit.`
+            : `Με περισσότερες από ${UNIT_MODE_MAX_UNITS} μονάδες το γράφημα δείχνει μία στήλη ανά σταθμό (το άθροισμα των μονάδων του). Ο πίνακας κάτω δείχνει κάθε μονάδα.`);
+        modeNote.classList.toggle('hidden', reg.unitMode);
+    }
 
     if (mcpRow) {
         datasets.push({
             label: mcpLegendLabelFinal,
             data: dailyMcp,
-            borderColor: '#eab308', 
-            backgroundColor: '#eab308',
+            borderColor: COLORS.mcp, 
+            backgroundColor: COLORS.mcp,
             type: 'line',
             borderWidth: 2,
             pointRadius: 2,
@@ -1140,8 +1239,8 @@ function renderArbitrageTab() {
                     display: true,
                     position: 'right',
                     grid: { display: false },
-                    title: { display: true, text: yMcpTitle, color: '#eab308' },
-                    ticks: { color: '#eab308' }
+                    title: { display: true, text: yMcpTitle, color: COLORS.mcp },
+                    ticks: { color: COLORS.mcpThreshold }
                 }
             },
             plugins: { 
@@ -1205,7 +1304,7 @@ function renderArbitrageTab() {
                         ${formatPct(item.rte)}
                     </span>
                 </td>
-                <td class="p-3 font-semibold hidden md:table-cell text-right ${item.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${formatEur(item.pnl)}</td>
+                <td class="p-3 font-semibold hidden md:table-cell text-right ${item.pnl >= 0 ? 'text-lime-400' : 'text-rose-400'}">${formatEur(item.pnl)}</td>
                 <td class="p-3 hidden md:table-cell text-right">${formatEur(item.unitProfit)} / MWh</td>
             `;
             
@@ -1227,12 +1326,12 @@ function renderArbitrageTab() {
                         
                         <div class="flex justify-between items-center py-3 px-4 border-b border-slate-700/50">
                             <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Potential Daily P&L</span>
-                            <span class="text-sm font-bold ${item.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${formatEur(item.pnl)}</span>
+                            <span class="text-sm font-bold ${item.pnl >= 0 ? 'text-lime-400' : 'text-rose-400'}">${formatEur(item.pnl)}</span>
                         </div>
                         
                         <div class="flex justify-between items-center py-3 px-4">
                             <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Profit / MWh</span>
-                            <span class="text-sm font-bold text-yellow-400">${formatEur(item.unitProfit)}</span>
+                            <span class="text-sm font-bold text-slate-100">${formatEur(item.unitProfit)}</span>
                         </div>
 
                     </div>

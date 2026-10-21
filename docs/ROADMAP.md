@@ -11,10 +11,11 @@ Order of work for aligning this dashboard with the hub house style (live-greekpo
 - Emerald accent defined in one place (D02); Tailwind pinned (D07)
 - README and `docs/`
 
-## Phase 2: data colours
+## Phase 2: data colours (batch 4, 21 Oct 2026) — done
 
-- One colour per entity across all tabs; no data colour equal to the accent
-- Greens that mean "complete / positive / ✓" become lime (K02)
+- One colour per entity across all tabs; no data colour equal to the accent, red or yellow (D18, D19)
+- Unit colours by site, with a switch to one column per site beyond 20 units (D20)
+- Green means "complete / positive" and is lime (D21); status colours left for Phase 3 (K12)
 
 ## Phase 3: house shell and accent
 
@@ -43,6 +44,7 @@ Measured on 21 Oct 2026 (K05): ≈ 93 KB gzipped for 143 days. When the history 
 
 - 22 Oct 2026: first 07:04 run after batch 1; check that `data/meta.json` appears (K09), that there is one run per day, and that the previous day's SCADA file was already there (K08)
 - 26 Oct 2026: verify the 25-hour day of 25 Oct (K06)
+- First day with more than 20 units (now 16): check the Arbitrage chart switches to sites and reads well (K14)
 
 ## Later
 
