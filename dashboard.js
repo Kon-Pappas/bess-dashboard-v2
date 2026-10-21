@@ -1249,7 +1249,8 @@ function renderArbitrageTab() {
 // ΟΘΟΝΗ ΦΟΡΤΩΣΗΣ & ΕΚΚΙΝΗΣΗ (D03, όπως live-greekpower D47 / Flows)
 // ==========================================
 // Πρώτα η δουλειά, μετά το γέμισμα της μπάρας, μετά το ✓. Χρόνοι ίδιοι με το live.
-// Το ✓ και η γεμάτη μπάρα είναι lime (όχι emerald): το emerald είναι το accent του BESS (D02).
+// Ό,τι έχει τελειώσει (✓, γεμάτη μπάρα, «έτοιμο») είναι emerald, το χρώμα του repo, όπως το πράσινο «τελείωσε» σε όλο το hub·
+// τα βήματα σε εξέλιξη είναι lime ώστε η πρόοδος να ξεχωρίζει από το τέλος, αφού το accent του BESS είναι κι αυτό emerald (D02).
 const REDUCE_MOTION = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 const LOAD_STEP = REDUCE_MOTION ? 120 : 350, LOAD_MIN_READ = REDUCE_MOTION ? 200 : 650, LOAD_READY = REDUCE_MOTION ? 200 : 650;
 const pause = (ms) => (ms > 0 ? new Promise((r) => setTimeout(r, ms)) : Promise.resolve());
@@ -1259,7 +1260,7 @@ function loadSet(i, pct) { const b = loadRow(i) && loadRow(i).querySelector('[da
 function loadDone(i) {
     const r = loadRow(i); if (!r) return;
     const b = r.querySelector('[data-load-bar]');
-    b.style.width = '100%'; b.classList.remove('bg-blue-500', 'bg-acc-500'); b.classList.add('bg-lime-500');
+    b.style.width = '100%'; b.classList.remove('bg-blue-500', 'bg-lime-500'); b.style.backgroundColor = window.ACCENT[500];   // το accent από το ένα σημείο ορισμού του index.html
     r.querySelector('[data-load-ck]').classList.remove('opacity-0');
 }
 async function loadStep(i, work) {          // βήματα 2…5: δουλειά → γέμισμα → ✓
