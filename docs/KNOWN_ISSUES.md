@@ -5,8 +5,7 @@ Open problems found in the review of 21 October 2026, when the alignment with th
 | # | Issue | Why it matters | Plan |
 |---|---|---|---|
 | K01 | Chart.js is loaded from jsDelivr without a version (`chart.js` = latest) | A library release can change the charts overnight (live-greekpower D21 pinned its libraries) | Pin 4.5.1 (UMD build) as in live-greekpower, check for unused plugins (Phase 5) |
-| K02 | Phase 2 (D18–D21) removed the accent from **all data**. What is left in emerald is decoration only (53 occurrences on 21 Oct 2026, in `index.html`, `dashboard.js` and the section titles of the methodology texts in `data.js`): title, active tab, GR | EN, buttons, modal | Decoration must use `acc-*` so that a change of accent reaches the page, and the active tab and language switch use indigo today | Convert to `acc-*` (Phase 3) |
-| K03 | All-caps labels: the `uppercase` class is used 38 times (11 in `index.html`, 5 in `dashboard.js`, 22 in `data.js`, all of them section titles of the methodology texts) | Hub convention C02: Greek capitals lose their accents, take width and compete with the numbers | Remove, write labels normally (Phase 4) |
+| K03 | All-caps labels: the `uppercase` class is used 38 times (11 in `index.html`, 5 in `dashboard.js`, 22 in `data.js`, 22 of them section titles of the methodology texts), and some texts are stored in capitals (e.g. "SCHEDULED (ISP)" in the Daily cards) | Hub convention C02: Greek capitals lose their accents, take width and compete with the numbers | Remove, write labels normally (Phase 4) |
 | K04 | Greek casing and title (C01): only the English main title was found in the code; Greek labels have not been checked | The Greek page should be fully Greek, capital on the first word only | Check and convert (Phase 4) |
 | K05 | All data live in one file, `historical.json`, downloaded whole on every visit. **Measured 21 Oct 2026:** 143 days = 1.34 MB on disk, ≈ **93 KB** gzipped (estimate; the size on the wire was not measured); ≈ 9.4 KB per day, so about 3.4 MB on disk / ≈ 230 KB gzipped after a year | Not a problem today; it would become one only with a year or more of history | Measure again at about a year of history, then decide (Phase 7) |
 | K06 | Daylight-saving days (25 Oct 2026: 25 hours; 28 Mar 2027: 23 hours) are handled by design in the pipeline (hour columns, the day window of the market) and in the page (hour 25), but have not been tested on real data | A 25th hour could be dropped or shifted in SCADA, ISP or prices | Check the data of 25–26 Oct 2026 |
@@ -15,9 +14,11 @@ Open problems found in the review of 21 October 2026, when the alignment with th
 | K09 | Right after batch 1 is uploaded, `data/meta.json` does not exist until the first run, so the header shows "–" | Cosmetic, one day at most | Resolved by one manual run of the workflow |
 | K10 | `data.js` holds the texts, the methodology, the data loading and the header, while its name suggests only data | Misleading when looking for code | Decide with the data files phase (Phase 7) |
 | K11 | Mobile (≈ 342 px) has not been reviewed against the hub rules: tables that do not fit, "–" instead of 0, one divider line | Same issues as Flows had before its batches 8–9 | Phase 6 |
-| K12 | Status colours still use hub-reserved hues: the RTE warnings (yellow below 83%, rose above 92%), and the *pending data* pill is orange, the same orange as BESS charge | Yellow and red mean imports and exports across the hub, and orange now means charge; a warning or a pending day could be misread as data | Decide with the shell phase (Phase 3), together with the other repositories |
+| K12 | The RTE warnings use hub-reserved hues (yellow below 83%, rose above 92%) | Yellow and red mean imports and exports across the hub; a warning could be misread as data (the orange *pending* pill was accepted in D26) | Decide with the other repositories (hub-wide pass) |
 | K13 | Colour space is nearly used up: emerald (accent), lime (OK), red and yellow are reserved, so units have only about eight families (sky, pink, indigo, purple, orange, neutral, cyan, magenta). The newest site (ENW, since 6 Oct) took cyan, which is close to SUS sky | Beyond roughly six sites the colours of neighbouring sites get hard to tell apart; the per-site mode takes over only after 20 units | Look at the chart on real days; if needed move the switch to per-site earlier or darken the new sites' shades |
 | K14 | 16 units on 21 Oct 2026 (7 sites), so the per-site switch (20 units) is 4 units away | The first day with a 21st unit changes the chart from units to sites | Check the chart on that day (see `ROADMAP.md`) |
+
+Resolved: K02 → D25.
 
 ## Hub-wide issues
 
@@ -27,7 +28,7 @@ Same structure in every hub page, so a fix here alone would make this page diffe
 |---|---|---|---|
 | H01 | Mobile: two divider lines between the header and the tabs | live-greekpower; Flows fixed it as pilot (D25) | To check (Phase 6) |
 | H02 | Header labels on mobile: short labels ("Updated:" / "Next:", "Ενημέρωση:" / "Επόμενη:") | Flows, live-greekpower (only "Next") | **Done in batch 1 (D09)** |
-| H05 | Mobile height: the status pill sits on its own line; it could live inside the picker box, next to the date (owner's idea, 20 Oct 2026) | Flows, live-greekpower | For the hub-wide pass |
+| H05 | Mobile height: the status pill sits on its own line; it could live inside the picker box, next to the date (owner's idea, 20 Oct 2026) | Flows, live-greekpower | **BESS ✓ pilot (batch 5, D23, D24)**; Flows, live and the others in the hub-wide pass |
 
 ## Hub conventions
 

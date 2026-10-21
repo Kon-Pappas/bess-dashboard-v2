@@ -17,11 +17,12 @@ Order of work for aligning this dashboard with the hub house style (live-greekpo
 - Unit colours by site, with a switch to one column per site beyond 20 units (D20)
 - Green means "complete / positive" and is lime (D21); status colours left for Phase 3 (K12)
 
-## Phase 3: house shell and accent
+## Phase 3: house shell and accent (batches 5 and 6, 21 Oct 2026) — done
 
-- Accent (`acc-*`) wherever it is decoration: title, active tab, GR | EN, buttons, focus (K02)
-- One picker box that changes label per tab; dates in the visitor's language; status pill next to *Last / Next update*
-- Methodology modal as in live: boxed X, bordered Close button, focus handling; footer rule; Methodology links in context
+- Accent wherever it is decoration; tabs painted as in Flows (D25)
+- One picker box with shared day and month, dates in the visitor's language (D22); pill inside the box (D23); Methodology and GR | EN on one row on mobile (D24); pending pill stays orange (D26)
+- Language switch repaired (D27)
+- Methodology modal as in live: boxed X, focus handling (D28); "Methodology →" in every tab (D29); footer (D30)
 
 ## Phase 4: texts
 

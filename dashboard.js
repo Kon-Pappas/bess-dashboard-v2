@@ -228,147 +228,137 @@ function getMcpData() {
 // ==========================================
 // SMART DEFAULT SELECTION (Κανόνας 7)
 // ==========================================
-function initGlobalDates() {
-    if (!rawData || !rawData.isp) return;
+// Ημερομηνίες στη γλώσσα του επισκέπτη, όπως στο live και στο Flows: «21 Οκτ 2026 (σήμερα)», «Οκτώβριος 2026»
+function fmtDay(iso) {
+    const [y, m, d] = iso.split('-').map(Number);
+    return new Intl.DateTimeFormat(i18n[currentLang].locale, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(Date.UTC(y, m - 1, d)));
+}
+function fmtMonth(ym) {
+    const [y, m] = ym.split('-').map(Number);
+    const s = new Intl.DateTimeFormat(i18n[currentLang].locale, { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(Date.UTC(y, m - 1, 1)));
+    return s.charAt(0).toUpperCase() + s.slice(1);
+}
+function todayAthens() {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Athens' }).format(new Date()); // YYYY-MM-DD
+}
+
+// Ένα κουτί επιλογής (D22): μία ημέρα για Daily + Arbitrage, ένας μήνας για Monthly + Surplus.
+// Γεμίζει ξανά και όταν αλλάζει η γλώσσα, κρατώντας την τρέχουσα επιλογή. Πρώτη φορά: τελευταία ημέρα ΜΕ SCADA και τελευταίος μήνας.
+function fillPickers() {
+    if (!rawData || !rawData.isp || rawData.isp.length === 0) return;
+    const t = i18n[currentLang], today = todayAthens();
+    const dSel = document.getElementById('dateSelect'), mSel = document.getElementById('monthSelect');
+    if (!dSel || !mSel) return;
 
     const datesSet = new Set();
     rawData.isp.forEach(d => datesSet.add(d.date));
     if (rawData.scada) rawData.scada.forEach(d => datesSet.add(d.date));
-    
-    const allDates = Array.from(datesSet).sort();
-    const dateSelect = document.getElementById('dateSelect');
-    const arbSelect = document.getElementById('arbitrageDateSelect');
-    
-    if (dateSelect) dateSelect.innerHTML = '';
-    if (arbSelect) arbSelect.innerHTML = '';
+    const dates = Array.from(datesSet).sort().reverse();
+    const hasScada = new Set((rawData.scada || []).filter(d => d.unit === 'TOTAL BESS').map(d => d.date));
 
-    let latestCompleteDate = null;
-
-    allDates.forEach(date => {
-        const hasScada = rawData.scada && rawData.scada.some(d => d.date === date && d.unit === "TOTAL BESS");
-        const isPending = !hasScada;
-        
-        const lang = typeof currentLang !== 'undefined' ? currentLang : 'en';
-        const pendingText = lang === 'el' ? ' (Εκκρεμεί SCADA)' : ' (Pending SCADA)';
-        const displayText = date + (isPending ? pendingText : '');
-
-        [dateSelect, arbSelect].forEach(select => {
-            if (select) {
-                let opt = document.createElement('option');
-                opt.value = date;
-                opt.innerText = displayText;
-                opt.dataset.pending = isPending; 
-                select.appendChild(opt);
-            }
-        });
-
-        if (!isPending) {
-            latestCompleteDate = date;
-        }
+    const keepDay = dates.includes(dSel.value) ? dSel.value : null;
+    dSel.innerHTML = '';
+    dates.forEach(date => {
+        const pending = !hasScada.has(date);
+        const opt = document.createElement('option');
+        opt.value = date;
+        opt.textContent = fmtDay(date) + (date === today ? ` (${t.today})` : '') + (pending ? ' ⚠' : '');
+        opt.dataset.pending = pending;
+        dSel.appendChild(opt);
     });
+    dSel.value = keepDay || dates.find(d => hasScada.has(d)) || dates[0] || '';
 
-    const finalDefault = latestCompleteDate || allDates[allDates.length - 1];
-    
-    if (dateSelect) dateSelect.value = finalDefault;
-    if (arbSelect) arbSelect.value = finalDefault;
+    const mSet = new Set();
+    [...(rawData.scada || []), ...(rawData.surplus || [])].forEach(d => { if (d.date) mSet.add(d.date.substring(0, 7)); });
+    const months = Array.from(mSet).sort().reverse();
+    const keepMonth = months.includes(mSel.value) ? mSel.value : null;
+    mSel.innerHTML = '';
+    months.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m;
+        opt.textContent = fmtMonth(m);
+        mSel.appendChild(opt);
+    });
+    mSel.value = keepMonth || months[0] || '';
 }
+
+// Η ετικέτα και ο επιλογέας του κουτιού ακολουθούν το tab: «Ημέρα» (Daily, Arbitrage) ή «Μήνας» (Monthly, Surplus)
+function updatePicker() {
+    const t = i18n[currentLang], monthTab = (currentTab === 'monthly' || currentTab === 'surplus');
+    const label = document.getElementById('pickerLabel');
+    if (label) {
+        label.textContent = monthTab ? t.monthLabel : t.dateLabel;
+        label.setAttribute('for', monthTab ? 'monthSelect' : 'dateSelect');
+    }
+    const dSel = document.getElementById('dateSelect'), mSel = document.getElementById('monthSelect');
+    if (dSel) dSel.classList.toggle('hidden', monthTab);
+    if (mSel) mSel.classList.toggle('hidden', !monthTab);
+}
+
+// Αλλαγή επιλογής: ξαναζωγραφίζεται μόνο το tab που φαίνεται (τα άλλα ζωγραφίζονται όταν τα ανοίξεις)
+function onDateChange() { if (currentTab === 'arbitrage') renderArbitrageTab(); else updateDashboard(); }
+function onMonthChange() { if (currentTab === 'surplus') updateSurplusDashboard(); else updateMonthlyDashboard(); }
 
 function updateStatusBadge() {
     const badge = document.getElementById('dataStatusBadge');
     const textEl = document.getElementById('dataStatusText');
     if (!badge || !textEl) return;
 
-    let activeSelect = null;
-    if (!document.getElementById('viewDaily').classList.contains('hidden')) {
-        activeSelect = document.getElementById('dateSelect');
-    } else if (!document.getElementById('viewArbitrage').classList.contains('hidden')) {
-        activeSelect = document.getElementById('arbitrageDateSelect');
-    }
-
-    if (!activeSelect) {
-        badge.classList.add('hidden');
-        return;
-    }
+    // Το pill περιγράφει την επιλεγμένη ΗΜΕΡΑ: κρύβεται στα tabs που έχουν μήνα
+    if (currentTab !== 'daily' && currentTab !== 'arbitrage') { badge.classList.add('hidden'); return; }
+    const sel = document.getElementById('dateSelect');
+    const option = sel && sel.options[sel.selectedIndex];
+    if (!option) { badge.classList.add('hidden'); return; }
 
     badge.classList.remove('hidden');
-    const option = activeSelect.options[activeSelect.selectedIndex];
-    if (!option) return;
-
+    const t = i18n[currentLang];
     const isPending = option.dataset.pending === 'true';
-    const lang = typeof currentLang !== 'undefined' ? currentLang : 'en';
-
+    const text = isPending ? t.pillPending : t.pillComplete;
     if (isPending) {
+        // Πορτοκαλί όπως στο Flows και στο live (D26): το pill είναι στην κεφαλίδα, μακριά από τα δεδομένα της φόρτισης
         badge.className = "flex shrink-0 items-center gap-1.5 px-2 py-0.5 rounded border border-orange-500/30 bg-orange-500/10 text-[10px] md:text-xs font-bold text-orange-400 shadow-sm";
         badge.querySelector('div').className = "w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-orange-500 animate-pulse shrink-0";
-        textEl.className = "whitespace-nowrap";
-        textEl.innerText = lang === 'el' ? 'Pending SCADA' : 'Pending SCADA';
     } else {
         badge.className = "flex shrink-0 items-center gap-1.5 px-2 py-0.5 rounded border border-lime-500/30 bg-lime-500/10 text-[10px] md:text-xs font-bold text-lime-400 shadow-sm";
         badge.querySelector('div').className = "w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-lime-500 shrink-0";
-        textEl.className = "whitespace-nowrap";
-        textEl.innerText = lang === 'el' ? 'Complete Data' : 'Complete Data';
     }
+    // Σε στενή οθόνη (< 400 px) μόνο η τελεία· το κείμενο μένει στο title
+    textEl.className = "hidden min-[400px]:inline whitespace-nowrap";
+    textEl.innerText = text;
+    badge.title = text;
 }
 
 // ==========================================
 // 0. TABS SWITCHING (Controller)
 // ==========================================
+// Tabs όπως στο Flows και στο live (D25): ένα accent για όλα. Ενεργό = γεμάτο accent με σκούρα γράμματα (κινητό)
+// ή χρώμα accent με γραμμή από κάτω (υπολογιστής).
+var currentTab = 'daily';
+const TAB_BASE = 'tab-btn flex items-center justify-center text-xs md:text-base font-bold rounded-lg md:rounded-none h-12 w-full transition whitespace-nowrap px-2 border md:border-0 md:border-b-2 cursor-pointer ';
+const TAB_ON = 'bg-acc-400 text-slate-900 border-acc-400 md:bg-transparent md:text-acc-400 md:border-b-acc-400';
+const TAB_OFF = 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white md:bg-transparent md:border-transparent md:hover:text-acc-200';
+const TABS = { daily: ['tabBtnDaily', 'viewDaily'], monthly: ['tabBtnMonthly', 'viewMonthly'], surplus: ['tabBtnSurplus', 'viewSurplus'], arbitrage: ['tabBtnArbitrage', 'viewArbitrage'] };
+
+function paintTabs() {
+    Object.entries(TABS).forEach(([key, [btn, view]]) => {
+        const on = key === currentTab;
+        const b = document.getElementById(btn);
+        b.className = TAB_BASE + (on ? TAB_ON : TAB_OFF);
+        b.setAttribute('aria-selected', on ? 'true' : 'false');
+        document.getElementById(view).classList.toggle('hidden', !on);
+    });
+}
+
 function switchTab(tabName) {
-    document.getElementById('viewDaily').classList.add('hidden');
-    document.getElementById('viewMonthly').classList.add('hidden');
-    document.getElementById('viewSurplus').classList.add('hidden');
-    document.getElementById('viewArbitrage').classList.add('hidden');
+    if (!TABS[tabName]) return;
+    currentTab = tabName;
+    paintTabs();
+    updatePicker();
 
-    const inactiveClass = "w-full text-slate-400 bg-slate-800 border border-slate-700 rounded-xl py-3 px-3 text-center text-sm font-medium hover:bg-slate-700/50 transition-colors shadow-sm md:w-full md:bg-transparent md:border-0 md:border-b-2 md:border-transparent md:rounded-none md:hover:bg-transparent md:hover:text-emerald-300 md:py-2 md:pb-2 md:px-2 whitespace-nowrap md:shadow-none";
-
-    document.getElementById('tabBtnDaily').className = inactiveClass;
-    document.getElementById('tabBtnMonthly').className = inactiveClass;
-    document.getElementById('tabBtnSurplus').className = inactiveClass;
-    document.getElementById('tabBtnArbitrage').className = inactiveClass;
-
-    document.getElementById('globalDateContainer').classList.remove('flex');
-    document.getElementById('globalDateContainer').classList.add('hidden');
-    
-    document.getElementById('globalMonthContainer').classList.remove('flex');
-    document.getElementById('globalMonthContainer').classList.add('hidden');
-    
-    document.getElementById('globalSurplusContainer').classList.remove('flex');
-    document.getElementById('globalSurplusContainer').classList.add('hidden');
-    
-    document.getElementById('globalArbitrageContainer').classList.remove('flex');
-    document.getElementById('globalArbitrageContainer').classList.add('hidden');
-
-    const activeClass = "w-full text-white bg-indigo-600 font-bold border border-transparent rounded-xl py-3 px-3 text-center text-sm transition-colors shadow-md md:w-full md:text-emerald-400 md:bg-transparent md:border-0 md:border-b-2 md:border-emerald-400 md:rounded-none md:py-2 md:pb-2 md:px-2 whitespace-nowrap md:shadow-none";
-
-    if (tabName === 'daily') {
-        document.getElementById('viewDaily').classList.remove('hidden');
-        document.getElementById('tabBtnDaily').className = activeClass;
-        document.getElementById('globalDateContainer').classList.remove('hidden');
-        document.getElementById('globalDateContainer').classList.add('flex');
-        
-        updateDashboard();
-    } else if (tabName === 'monthly') {
-        document.getElementById('viewMonthly').classList.remove('hidden');
-        document.getElementById('tabBtnMonthly').className = activeClass;
-        document.getElementById('globalMonthContainer').classList.remove('hidden');
-        document.getElementById('globalMonthContainer').classList.add('flex');
-        
-        updateMonthlyDashboard();
-    } else if (tabName === 'surplus') {
-        document.getElementById('viewSurplus').classList.remove('hidden');
-        document.getElementById('tabBtnSurplus').className = activeClass;
-        document.getElementById('globalSurplusContainer').classList.remove('hidden');
-        document.getElementById('globalSurplusContainer').classList.add('flex');
-        
-        updateSurplusDashboard();
-    } else if (tabName === 'arbitrage') {
-        document.getElementById('viewArbitrage').classList.remove('hidden');
-        document.getElementById('tabBtnArbitrage').className = activeClass;
-        document.getElementById('globalArbitrageContainer').classList.remove('hidden');
-        document.getElementById('globalArbitrageContainer').classList.add('flex');
-        
-        renderArbitrageTab();
-    }
+    if (tabName === 'daily') updateDashboard();
+    else if (tabName === 'monthly') updateMonthlyDashboard();
+    else if (tabName === 'surplus') updateSurplusDashboard();
+    else if (tabName === 'arbitrage') renderArbitrageTab();
 
     updateStatusBadge();
 }
@@ -689,7 +679,7 @@ function computeSurplusHourSplit(selectedMonth) {
 
 function updateSurplusDashboard() {
     if (typeof syncMcpShiftControls === 'function') syncMcpShiftControls();
-    const selectedMonth = document.getElementById('monthSelectSurplus').value;
+    const selectedMonth = document.getElementById('monthSelect').value;
     if (!selectedMonth || !rawData || !rawData.surplus) return;
     const lang = typeof currentLang !== 'undefined' ? currentLang : 'en';
 
@@ -835,7 +825,7 @@ function prevDateString(dateStr) {
 }
 
 function renderSurplusHourlyProfile() {
-    const monthEl = document.getElementById('monthSelectSurplus');
+    const monthEl = document.getElementById('monthSelect');
     const canvas = document.getElementById('surplusHourlyChart');
     if (!monthEl || !canvas || !rawData) return;
     const month = monthEl.value;
@@ -1052,7 +1042,7 @@ function renderArbitrageTab() {
     updateStatusBadge();
     currentlyIsolatedBess = null; 
 
-    const select = document.getElementById('arbitrageDateSelect');
+    const select = document.getElementById('dateSelect');
     if (!select) return;
     
     const selectedDate = select.value;
@@ -1387,22 +1377,10 @@ async function getJSON(path, bust = false) {
     return r.json();
 }
 
-// Γεμίζει τους επιλογείς ημερομηνίας / μήνα (ίδια συμπεριφορά με πριν: τελευταία ημέρα με SCADA, τελευταίος μήνας)
+// Γεμίζει το κουτί επιλογής (ημέρες και μήνες) πριν ζωγραφιστεί οποιοδήποτε tab
 function populateSelectors() {
-    initGlobalDates();
-
-    const fillMonths = (selectId, rows) => {
-        const sel = document.getElementById(selectId);
-        if (!sel || !rows) return;
-        const mSet = new Set();
-        rows.forEach(d => { if (d.date) mSet.add(d.date.substring(0, 7)); });
-        const months = [...mSet].sort();
-        sel.innerHTML = '';
-        months.forEach(m => sel.appendChild(new Option(m, m)));
-        if (months.length > 0) sel.value = months[months.length - 1];
-    };
-    fillMonths('monthSelect', rawData.scada);
-    fillMonths('monthSelectSurplus', rawData.surplus);
+    fillPickers();
+    updatePicker();
 }
 
 async function boot() {
