@@ -35,10 +35,11 @@ Order of work for aligning this dashboard with the hub house style (live-greekpo
 - Chart.js 4.5.1 pinned, shared defaults, no plugins (D38)
 - Hours 00 … 23 on the axes and 12–13 in the tooltips (D39)
 - Own HTML tooltips on all 8 charts (D40); Arbitrage tooltip by site or one unit alone (D41)
+- Follow-up (batch 11): repeated title removed, inactive units faded with "–" for zeros, shorter price legend, "5k" ticks on phones (D42–D45)
 
 ## Phase 6: mobile
 
-- Tables that do not fit become cards; "–" instead of 0; one divider line (K11, H01)
+- Tables that do not fit become cards; "–" instead of 0 (already done for the Arbitrage table in batch 11, D43); one divider line (K11, H01)
 
 ## Phase 7: data files — later, not urgent
 

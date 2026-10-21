@@ -187,7 +187,6 @@ const i18n = {
         tipHint: "Κλικ σε μονάδα στον πίνακα για να τη δεις μόνη της.",
         tipMcpLabel: "Τιμή MCP",
         tipHourValue: "Αξία ώρας",
-        arbitrageMainTitle: "Arbitrage P&L και ωριαίο προφίλ λειτουργίας",
         arbitrageChartTitle: "Ωριαία κίνηση BESS ανά μονάδα (MWh)",
         arbitrageChartSub: "Αρνητικές τιμές = φόρτιση, θετικές τιμές = αποφόρτιση",
         arbitrageTableTitle: "Οικονομική απόδοση και arbitrage ημέρας",
@@ -357,7 +356,6 @@ const i18n = {
         tipHint: "Click a unit in the table to see it alone.",
         tipMcpLabel: "MCP price",
         tipHourValue: "Value of the hour",
-        arbitrageMainTitle: "Arbitrage P&L & Hourly Operation Profile",
         arbitrageChartTitle: "Hourly BESS Operation per Unit (MWh)",
         arbitrageChartSub: "Negative values = Charging, Positive values = Discharging",
         arbitrageTableTitle: "Daily Financial Performance & Arbitrage",
@@ -446,7 +444,6 @@ function setLang(lang) {
     setTxt('optHourlyAll', t.surplusHourlyAll);
     setTxt('optHourlyHigh', t.surplusHourlyHigh);
 
-    setT('arbitrageMainTitle', t.arbitrageMainTitle);
     setT('arbitrageChartTitle', t.arbitrageChartTitle);
     setT('arbitrageChartSub', t.arbitrageChartSub);
     setT('arbitrageTableTitle', t.arbitrageTableTitle);

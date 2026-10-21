@@ -108,6 +108,16 @@ function applyChartDefaults() {
     Chart.defaults.animation.duration = (typeof REDUCE_MOTION !== 'undefined' && REDUCE_MOTION) ? 0 : 400;
 }
 
+// Σε κινητό οι χιλιάδες γράφονται «5k» στους κάθετους άξονες: κερδίζουμε οριζόντιο χώρο για το γράφημα (D45)
+function axisTick(v, idx, ticks) {
+    if (isPhone()) {
+        if (Math.abs(v) >= 1000) { const k = v / 1000; return fmtN(k, Number.isInteger(k) ? 0 : 1) + 'k'; }
+        return fmtN(v, Number.isInteger(v) ? 0 : 1);
+    }
+    return (typeof Chart !== 'undefined' && Chart.Ticks && Chart.Ticks.formatters) ? Chart.Ticks.formatters.numeric.call(this, v, idx, ticks) : v;
+}
+const yTicks = { callback: axisTick };
+
 // ---- Daily Analytics: μία μονάδα, πρόγραμμα έναντι πραγματικού
 function unitTip(unit, isp, sc, cIsp, cSc) {
     const T = TT(), sel = document.getElementById('dateSelect');
@@ -629,7 +639,7 @@ function renderDailyCharts(labels, ispDischarge, scadaDischarge, ispCharge, scad
         options: { 
             responsive: true, maintainAspectRatio: false, 
             plugins: { legend: { position: 'top' }, tooltip: tipOff(i => unitTip(labels[i], ispDischarge[i], scadaDischarge[i], COLORS.dischargeIsp, COLORS.discharge)) }, 
-            scales: { x: { grid: { display: false } }, y: { grid: { color: '#334155' } } } 
+            scales: { x: { grid: { display: false } }, y: { grid: { color: '#334155' }, ticks: yTicks } } 
         } 
     });
 
@@ -648,7 +658,7 @@ function renderDailyCharts(labels, ispDischarge, scadaDischarge, ispCharge, scad
         options: { 
             responsive: true, maintainAspectRatio: false, 
             plugins: { legend: { position: 'top' }, tooltip: tipOff(i => unitTip(labels[i], ispCharge[i], scadaCharge[i], COLORS.chargeIsp, COLORS.charge)) }, 
-            scales: { x: { grid: { display: false } }, y: { grid: { color: '#334155' } } } 
+            scales: { x: { grid: { display: false } }, y: { grid: { color: '#334155' }, ticks: yTicks } } 
         } 
     });
 }
@@ -723,7 +733,7 @@ function renderMonthlyCharts(labels, chargeData, dischargeData, dates) {
         }, 
         options: { 
             responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: tipOff(cumTip(dates, dischargeData, COLORS.discharge)) }, 
-            scales: { x: { grid: { display: false } }, y: { grid: { color: '#334155' }, title: { display: true, text: 'MWh' } } } 
+            scales: { x: { grid: { display: false } }, y: { grid: { color: '#334155' }, ticks: yTicks, title: { display: true, text: 'MWh' } } } 
         } 
     });
 
@@ -741,7 +751,7 @@ function renderMonthlyCharts(labels, chargeData, dischargeData, dates) {
         }, 
         options: { 
             responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: tipOff(cumTip(dates, chargeData, COLORS.charge)) }, 
-            scales: { x: { grid: { display: false } }, y: { grid: { color: '#334155' }, title: { display: true, text: 'MWh' } } } 
+            scales: { x: { grid: { display: false } }, y: { grid: { color: '#334155' }, ticks: yTicks, title: { display: true, text: 'MWh' } } } 
         } 
     });
 }
@@ -1090,8 +1100,8 @@ function renderSurplusHourlyProfile() {
             },
             scales: {
                 x: { stacked: true, grid: { display: false }, title: { display: true, text: (lang === 'el' ? 'Ώρα ημέρας (ελληνική ώρα)' : 'Hour of day (Greek local time)') } },
-                y: { stacked: true, grid: { color: '#334155' }, title: { display: true, text: 'MWh / h' }, beginAtZero: true },
-                y2: { position: 'right', grid: { display: false }, title: { display: true, text: '€/MWh' } }
+                y: { stacked: true, grid: { color: '#334155' }, ticks: yTicks, title: { display: true, text: 'MWh / h' }, beginAtZero: true },
+                y2: { position: 'right', grid: { display: false }, ticks: yTicks, title: { display: true, text: '€/MWh' } }
             }
         }
     });
@@ -1133,7 +1143,7 @@ function renderSurplusCharts(labels, dailyBess, dailyPump, dailySurplus, cumBess
             },
             scales: { 
                 x: { stacked: true, grid: { display: false } }, 
-                y: { stacked: true, grid: { color: '#334155' }, title: { display: true, text: 'MWh' } } 
+                y: { stacked: true, grid: { color: '#334155' }, ticks: yTicks, title: { display: true, text: 'MWh' } } 
             }
         }
     });
@@ -1158,7 +1168,7 @@ function renderSurplusCharts(labels, dailyBess, dailyPump, dailySurplus, cumBess
                 legend: { position: 'top' },
                 tooltip: tipOff(i => cumSurplusTip(i, dates, cumBess, cumPump, cumSurplus, cumOut))
             },
-            scales: { x: { grid: { display: false } }, y: { grid: { color: '#334155' }, title: { display: true, text: 'MWh' } } }
+            scales: { x: { grid: { display: false } }, y: { grid: { color: '#334155' }, ticks: yTicks, title: { display: true, text: 'MWh' } } }
         }
     });
 }
@@ -1182,7 +1192,7 @@ function renderArbitrageTab() {
 
     const lang = typeof currentLang !== 'undefined' ? currentLang : 'en';
     const mcpLegendLabel = (lang === 'en') ? 'MCP Price (€/MWh)' : 'Τιμή MCP (€/MWh)';
-    const mcpLegendLabelFinal = mcpLegendLabel + (mcpShiftEnabled ? (lang === 'en' ? ' – SCADA-aligned' : ' – ευθυγραμμισμένη με SCADA') : '');
+    const mcpLegendLabelFinal = mcpLegendLabel;   // η ευθυγράμμιση φαίνεται ήδη στον διακόπτη πάνω από το γράφημα· η μακριά ετικέτα κόβονταν στο κινητό (D44)
     const chk = document.getElementById('mcpShiftToggle');
     if (chk) chk.checked = mcpShiftEnabled;
     const shiftLbl = document.getElementById('mcpShiftLabel');
@@ -1405,7 +1415,7 @@ function renderArbitrageTab() {
                 x: { stacked: true, grid: { display: false } },
                 y: { 
                     stacked: true, 
-                    grid: { color: '#334155' }, 
+                    grid: { color: '#334155' }, ticks: yTicks, 
                     title: { display: true, text: yBessTitle },
                     position: 'left'
                 },
@@ -1415,11 +1425,11 @@ function renderArbitrageTab() {
                     position: 'right',
                     grid: { display: false },
                     title: { display: true, text: yMcpTitle, color: COLORS.mcp },
-                    ticks: { color: COLORS.mcpThreshold }
+                    ticks: { color: COLORS.mcpThreshold, callback: axisTick }
                 }
             },
             plugins: { 
-                legend: { position: 'top' },
+                legend: { position: 'top', labels: { padding: isPhone() ? 16 : 12 } },
                 tooltip: tipOff(arbTip) 
             }
         }
@@ -1446,8 +1456,20 @@ function renderArbitrageTab() {
                 rteTooltip = (lang === 'en') ? "Zero cycle activity." : "Μηδενική δραστηριότητα κύκλου.";
             }
             
+            // Μονάδα χωρίς δραστηριότητα (μηδέν φόρτιση και αποφόρτιση): ξεθωριασμένη γραμμή και «–» αντί για μηδενικά (D43)
+            const inactive = roundsToZero(item.charge) && roundsToZero(item.discharge);
+            const zeroPnl = Math.abs(item.pnl) < 0.005;
+            const chargeTxt = roundsToZero(item.charge) ? '–' : formatMWh(item.charge);
+            const dischargeTxt = roundsToZero(item.discharge) ? '–' : formatMWh(item.discharge);
+            const rteTxt = item.rte === 0 ? '–' : formatPct(item.rte);
+            const pnlTxt = zeroPnl ? '–' : formatEur(item.pnl);
+            const pnlClass = zeroPnl ? 'text-slate-500' : (item.pnl >= 0 ? 'text-lime-400' : 'text-rose-400');
+            const profitZero = roundsToZero(item.unitProfit, 2);
+            const profitTxt = profitZero ? '–' : `${formatEur(item.unitProfit)} / MWh`;
+            const profitShort = profitZero ? '–' : formatEur(item.unitProfit);
+
             const trMain = document.createElement('tr');
-            trMain.className = "bess-main-row hover:bg-slate-700/50 transition-all cursor-pointer group";
+            trMain.className = "bess-main-row hover:bg-slate-700/50 transition-all cursor-pointer group" + (inactive ? " opacity-30 hover:opacity-60" : "");
             trMain.id = "row-" + safeUnitId;
             
             trMain.innerHTML = `
@@ -1459,22 +1481,22 @@ function renderArbitrageTab() {
                         </svg>
                     </div>
                 </td>
-                <td class="p-3 text-right">${formatMWh(item.charge)}</td>
-                <td class="p-3 text-right">${formatMWh(item.discharge)}</td>
+                <td class="p-3 text-right">${chargeTxt}</td>
+                <td class="p-3 text-right">${dischargeTxt}</td>
                 <td class="p-3 hidden md:table-cell text-right">
                     <span class="${rteColorClass} cursor-help border-b border-dotted border-slate-500" title="${rteTooltip}">
-                        ${formatPct(item.rte)}
+                        ${rteTxt}
                     </span>
                 </td>
-                <td class="p-3 font-semibold hidden md:table-cell text-right ${item.pnl >= 0 ? 'text-lime-400' : 'text-rose-400'}">${formatEur(item.pnl)}</td>
-                <td class="p-3 hidden md:table-cell text-right">${formatEur(item.unitProfit)} / MWh</td>
+                <td class="p-3 font-semibold hidden md:table-cell text-right ${pnlClass}">${pnlTxt}</td>
+                <td class="p-3 hidden md:table-cell text-right">${profitTxt}</td>
             `;
             
             trMain.onclick = () => toggleBessIsolation(unit);
             tbody.appendChild(trMain);
 
             const trExpand = document.createElement('tr');
-            trExpand.className = "bess-expand-row hidden md:hidden bg-slate-800/30";
+            trExpand.className = "bess-expand-row hidden md:hidden bg-slate-800/30" + (inactive ? " opacity-30" : "");
             trExpand.id = "expand-" + safeUnitId;
 
             trExpand.innerHTML = `
@@ -1483,17 +1505,17 @@ function renderArbitrageTab() {
                         
                         <div class="flex justify-between items-center py-3 px-4 border-b border-slate-700/50">
                             <span class="text-xs font-semibold text-slate-500">${i18n[lang].thRte}</span>
-                            <span class="${rteColorClass} text-sm font-semibold cursor-help" title="${rteTooltip}">${formatPct(item.rte)}</span>
+                            <span class="${rteColorClass} text-sm font-semibold cursor-help" title="${rteTooltip}">${rteTxt}</span>
                         </div>
                         
                         <div class="flex justify-between items-center py-3 px-4 border-b border-slate-700/50">
                             <span class="text-xs font-semibold text-slate-500">${i18n[lang].thPnl}</span>
-                            <span class="text-sm font-bold ${item.pnl >= 0 ? 'text-lime-400' : 'text-rose-400'}">${formatEur(item.pnl)}</span>
+                            <span class="text-sm font-bold ${pnlClass}">${pnlTxt}</span>
                         </div>
                         
                         <div class="flex justify-between items-center py-3 px-4">
                             <span class="text-xs font-semibold text-slate-500">${i18n[lang].thProfit}</span>
-                            <span class="text-sm font-bold text-slate-100">${formatEur(item.unitProfit)}</span>
+                            <span class="text-sm font-bold text-slate-100">${profitShort}</span>
                         </div>
 
                     </div>
