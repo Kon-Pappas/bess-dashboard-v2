@@ -4,7 +4,6 @@ Open problems found in the review of 21 October 2026, when the alignment with th
 
 | # | Issue | Why it matters | Plan |
 |---|---|---|---|
-| K01 | Chart.js is loaded from jsDelivr without a version (`chart.js` = latest) | A library release can change the charts overnight (live-greekpower D21 pinned its libraries) | Pin 4.5.1 (UMD build) as in live-greekpower, check for unused plugins (Phase 5) |
 | K05 | All data live in one file, `historical.json`, downloaded whole on every visit. **Measured 21 Oct 2026:** 143 days = 1.34 MB on disk, ≈ **93 KB** gzipped (estimate; the size on the wire was not measured); ≈ 9.4 KB per day, so about 3.4 MB on disk / ≈ 230 KB gzipped after a year | Not a problem today; it would become one only with a year or more of history | Measure again at about a year of history, then decide (Phase 7) |
 | K06 | Daylight-saving days (25 Oct 2026: 25 hours; 28 Mar 2027: 23 hours) are handled by design in the pipeline (hour columns, the day window of the market) and in the page (hour 25), but have not been tested on real data | A 25th hour could be dropped or shifted in SCADA, ISP or prices | Check the data of 25–26 Oct 2026 |
 | K07 | The one-hour alignment between SCADA and the market clock (D10) is a statistical assumption, not confirmed by IPTO documentation | It changes the P&L by roughly 10%; the page says so and offers a switch | Look for documentation; keep the switch |
@@ -16,7 +15,7 @@ Open problems found in the review of 21 October 2026, when the alignment with th
 | K13 | Colour space is nearly used up: emerald (accent), lime (OK), red and yellow are reserved, so units have only about eight families (sky, pink, indigo, purple, orange, neutral, cyan, magenta). The newest site (ENW, since 6 Oct) took cyan, which is close to SUS sky | Beyond roughly six sites the colours of neighbouring sites get hard to tell apart; the per-site mode takes over only after 20 units | Look at the chart on real days; if needed move the switch to per-site earlier or darken the new sites' shades |
 | K14 | 16 units on 21 Oct 2026 (7 sites), so the per-site switch (20 units) is 4 units away | The first day with a 21st unit changes the chart from units to sites | Check the chart on that day (see `ROADMAP.md`) |
 
-Resolved: K02 → D25; K03 → D32; K04 → D33, D34.
+Resolved: K01 → D38; K02 → D25; K03 → D32; K04 → D33, D34.
 
 ## Hub-wide issues
 

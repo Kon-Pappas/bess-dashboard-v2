@@ -12,7 +12,7 @@
         tailwind.config = { theme: { extend: { colors: { acc: window.ACCENT } } } };
         document.documentElement.style.setProperty('--acc', window.ACCENT[400]);
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js" defer></script>
     <style>
         /* Λιγότερη κίνηση: μόνο στην οθόνη φόρτωσης (D03). Οι χρόνοι ρυθμίζονται και στο dashboard.js. */
         @media (prefers-reduced-motion: reduce) { #loading-overlay *, #loading-overlay *::before, #loading-overlay *::after { transition: none !important; animation: none !important; } }

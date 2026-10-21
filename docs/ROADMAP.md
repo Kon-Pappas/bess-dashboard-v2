@@ -30,10 +30,11 @@ Order of work for aligning this dashboard with the hub house style (live-greekpo
 - Greek page fully Greek, with the glossary and the Greek title (D33)
 - Legends, axis texts, mobile captions and tab title translated (D34); the (GWh) title corrected (D35)
 
-## Phase 5: charts
+## Phase 5: charts (batch 10, 21 Oct 2026) — done
 
-- Pin Chart.js 4.5.1; remove unused plugins (K01)
-- Hour labels `00–01` … `23–24` from the hour's number; own HTML tooltips
+- Chart.js 4.5.1 pinned, shared defaults, no plugins (D38)
+- Hours 00 … 23 on the axes and 12–13 in the tooltips (D39)
+- Own HTML tooltips on all 8 charts (D40); Arbitrage tooltip by site or one unit alone (D41)
 
 ## Phase 6: mobile
 

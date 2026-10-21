@@ -34,6 +34,101 @@ function L(key, fallback) {
     const t = (typeof i18n !== 'undefined' && i18n[currentLang]) || {};
     return t[key] || fallback;
 }
+// ==========================================
+// ΓΡΑΦΗΜΑΤΑ: ώρες, αριθμοί και tooltips (D38-D41, όπως live και Flows)
+// ==========================================
+// Ώρα από τον αριθμό της (H01 → 0), όχι από τη θέση στη λίστα, ώστε μια ημέρα αλλαγής ώρας να μη μετακινεί τις ετικέτες.
+const hourStart = (h) => { const n = parseInt(String(h).replace(/\D/g, ''), 10); return Number.isFinite(n) ? n - 1 : 0; };
+const pad2 = (n) => String(n).padStart(2, '0');
+const hourTick = (h) => pad2(hourStart(h));                                    // άξονας: 00 … 23
+const hourRange = (h) => `${pad2(hourStart(h))}–${pad2(hourStart(h) + 1)}`;    // tooltip: 00–01 … 23–24
+const escapeHtml = (s) => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const TT = () => i18n[currentLang];
+
+// Αριθμοί στη γλώσσα της σελίδας, με το σωστό σύμβολο μείον και «–» όταν λείπει η τιμή
+function fmtN(v, dec = 0, signed = false) {
+    if (v === null || v === undefined || Number.isNaN(v)) return '–';
+    return new Intl.NumberFormat(i18n[currentLang].locale, { minimumFractionDigits: dec, maximumFractionDigits: dec, signDisplay: signed ? 'exceptZero' : 'auto' })
+        .format(v).replace('-', '−');
+}
+const roundsToZero = (v, dec = 0) => v === null || v === undefined || Math.abs(v) < 0.5 * Math.pow(10, -dec);
+
+// Δικό μας HTML tooltip (ίδιο με live και Flows): μένει πάντα μέσα στην οθόνη
+function htmlTip(build) {
+    return (ctx) => {
+        let el = document.getElementById('chart-tip');
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'chart-tip';
+            el.className = 'fixed z-[9000] pointer-events-none rounded-lg border border-slate-600 bg-slate-900/95 shadow-2xl px-4 py-3 min-w-[240px] max-w-[92vw] transition-opacity duration-150';
+            el.style.opacity = 0;
+            document.body.appendChild(el);
+        }
+        const tt = ctx.tooltip;
+        if (!tt || tt.opacity === 0 || !tt.dataPoints || !tt.dataPoints.length) { el.style.opacity = 0; return; }
+        const html = build(tt.dataPoints[0].dataIndex);
+        if (!html) { el.style.opacity = 0; return; }
+        el.innerHTML = html;
+        el.style.opacity = 1;
+        const r = ctx.chart.canvas.getBoundingClientRect();
+        const w = el.offsetWidth, h = el.offsetHeight, gap = 14;
+        let x = r.left + tt.caretX + gap;
+        if (x + w > window.innerWidth - 8) x = r.left + tt.caretX - w - gap;
+        x = Math.max(8, Math.min(x, window.innerWidth - w - 8));
+        let y = r.top + (ctx.chart.chartArea ? ctx.chart.chartArea.top : 0);
+        y = Math.max(8, Math.min(y, window.innerHeight - h - 8));
+        el.style.left = `${x}px`; el.style.top = `${y}px`;
+    };
+}
+const tipOff = (build) => ({ enabled: false, external: htmlTip(build) });
+function hideChartTip() { const el = document.getElementById('chart-tip'); if (el) el.style.opacity = 0; }
+window.addEventListener('scroll', hideChartTip, { passive: true });
+
+const tipHead = (left, right = '') => `<div class="flex justify-between items-baseline gap-6 mb-2.5"><span class="text-acc-400 font-bold text-sm">${escapeHtml(left)}</span><span class="text-xs font-bold text-slate-300">${escapeHtml(right)}</span></div>`;
+const tipRule = '<div class="border-t border-dashed border-white/20 my-2"></div>';
+function tipRow(label, value, color, opts = {}) {
+    const sw = color ? `<span class="w-2.5 h-2.5 rounded-sm shrink-0" style="background:${color}"></span>` : '';
+    const pct = opts.pct ? `<span class="text-[11px] font-normal text-slate-400 ml-2">${opts.pct}</span>` : '';
+    const unit = opts.unit === false ? '' : ` <span class="text-[11px] font-normal text-slate-500">${escapeHtml(opts.unit || 'MWh')}</span>`;
+    return `<div class="grid grid-cols-[1fr_auto] gap-4 py-0.5 ${opts.strong ? 'text-white font-bold' : 'text-slate-300'} text-[13px]">` +
+        `<span class="flex items-center gap-2 min-w-0">${sw}<span class="truncate">${escapeHtml(label)}</span></span>` +
+        `<span class="text-right ${opts.strong ? '' : 'text-slate-100'}" style="font-variant-numeric:tabular-nums">${value}${unit}${pct}</span></div>`;
+}
+const tipGroup = (title) => `<div class="text-[11px] text-slate-400 mb-0.5">${escapeHtml(title)}</div>`;
+const tipNote = (text) => `<div class="text-[11px] text-slate-400 mt-1.5">${escapeHtml(text)}</div>`;
+
+// Κοινές ρυθμίσεις όλων των γραφημάτων (μία φορά, όπως στο live και στο Flows)
+function applyChartDefaults() {
+    Chart.defaults.color = '#94a3b8';
+    Chart.defaults.borderColor = '#334155';
+    Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+    Chart.defaults.font.size = 12;
+    Chart.defaults.plugins.legend.labels.boxWidth = 12;
+    Chart.defaults.plugins.legend.labels.boxHeight = 12;
+    Chart.defaults.animation.duration = (typeof REDUCE_MOTION !== 'undefined' && REDUCE_MOTION) ? 0 : 400;
+}
+
+// ---- Daily Analytics: μία μονάδα, πρόγραμμα έναντι πραγματικού
+function unitTip(unit, isp, sc, cIsp, cSc) {
+    const T = TT(), sel = document.getElementById('dateSelect');
+    let html = tipHead(unit, sel && sel.value ? fmtDay(sel.value) : '');
+    if (roundsToZero(isp) && roundsToZero(sc)) return html + tipNote(T.tipNoMove);
+    if (!roundsToZero(isp)) html += tipRow(T.schedIsp, fmtN(isp), cIsp);
+    if (!roundsToZero(sc)) html += tipRow(T.actScada, fmtN(sc), cSc);
+    const dev = (sc || 0) - (isp || 0);
+    if (!roundsToZero(dev)) html += tipRule + tipRow(T.tipDev, fmtN(dev, 0, true), null);
+    return html;
+}
+
+// ---- Monthly Impact: αθροιστικό και νούμερο της ημέρας
+function cumTip(dates, data, color) {
+    const T = TT();
+    return (i) => {
+        const day = data[i] - (i > 0 ? data[i - 1] : 0);
+        return tipHead(fmtDay(dates[i])) + tipRow(T.tipCum, fmtN(data[i]), color, { strong: true }) + (roundsToZero(day) ? '' : tipRow(T.tipDay, fmtN(day, 0, true), null));
+    };
+}
+
 function rgba(hex, a) {
     const n = parseInt(hex.slice(1), 16);
     return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
@@ -360,6 +455,7 @@ const TAB_OFF = 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white m
 const TABS = { daily: ['tabBtnDaily', 'viewDaily'], monthly: ['tabBtnMonthly', 'viewMonthly'], surplus: ['tabBtnSurplus', 'viewSurplus'], arbitrage: ['tabBtnArbitrage', 'viewArbitrage'] };
 
 function paintTabs() {
+    hideChartTip();
     Object.entries(TABS).forEach(([key, [btn, view]]) => {
         const on = key === currentTab;
         const b = document.getElementById(btn);
@@ -515,12 +611,8 @@ function updateDashboard() {
 }
 
 function renderDailyCharts(labels, ispDischarge, scadaDischarge, ispCharge, scadaCharge) {
-    Chart.defaults.color = '#94a3b8';
-    Chart.defaults.font.family = 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     
-    const tooltipOptions = {
-        callbacks: { label: function(ctx) { return formatMWh(ctx.parsed.y) + ' MWh'; } }
-    };
+    hideChartTip();
 
     const ctxDischarge = document.getElementById('dischargeChart').getContext('2d');
     if (dischargeChartInst) dischargeChartInst.destroy();
@@ -536,7 +628,7 @@ function renderDailyCharts(labels, ispDischarge, scadaDischarge, ispCharge, scad
         }, 
         options: { 
             responsive: true, maintainAspectRatio: false, 
-            plugins: { legend: { position: 'top' }, tooltip: tooltipOptions }, 
+            plugins: { legend: { position: 'top' }, tooltip: tipOff(i => unitTip(labels[i], ispDischarge[i], scadaDischarge[i], COLORS.dischargeIsp, COLORS.discharge)) }, 
             scales: { x: { grid: { display: false } }, y: { grid: { color: '#334155' } } } 
         } 
     });
@@ -555,7 +647,7 @@ function renderDailyCharts(labels, ispDischarge, scadaDischarge, ispCharge, scad
         }, 
         options: { 
             responsive: true, maintainAspectRatio: false, 
-            plugins: { legend: { position: 'top' }, tooltip: tooltipOptions }, 
+            plugins: { legend: { position: 'top' }, tooltip: tipOff(i => unitTip(labels[i], ispCharge[i], scadaCharge[i], COLORS.chargeIsp, COLORS.charge)) }, 
             scales: { x: { grid: { display: false } }, y: { grid: { color: '#334155' } } } 
         } 
     });
@@ -611,11 +703,11 @@ function updateMonthlyDashboard() {
     const kpiDischargeMob = document.getElementById('kpiMonthlyDischarge_mob');
     if (kpiDischargeMob) kpiDischargeMob.innerText = strDischarge;
 
-    renderMonthlyCharts(labels, chargeData, dischargeData);
+    renderMonthlyCharts(labels, chargeData, dischargeData, sortedDates);
 }
 
-function renderMonthlyCharts(labels, chargeData, dischargeData) {
-    const tooltipOptions = { callbacks: { label: function(ctx) { return formatMWh(ctx.parsed.y) + ' MWh'; } } };
+function renderMonthlyCharts(labels, chargeData, dischargeData, dates) {
+    hideChartTip();
 
     const ctxDischarge = document.getElementById('monthlyDischargeChart').getContext('2d');
     if (monthlyDischargeChartInst) monthlyDischargeChartInst.destroy();
@@ -630,7 +722,7 @@ function renderMonthlyCharts(labels, chargeData, dischargeData) {
             }] 
         }, 
         options: { 
-            responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: tooltipOptions }, 
+            responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: tipOff(cumTip(dates, dischargeData, COLORS.discharge)) }, 
             scales: { x: { grid: { display: false } }, y: { grid: { color: '#334155' }, title: { display: true, text: 'MWh' } } } 
         } 
     });
@@ -648,7 +740,7 @@ function renderMonthlyCharts(labels, chargeData, dischargeData) {
             }] 
         }, 
         options: { 
-            responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: tooltipOptions }, 
+            responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: tipOff(cumTip(dates, chargeData, COLORS.charge)) }, 
             scales: { x: { grid: { display: false } }, y: { grid: { color: '#334155' }, title: { display: true, text: 'MWh' } } } 
         } 
     });
@@ -770,7 +862,7 @@ function updateSurplusDashboard() {
     });
 
     renderSurplusKpis(kpi, bigDays, kpi.n, peak, lang);
-    renderSurplusCharts(labels, dailyBess, dailyPump, dailySurp, cumBess, cumPump, cumSurp, dailyOut, dailyBessOut, dailyPumpOut, cumOut);
+    renderSurplusCharts(labels, dailyBess, dailyPump, dailySurp, cumBess, cumPump, cumSurp, dailyOut, dailyBessOut, dailyPumpOut, cumOut, allDates);
     renderSurplusHourlyProfile();
 }
 
@@ -842,6 +934,53 @@ function prevDateString(dateStr) {
     const d = new Date(dateStr + 'T00:00:00Z');
     d.setUTCDate(d.getUTCDate() - 1);
     return d.toISOString().substring(0, 10);
+}
+
+// ---- Surplus & Flexibility: ωριαίο προφίλ, ημερήσιο, αθροιστικό
+function hourlyTip(i, bessAvg, pumpAvg, surpAvg, mcpAvg, n) {
+    const T = TT(), b = bessAvg[i], p = pumpAvg[i], r = surpAvg[i], m = mcpAvg[i], flex = b + p;
+    let html = tipHead(hourRange(i + 1), `${T.tipMcp} ${fmtN(m, 1)} ${T.tipEur}`);
+    const parts = [];
+    if (!roundsToZero(b) || !roundsToZero(p)) {
+        let g = tipGroup(T.tipFlexGrp);
+        if (!roundsToZero(b)) g += tipRow(T.tipBess, fmtN(b), COLORS.charge);
+        if (!roundsToZero(p)) g += tipRow(T.tipPump, fmtN(p), COLORS.pump);
+        if (!roundsToZero(b) && !roundsToZero(p)) g += tipRow(T.tipFlexTot, fmtN(flex), null, { strong: true });
+        parts.push(g);
+    }
+    if (!roundsToZero(r)) parts.push(tipRow(L('lblResidual', 'Residual Surplus (ISP)'), fmtN(r), COLORS.residual));
+    if (!roundsToZero(r) && flex > 0) parts.push(tipRow(T.tipCover, fmtN(flex / r * 100) + '%', null, { unit: false }));
+    if (!parts.length) return html + tipNote(T.tipNoMove);
+    return html + parts.join(tipRule) + tipNote(T.tipAvg.replace('{n}', n));
+}
+function stackedTip(i, dates, bessIn, pumpIn, resid, bessOut, pumpOut) {
+    const T = TT(), b = bessIn[i], p = pumpIn[i], r = resid[i], o = (bessOut[i] || 0) + (pumpOut[i] || 0);
+    const theo = b + p + r, pc = (v) => fmtN(v / theo * 100, 1) + '%';
+    let html = tipHead(fmtDay(dates[i]), theo > 0 ? `${T.tipTheo} ${fmtN(theo)} MWh` : '');
+    const parts = [];
+    if (!roundsToZero(theo)) {
+        let g = tipGroup(T.tipIn);
+        if (!roundsToZero(b)) g += tipRow(T.tipBess, fmtN(b), COLORS.charge, { pct: pc(b) });
+        if (!roundsToZero(p)) g += tipRow(T.tipPump, fmtN(p), COLORS.pump, { pct: pc(p) });
+        if (!roundsToZero(r)) g += tipRow(L('lblResidual', 'Residual Surplus (ISP)'), fmtN(r), COLORS.residual, { pct: pc(r) });
+        else g += tipNote(T.tipZero);
+        parts.push(g);
+    }
+    if (!roundsToZero(o)) parts.push(tipGroup(T.tipOut) + tipRow(T.tipOutBoth, fmtN(o), COLORS.offSurplus) + tipNote(T.tipOutNote));
+    if (!parts.length) return html + tipNote(T.tipNoMove);
+    return html + parts.join(tipRule);
+}
+function cumSurplusTip(i, dates, cumBess, cumPump, cumResid, cumOut) {
+    const T = TT();
+    let html = tipHead(fmtDay(dates[i]));
+    const rows = [
+        [L('lblCumBess', 'Cum. BESS Charge'), cumBess[i], COLORS.charge],
+        [L('lblCumPump', 'Cum. PUMP Charge'), cumPump[i], COLORS.pump],
+        [L('lblCumResidual', 'Cum. Residual Surplus'), cumResid[i], COLORS.residual],
+        [L('lblCumOut', 'Cum. charging outside surplus hours (arbitrage)'), cumOut[i], COLORS.offSurplus]
+    ].filter(r => !roundsToZero(r[1]));
+    if (!rows.length) return html + tipNote(T.tipNoMove);
+    return html + rows.map(r => tipRow(r[0], fmtN(r[1]), r[2])).join('');
 }
 
 function renderSurplusHourlyProfile() {
@@ -928,8 +1067,9 @@ function renderSurplusHourlyProfile() {
     }
 
     // --- Γράφημα ---
-    const labels = []; for (let L = 0; L < 24; L++) labels.push((L < 10 ? '0' + L : L) + ':00');
+    const labels = []; for (let L = 0; L < 24; L++) labels.push(hourTick(L + 1));
     resetChart();
+    hideChartTip();
     surplusHourlyChartInst = new Chart(canvas.getContext('2d'), {
         data: {
             labels: labels,
@@ -946,7 +1086,7 @@ function renderSurplusHourlyProfile() {
             interaction: { mode: 'index', intersect: false },
             plugins: {
                 legend: { position: 'top' },
-                tooltip: { callbacks: { label: ctx => ctx.dataset.yAxisID === 'y2' ? `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}` : `${ctx.dataset.label}: ${fmt(ctx.parsed.y)} MWh` } }
+                tooltip: tipOff(i => hourlyTip(i, bessAvg, pumpAvg, surpAvg, mcpAvg, n))
             },
             scales: {
                 x: { stacked: true, grid: { display: false }, title: { display: true, text: (lang === 'el' ? 'Ώρα ημέρας (ελληνική ώρα)' : 'Hour of day (Greek local time)') } },
@@ -966,7 +1106,8 @@ function renderSurplusHourlyProfile() {
     }
 }
 
-function renderSurplusCharts(labels, dailyBess, dailyPump, dailySurplus, cumBess, cumPump, cumSurplus, dailyOut, dailyBessOut, dailyPumpOut, cumOut) {
+function renderSurplusCharts(labels, dailyBess, dailyPump, dailySurplus, cumBess, cumPump, cumSurplus, dailyOut, dailyBessOut, dailyPumpOut, cumOut, dates) {
+    hideChartTip();
     dailyOut = dailyOut || []; dailyBessOut = dailyBessOut || []; dailyPumpOut = dailyPumpOut || []; cumOut = cumOut || [];
     const ctxStacked = document.getElementById('surplusStackedChart').getContext('2d');
     if (surplusStackedChartInst) surplusStackedChartInst.destroy();
@@ -988,39 +1129,7 @@ function renderSurplusCharts(labels, dailyBess, dailyPump, dailySurplus, cumBess
             responsive: true, maintainAspectRatio: false,
             plugins: {
                 legend: { position: 'top' },
-                tooltip: {
-                    callbacks: {
-                        label: function(ctx) { return formatMWh(ctx.parsed.y) + ' MWh'; },
-                        footer: function(tooltipItems) {
-                            let idx = tooltipItems[0].dataIndex;
-                            let bess = dailyBess[idx];
-                            let pump = dailyPump[idx];
-                            let surp = dailySurplus[idx];
-                            let outBess = dailyBessOut[idx] || 0;
-                            let outPump = dailyPumpOut[idx] || 0;
-                            let outTxt = (outBess + outPump > 0)
-                                ? ((lang === 'el')
-                                    ? `\n\nΕκτός ωρών πλεονάσματος (arbitrage): ${formatMWh(outBess + outPump)} MWh\n(BESS ${formatMWh(outBess)}, άντληση ${formatMWh(outPump)}) - δεν μετράει ως απορρόφηση πλεονάσματος.`
-                                    : `\n\nOutside surplus hours (arbitrage): ${formatMWh(outBess + outPump)} MWh\n(BESS ${formatMWh(outBess)}, PUMP ${formatMWh(outPump)}) - not counted as surplus absorption.`)
-                                : '';
-
-                            if (surp === 0) {
-                                return ((lang === 'el')
-                                    ? "Μηδενικό υπολειπόμενο πλεόνασμα ISP\nΠιθανή καθαρή λειτουργία arbitrage αγοράς."
-                                    : "Zero ISP Surplus\nPotential pure Market Arbitrage operation.") + outTxt;
-                            }
-
-                            let total = bess + pump + surp;
-                            let pctBess = formatPct((bess / total) * 100);
-                            let pctPump = formatPct((pump / total) * 100);
-                            let pctSurp = formatPct((surp / total) * 100);
-
-                            return ((lang === 'el') ?
-                                `\n💡 Επίλυση θεωρητικού πλεονάσματος:\n- Άντληση: ${pctPump}\n- Μπαταρίες (BESS): ${pctBess}\n- Υπολειπόμενο πλεόνασμα: ${pctSurp}` :
-                                `\n💡 Theoretical Surplus Resolution:\n- Pumped Hydro (PUMP): ${pctPump}\n- Batteries (BESS): ${pctBess}\n- Residual Surplus: ${pctSurp}`) + outTxt;
-                        }
-                    }
-                }
+                tooltip: tipOff(i => stackedTip(i, dates, dailyBess, dailyPump, dailySurplus, dailyBessOut, dailyPumpOut))
             },
             scales: { 
                 x: { stacked: true, grid: { display: false } }, 
@@ -1040,14 +1149,14 @@ function renderSurplusCharts(labels, dailyBess, dailyPump, dailySurplus, cumBess
                 { label: L('lblCumBess', 'Cum. BESS Charge'), data: cumBess, borderColor: COLORS.charge, backgroundColor: rgba(COLORS.charge, 0.1), fill: true, tension: 0.3 },
                 { label: L('lblCumPump', 'Cum. PUMP Charge'), data: cumPump, borderColor: COLORS.pump, backgroundColor: rgba(COLORS.pump, 0.1), fill: true, tension: 0.3 },
                 { label: L('lblCumResidual', 'Cum. Residual Surplus'), data: cumSurplus, borderColor: COLORS.residual, backgroundColor: 'transparent', fill: false, tension: 0.3 },
-                { label: (lang === 'el') ? 'Αθροιστική φόρτιση εκτός ωρών πλεονάσματος (arbitrage)' : 'Cum. charging outside surplus hours (arbitrage)', data: cumOut, borderColor: COLORS.offSurplus, backgroundColor: 'transparent', borderDash: [6, 4], fill: false, tension: 0.3 }
+                { label: L('lblCumOut', 'Cum. charging outside surplus hours (arbitrage)'), data: cumOut, borderColor: COLORS.offSurplus, backgroundColor: 'transparent', borderDash: [6, 4], fill: false, tension: 0.3 }
             ]
         },
         options: {
             responsive: true, maintainAspectRatio: false,
             plugins: { 
                 legend: { position: 'top' },
-                tooltip: { callbacks: { label: function(ctx) { return formatMWh(ctx.parsed.y) + ' MWh'; } } }
+                tooltip: tipOff(i => cumSurplusTip(i, dates, cumBess, cumPump, cumSurplus, cumOut))
             },
             scales: { x: { grid: { display: false } }, y: { grid: { color: '#334155' }, title: { display: true, text: 'MWh' } } }
         }
@@ -1106,7 +1215,7 @@ function renderArbitrageTab() {
 
     const chartLabels = [];
     for (let h = 1; h <= nH; h++) {
-        chartLabels.push((h < 10 ? '0' + h : h) + ':00');
+        chartLabels.push(hourTick(h));
     }
 
     const dailyMcpRaw = getMcpHoursFromRow(mcpRow, nH);
@@ -1185,7 +1294,7 @@ function renderArbitrageTab() {
     if (reg.unitMode) {
         Object.keys(unitSeries).forEach(u => datasets.push({
             label: u, data: unitSeries[u], backgroundColor: pnlSummary[u].color,
-            stack: 'bessStack', borderRadius: 2, type: 'bar', yAxisID: 'y', units: [u]
+            stack: 'bessStack', borderRadius: 2, type: 'bar', yAxisID: 'y', units: [u], site: reg.siteOf(u)
         }));
     } else {
         const bySite = {};
@@ -1199,7 +1308,7 @@ function renderArbitrageTab() {
             label: s === '__others' ? ((lang === 'en') ? 'Other sites' : 'Λοιποί σταθμοί') : s,
             data: bySite[s].data.map(v => Math.round(v * 1000) / 1000),
             backgroundColor: s === '__others' ? SITE_OTHERS_COLOR : siteColour(s, reg),
-            stack: 'bessStack', borderRadius: 2, type: 'bar', yAxisID: 'y', units: bySite[s].units
+            stack: 'bessStack', borderRadius: 2, type: 'bar', yAxisID: 'y', units: bySite[s].units, site: s
         }));
     }
     const modeNote = document.getElementById('arbitrageModeNote');
@@ -1224,10 +1333,66 @@ function renderArbitrageTab() {
         });
     }
 
+    // Tooltip (D41): όλες οι μονάδες ομαδοποιημένες ανά σταθμό, π.χ. «MYT (1 & 2)»· όταν έχει επιλεγεί ΜΙΑ μονάδα από τον πίνακα,
+    // μόνο τα στοιχεία της (ώρα, MWh, τιμή MCP και αξία της ώρας).
+    const arbTip = (i) => {
+        const T = TT(), ch = arbitrageDualChartInst;
+        if (!ch) return '';
+        const ds = ch.data.datasets;
+        const mcpDs = ds.find(x => x.yAxisID === 'yMcp');
+        const price = mcpDs ? mcpDs.data[i] : null;
+        const hasPrice = price !== null && price !== undefined && !Number.isNaN(price);
+        const range = hourRange(i + 1);
+        const bars = [];
+        ds.forEach((x, idx) => { if (x.stack === 'bessStack' && ch.isDatasetVisible(idx)) bars.push(x); });
+
+        if (reg.unitMode && currentlyIsolatedBess) {
+            const x = bars.find(b => b.label === currentlyIsolatedBess);
+            if (x) {
+                const v = x.data[i];
+                let html = tipHead(x.label, range);
+                if (roundsToZero(v)) return html + tipNote(T.tipNoMove);
+                html += tipRow(v < 0 ? T.tipChg : T.tipDis, fmtN(v, 0, true), x.backgroundColor);
+                if (hasPrice) {
+                    html += tipRow(T.tipMcpLabel, fmtN(price, 1), COLORS.mcp, { unit: T.tipEur });
+                    html += tipRule + tipRow(T.tipHourValue, fmtN(v * price, 0, true), null, { strong: true, unit: '€' });
+                }
+                return html;
+            }
+        }
+
+        const groups = { chg: {}, dis: {} };
+        const numOf = (u) => { const m = String(u).match(/_(\d+)/); return m ? parseInt(m[1], 10) : null; };
+        bars.forEach(x => {
+            const v = x.data[i];
+            if (roundsToZero(v)) return;
+            const g = v < 0 ? groups.chg : groups.dis, key = x.site || x.label;
+            if (!g[key]) g[key] = { site: key, value: 0, nums: new Set(), color: key === '__others' ? SITE_OTHERS_COLOR : siteColour(key, reg) };
+            g[key].value += v;
+            (x.units || []).forEach(u => { const n = numOf(u); if (n !== null) g[key].nums.add(n); });
+        });
+        const siteLabel = (g) => g.site === '__others' ? T.tipOtherSites : (g.nums.size ? `${g.site} (${[...g.nums].sort((a, b) => a - b).join(' & ')})` : g.site);
+        const block = (title, obj) => {
+            const list = Object.values(obj).sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
+            if (!list.length) return '';
+            const CAP = 8, shown = list.slice(0, CAP), rest = list.slice(CAP);
+            let out = tipGroup(title) + shown.map(g => tipRow(siteLabel(g), fmtN(g.value, 0, true), g.color)).join('');
+            if (rest.length) out += tipRow(`+${rest.length} ${T.tipMore}`, fmtN(rest.reduce((a, g) => a + g.value, 0), 0, true), null);
+            if (list.length > 1) out += tipRow(T.tipTotal, fmtN(list.reduce((a, g) => a + g.value, 0), 0, true), null, { strong: true });
+            return out;
+        };
+        const chg = block(T.tipChg, groups.chg), dis = block(T.tipDis, groups.dis);
+        let html = tipHead(range, hasPrice ? `${T.tipMcp} ${fmtN(price, 1)} ${T.tipEur}` : '');
+        if (!chg && !dis) return html + tipNote(T.tipNoMove);
+        const net = [...Object.values(groups.chg), ...Object.values(groups.dis)].reduce((a, g) => a + g.value, 0);
+        return html + chg + (chg && dis ? tipRule : '') + dis + (chg && dis ? tipRule + tipRow(T.tipNet, fmtN(net, 0, true), null, { strong: true }) : '') + tipNote(T.tipHint);
+    };
+
     const canvasCtx = document.getElementById('arbitrageDualChart');
     if (!canvasCtx) return;
     const ctx = canvasCtx.getContext('2d');
     
+    hideChartTip();
     if (arbitrageDualChartInst) arbitrageDualChartInst.destroy();
 
     arbitrageDualChartInst = new Chart(ctx, {
@@ -1255,20 +1420,7 @@ function renderArbitrageTab() {
             },
             plugins: { 
                 legend: { position: 'top' },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            let label = context.dataset.label || '';
-                            if (label) label += ': ';
-                            if (context.dataset.yAxisID === 'yMcp') {
-                                label += formatEur(context.parsed.y) + ' / MWh';
-                            } else {
-                                label += formatMWh(context.parsed.y) + ' MWh';
-                            }
-                            return label;
-                        }
-                    }
-                } 
+                tooltip: tipOff(arbTip) 
             }
         }
     });
@@ -1404,6 +1556,7 @@ function populateSelectors() {
 }
 
 async function boot() {
+    applyChartDefaults();
     // Γλώσσα (kp_lang) και κουμπιά GR | EN
     try { changeLang(currentLang); } catch (e) { console.warn('Αποτυχία φόρτωσης μετάφρασης:', e); }
     try {
