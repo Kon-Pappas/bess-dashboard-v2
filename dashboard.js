@@ -1246,130 +1246,102 @@ function renderArbitrageTab() {
 }
 
 // ==========================================
-// NEO INITIALIZATION & WATERFALL LOADING UI 
+// ΟΘΟΝΗ ΦΟΡΤΩΣΗΣ & ΕΚΚΙΝΗΣΗ (D03, όπως live-greekpower D47 / Flows)
 // ==========================================
-
-function animateStep(stepNum, nextAction) {
-    const row = document.getElementById(`loadRow${stepNum}`);
-    const bar = document.getElementById(`loadBar${stepNum}`);
-    const pct = document.getElementById(`loadPct${stepNum}`);
-    
-    // Εμφάνιση της σειράς
-    if (row) row.classList.remove('opacity-0');
-    
-    // Μικρή καθυστέρηση για να παίξει το CSS transition
-    setTimeout(() => {
-        if (bar) bar.style.width = '100%'; // Η μπάρα αρχίζει να γεμίζει (css duration 300ms)
-        
-        // Counter από 0 έως 100
-        let start = 0;
-        const interval = setInterval(() => {
-            start += 12; // Ταχύτητα γεμίσματος
-            if (start >= 100) {
-                start = 100;
-                clearInterval(interval);
-                
-                // Μόλις φτάσει 100%, βάζουμε πράσινο χρώμα και SVG checkmark (τικ)
-                if (pct) {
-                    pct.innerHTML = `<svg class="w-3.5 h-3.5 text-emerald-400 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>`;
-                }
-                if (bar) {
-                    if(stepNum === 1) bar.classList.replace('bg-blue-500', 'bg-emerald-500');
-                    else bar.classList.replace('bg-purple-500', 'bg-emerald-500');
-                }
-            } else {
-                if (pct) pct.innerText = start + '%';
-            }
-        }, 30); // Ανανέωση νούμερου κάθε 30ms (συνολικά ~250ms)
-        
-        // Πάμε στο επόμενο βήμα μετά από 500ms
-        setTimeout(() => {
-            if (nextAction) nextAction();
-        }, 500);
-        
-    }, 50);
+// Πρώτα η δουλειά, μετά το γέμισμα της μπάρας, μετά το ✓. Χρόνοι ίδιοι με το live.
+// Το ✓ και η γεμάτη μπάρα είναι lime (όχι emerald): το emerald είναι το accent του BESS (D02).
+const REDUCE_MOTION = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+const LOAD_STEP = REDUCE_MOTION ? 120 : 350, LOAD_MIN_READ = REDUCE_MOTION ? 200 : 650, LOAD_READY = REDUCE_MOTION ? 200 : 650;
+const pause = (ms) => (ms > 0 ? new Promise((r) => setTimeout(r, ms)) : Promise.resolve());
+const loadRow = (i) => document.querySelector(`.load-row[data-step="${i}"]`);
+function loadActivate(i) { const r = loadRow(i); if (r) r.classList.remove('opacity-50'); }
+function loadSet(i, pct) { const b = loadRow(i) && loadRow(i).querySelector('[data-load-bar]'); if (b) b.style.width = `${pct}%`; }
+function loadDone(i) {
+    const r = loadRow(i); if (!r) return;
+    const b = r.querySelector('[data-load-bar]');
+    b.style.width = '100%'; b.classList.remove('bg-blue-500', 'bg-acc-500'); b.classList.add('bg-lime-500');
+    r.querySelector('[data-load-ck]').classList.remove('opacity-0');
+}
+async function loadStep(i, work) {          // βήματα 2…5: δουλειά → γέμισμα → ✓
+    loadActivate(i);
+    await pause(20);
+    await work();
+    const b = loadRow(i).querySelector('[data-load-bar]');
+    b.style.transitionDuration = `${LOAD_STEP}ms`; b.style.transitionTimingFunction = 'linear'; b.style.width = '100%';
+    await pause(LOAD_STEP);
+    loadDone(i);
 }
 
-window.addEventListener('load', () => {
+// Αν τα δεδομένα δεν φορτώσουν: η οθόνη μένει, σταματά το spinner και γράφει μήνυμα (όπως στο live).
+function loadFailed(err) {
+    console.error(err);
+    const sp = document.getElementById('mainSpinner'); if (sp) sp.classList.add('hidden');
+    const el = document.getElementById('loadError');
+    if (el) { el.textContent = i18n[currentLang].load.error; el.classList.remove('hidden'); }
+}
 
-    // Ασφαλής ρύθμιση γλώσσας
+// Λήψη JSON. Και τα δύο αρχεία αλλάζουν κάθε μέρα, οπότε παίρνουν cache-busting.
+async function getJSON(path, bust = false) {
+    const r = await fetch(path + (bust ? `?v=${Date.now()}` : ''));
+    if (!r.ok) throw new Error(`${path}: HTTP ${r.status}`);
+    return r.json();
+}
+
+// Γεμίζει τους επιλογείς ημερομηνίας / μήνα (ίδια συμπεριφορά με πριν: τελευταία ημέρα με SCADA, τελευταίος μήνας)
+function populateSelectors() {
+    initGlobalDates();
+
+    const fillMonths = (selectId, rows) => {
+        const sel = document.getElementById(selectId);
+        if (!sel || !rows) return;
+        const mSet = new Set();
+        rows.forEach(d => { if (d.date) mSet.add(d.date.substring(0, 7)); });
+        const months = [...mSet].sort();
+        sel.innerHTML = '';
+        months.forEach(m => sel.appendChild(new Option(m, m)));
+        if (months.length > 0) sel.value = months[months.length - 1];
+    };
+    fillMonths('monthSelect', rawData.scada);
+    fillMonths('monthSelectSurplus', rawData.surplus);
+}
+
+async function boot() {
+    // Γλώσσα (kp_lang) και κουμπιά GR | EN
+    try { changeLang(currentLang); } catch (e) { console.warn('Αποτυχία φόρτωσης μετάφρασης:', e); }
     try {
-        if (typeof setLang === 'function') setLang('en');
-    } catch (err) {
-        console.warn('Αποτυχία φόρτωσης μετάφρασης:', err);
-    }
+        // Βήμα 1: πραγματική πρόοδος (2 αρχεία: meta + ιστορικό), με ελάχιστο χρόνο ανάγνωσης
+        loadActivate(1);
+        const t0 = Date.now();
+        const files = [
+            getJSON('data/meta.json', true).catch((e) => { console.warn('meta.json', e); return null; }),   // όχι κρίσιμο
+            getJSON(API_URL, true)
+        ];
+        let done = 0;
+        const [meta, json] = await Promise.all(files.map((p) => p.then((v) => { loadSet(1, Math.round(++done / files.length * 100)); return v; })));
+        if (!json || !Array.isArray(json.isp) || json.isp.length === 0) throw new Error('historical.json is empty');
+        applyData(json);
+        metaData = meta;
+        updateHeader();
+        await pause(Math.max(0, LOAD_MIN_READ - (Date.now() - t0)));
+        loadDone(1);
+        await pause(LOAD_STEP);
 
-    // Καθυστερούμε λιγάκι για να είμαστε σίγουροι ότι "ζωγραφίστηκε" το modal στην οθόνη
-    setTimeout(() => {
-        
-        // ΒΗΜΑ 1: Data Files
-        animateStep(1, () => {
-            
-            // Τρέχουμε τους υπολογισμούς στο background τώρα (Daily)
-            try { initGlobalDates(); switchTab('daily'); } catch (e) { console.error(e); }
-            
-            // ΒΗΜΑ 2: Daily Analytics
-            animateStep(2, () => {
-                
-                // Υπολογισμοί background (Monthly)
-                try {
-                    const mSelect = document.getElementById('monthSelect');
-                    if (mSelect && rawData && rawData.scada) {
-                        const mSet = new Set();
-                        rawData.scada.forEach(d => { if (d.date) mSet.add(d.date.substring(0, 7)); });
-                        const months = [...mSet].sort();
-                        mSelect.innerHTML = '';
-                        months.forEach(m => mSelect.appendChild(new Option(m, m)));
-                        if (months.length > 0) mSelect.value = months[months.length - 1];
-                    }
-                } catch (e) { console.error(e); }
+        // Βήματα 2…5: ένα ανά tab, με τη σειρά των tabs
+        populateSelectors();
+        await loadStep(2, async () => { switchTab('daily'); });
+        await loadStep(3, async () => { updateMonthlyDashboard(); });
+        await loadStep(4, async () => { updateSurplusDashboard(); });
+        await loadStep(5, async () => { renderArbitrageTab(); });
 
-                // ΒΗΜΑ 3: Monthly Impact
-                animateStep(3, () => {
-                    
-                    // Υπολογισμοί background (Surplus)
-                    try {
-                        const msSelect = document.getElementById('monthSelectSurplus');
-                        if (msSelect && rawData && rawData.surplus) {
-                            const mSet = new Set();
-                            rawData.surplus.forEach(d => { if (d.date) mSet.add(d.date.substring(0, 7)); });
-                            const months = [...mSet].sort();
-                            msSelect.innerHTML = '';
-                            months.forEach(m => msSelect.appendChild(new Option(m, m)));
-                            if (months.length > 0) msSelect.value = months[months.length - 1];
-                        }
-                    } catch (e) { console.error(e); }
+        document.getElementById('mainSpinner').classList.add('hidden');
+        document.getElementById('loadRowFinal').classList.remove('opacity-0', 'translate-y-2');
+        await pause(LOAD_READY);
+        const ov = document.getElementById('loading-overlay');
+        ov.classList.add('opacity-0');
+        setTimeout(() => { ov.style.display = 'none'; }, 500);
+    } catch (err) { loadFailed(err); }
+}
 
-                    // ΒΗΜΑ 4: Surplus & Flex
-                    animateStep(4, () => {
-                        
-                        // ΒΗΜΑ 5: Arbitrage P&L
-                        animateStep(5, () => {
-                            
-                            // ΒΗΜΑ 6: Dashboard is Ready!
-                            const row6 = document.getElementById('loadRow6');
-                            const spinner = document.getElementById('mainSpinner');
-                            
-                            if (spinner) spinner.classList.add('hidden'); // Κρύβουμε το spinner
-                            
-                            if (row6) {
-                                row6.classList.remove('opacity-0', 'translate-y-2');
-                                row6.classList.add('opacity-100', 'translate-y-0');
-                            }
-                            
-                            // Περιμένουμε λίγο να το δει ο χρήστης και σβήνουμε το Overlay
-                            setTimeout(() => {
-                                const overlay = document.getElementById('loading-overlay');
-                                if (overlay) {
-                                    overlay.classList.add('opacity-0');
-                                    setTimeout(() => overlay.style.display = 'none', 500); 
-                                }
-                            }, 800);
-                            
-                        }); // Τέλος 5
-                    }); // Τέλος 4
-                }); // Τέλος 3
-            }); // Τέλος 2
-        }); // Τέλος 1
-    }, 200); // Αρχική καθυστέρηση
-});
+// Τα scripts είναι defer, οπότε το Chart.js και το data.js έχουν ήδη φορτώσει εδώ.
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+else boot();

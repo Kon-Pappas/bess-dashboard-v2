@@ -1,0 +1,36 @@
+# Known issues
+
+Open problems found in the review of 21 October 2026, when the alignment with the other hub dashboards began. Each item says what is wrong, why it matters and where it is planned (see `ROADMAP.md`). Resolved items are moved to `DECISIONS.md`.
+
+| # | Issue | Why it matters | Plan |
+|---|---|---|---|
+| K01 | Chart.js is loaded from jsDelivr without a version (`chart.js` = latest) | A library release can change the charts overnight (live-greekpower D21 pinned its libraries) | Pin 4.5.1 (UMD build) as in live-greekpower, check for unused plugins (Phase 5) |
+| K02 | The accent exists in one place (`window.ACCENT`, D02), but the page itself still uses `emerald-*` classes directly (77 occurrences on 21 Oct 2026: 34 in `index.html`, 18 in `dashboard.js`, 25 in `data.js`), and green is also used where it means "complete / positive / ✓" | Accent (decoration) and meaning (OK) look the same; a change of accent would not reach the page | Decoration → `acc-*`; "complete / positive / ✓" → lime (Phases 2 and 3) |
+| K03 | All-caps labels: the `uppercase` class is used 38 times (11 in `index.html`, 5 in `dashboard.js`, 22 in `data.js`, all of them section titles of the methodology texts) | Hub convention C02: Greek capitals lose their accents, take width and compete with the numbers | Remove, write labels normally (Phase 4) |
+| K04 | Greek casing and title (C01): only the English main title was found in the code; Greek labels have not been checked | The Greek page should be fully Greek, capital on the first word only | Check and convert (Phase 4) |
+| K05 | All data live in one file, `historical.json`, downloaded whole on every visit. **Measured 21 Oct 2026:** 143 days = 1.34 MB on disk, ≈ **93 KB** gzipped (estimate; the size on the wire was not measured); ≈ 9.4 KB per day, so about 3.4 MB on disk / ≈ 230 KB gzipped after a year | Not a problem today; it would become one only with a year or more of history | Measure again at about a year of history, then decide (Phase 7) |
+| K06 | Daylight-saving days (25 Oct 2026: 25 hours; 28 Mar 2027: 23 hours) are handled by design in the pipeline (hour columns, the day window of the market) and in the page (hour 25), but have not been tested on real data | A 25th hour could be dropped or shifted in SCADA, ISP or prices | Check the data of 25–26 Oct 2026 |
+| K07 | The one-hour alignment between SCADA and the market clock (D10) is a statistical assumption, not confirmed by IPTO documentation | It changes the P&L by roughly 10%; the page says so and offers a switch | Look for documentation; keep the switch |
+| K08 | The run now starts at 07:04 Athens time (D05), earlier than before (08:00 / 08:30). The previous day's SCADA or ISP file might not be published yet | The day would be missing until the next run (the last five days are re-fetched, so nothing is lost for good) | Check the first days after batch 1; move the time later in cron-job.org if needed |
+| K09 | Right after batch 1 is uploaded, `data/meta.json` does not exist until the first run, so the header shows "–" | Cosmetic, one day at most | Resolved by one manual run of the workflow |
+| K10 | `data.js` holds the texts, the methodology, the data loading and the header, while its name suggests only data | Misleading when looking for code | Decide with the data files phase (Phase 7) |
+| K11 | Mobile (≈ 342 px) has not been reviewed against the hub rules: tables that do not fit, "–" instead of 0, one divider line | Same issues as Flows had before its batches 8–9 | Phase 6 |
+
+## Hub-wide issues
+
+Same structure in every hub page, so a fix here alone would make this page differ from the others. To be fixed in one pass across all repositories (the same IDs are used in every repository's docs).
+
+| # | Issue | Seen in | BESS status |
+|---|---|---|---|
+| H01 | Mobile: two divider lines between the header and the tabs | live-greekpower; Flows fixed it as pilot (D25) | To check (Phase 6) |
+| H02 | Header labels on mobile: short labels ("Updated:" / "Next:", "Ενημέρωση:" / "Επόμενη:") | Flows, live-greekpower (only "Next") | **Done in batch 1 (D09)** |
+| H05 | Mobile height: the status pill sits on its own line; it could live inside the picker box, next to the date (owner's idea, 20 Oct 2026) | Flows, live-greekpower | For the hub-wide pass |
+
+## Hub conventions
+
+Rules that every hub page should follow; checked in each repository during the hub-wide pass.
+
+| # | Convention | BESS status |
+|---|---|---|
+| C01 | **Main title** is the dashboard's name: a capital on every word except articles and conjunctions; **everything else** in Greek has a capital on the first word only | Only the English title was found; to check (K04) |
+| C02 | **No all-caps labels.** Captions are written normally, small and grey; numbers carry the colour and weight; units are never uppercased | 38 uses to convert (K03) |

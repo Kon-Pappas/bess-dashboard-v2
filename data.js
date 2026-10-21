@@ -3,6 +3,10 @@ const API_URL = "data/historical.json";
 
 let rawData = { isp: [], scada: [], surplus: [], pump: [], bessHourly: [], mcpHourly: [], surplusHourly: [], pumpHourly: [] };
 let currentLang = 'en';
+// D04 (όπως live D10 / Flows): αγγλικά από προεπιλογή· η τελευταία επιλογή του επισκέπτη κρατιέται στον browser του,
+// στο κοινό κλειδί kp_lang, οπότε η γλώσσα τον ακολουθεί σε όλο το hub.
+try { const l = localStorage.getItem('kp_lang'); if (l === 'el' || l === 'en') currentLang = l; } catch (e) { /* ιδιωτική περιήγηση */ }
+let metaData = null;   // data/meta.json: πότε έγινε η τελευταία λήψη και πότε η επόμενη (D06)
 
 // Μεθοδολογία: δύο εκδόσεις κειμένου (σύντομη / αναλυτική)
 let methodologyView = 'short';
@@ -28,10 +32,12 @@ const i18n = {
         title: "Greek BESS Market Analytics",
         source: "Πηγή δεδομένων: Επίσημα αρχεία ISP & SCADA - ΑΔΜΗΕ (IPTO)",
         scopeTooltip: "Αφορά αποκλειστικά τις μονάδες BESS στο Σύστημα Μεταφοράς (ΑΔΜΗΕ). Δεν περιλαμβάνονται τα συστήματα στο Δίκτυο Διανομής (ΔΕΔΔΗΕ).",
-        lastUpdate: "Τελευταία Ενημέρωση:",
-        lastUpdateShort: "Ενημέρωση",
-        nextUpdateShort: "Επόμενη",
-        nextUpdate: "Επόμενη Ενημέρωση:",
+        locale: "el-GR",
+        load: { title: "Εκκίνηση", g1: "Λήψη δεδομένων", g2: "Προετοιμασία προβολών", s1: "Ανάγνωση δεδομένων", ready: "Το dashboard είναι έτοιμο!", error: "Τα δεδομένα δεν φορτώθηκαν. Ανανεώστε τη σελίδα σε λίγα λεπτά." },
+        lastUpdate: "Τελευταία ενημέρωση:",
+        lastUpdateShort: "Ενημέρωση:",
+        nextUpdateShort: "Επόμενη:",
+        nextUpdate: "Επόμενη ενημέρωση:",
         dateLabel: "Ημερομηνία:",
         monthLabel: "Μήνας:",
         tabDaily: "Ημερήσια Ανάλυση",
@@ -156,10 +162,12 @@ const i18n = {
         title: "Greek BESS Market Analytics",
         source: "Data source: IPTO (ADMIE) official ISP & SCADA files",
         scopeTooltip: "Refers exclusively to BESS units connected to the Transmission System (IPTO/ADMIE). Excludes distributed systems on the Distribution Network (HEDNO).",
-        lastUpdate: "Last Update:",
-        lastUpdateShort: "Updated",
-        nextUpdateShort: "Next",
-        nextUpdate: "Next Update:",
+        locale: "en-GB",
+        load: { title: "System Initialization", g1: "Data fetching", g2: "Building views", s1: "Reading the data", ready: "Dashboard is ready!", error: "The data could not be loaded. Reload the page in a few minutes." },
+        lastUpdate: "Last update:",
+        lastUpdateShort: "Updated:",
+        nextUpdateShort: "Next:",
+        nextUpdate: "Next update:",
         dateLabel: "Date:",
         monthLabel: "Month:",
         tabDaily: "Daily Analytics",
@@ -283,14 +291,24 @@ const i18n = {
 };
 
 function setLang(lang) {
+    if (lang !== 'el' && lang !== 'en') return;
     currentLang = lang;
+    try { localStorage.setItem('kp_lang', lang); } catch (e) { /* ιδιωτική περιήγηση */ }
     const t = i18n[lang];
+
+    // Οθόνη φόρτωσης: τα βήματα 2…5 παίρνουν τα ονόματα των tabs, με τη σειρά τους
+    const L = t.load;
+    const stepText = { 1: L.s1, 2: t.tabDaily, 3: t.tabMonthly, 4: t.tabSurplus, 5: t.tabArbitrage };
+    const loadIds = { loadTitle: L.title, loadGroup1: L.g1, loadGroup2: L.g2, loadReady: L.ready };
+    Object.entries(loadIds).forEach(([id, txt]) => { const el = document.getElementById(id); if (el) el.textContent = txt; });
+    document.querySelectorAll('.load-row').forEach(r => { const lb = r.querySelector('[data-load-label]'); if (lb) lb.textContent = stepText[r.dataset.step] || ''; });
     
     document.getElementById('mainTitle').innerText = t.title;
     document.getElementById('lastUpdateLabel').innerText = t.lastUpdate;
     const lus = document.getElementById('lastUpdateLabelShort'); if (lus) lus.innerText = t.lastUpdateShort;
     const nus = document.getElementById('nextUpdateLabelShort'); if (nus) nus.innerText = t.nextUpdateShort;
     document.getElementById('nextUpdateLabel').innerText = t.nextUpdate;
+    updateHeader();
     document.getElementById('dateLabel').innerText = t.dateLabel;
     document.getElementById('monthLabel').innerText = t.monthLabel;
     document.getElementById('monthLabelSurp').innerText = t.monthLabel;
@@ -383,80 +401,46 @@ function normalizeData(dataArray) {
     }));
 }
 
-function updateFreshness(dates) {
-    if (!dates || dates.length === 0) return;
-    const latestDate = dates[0];
-    let parts = latestDate.split('-');
-    let formattedLatest = latestDate;
-    let formattedNext = "-";
-    if (parts.length === 3) {
-        formattedLatest = `${parts[2]}/${parts[1]}/${parts[0]} 08:00`;
-        let d = new Date(parts[0], parts[1] - 1, parseInt(parts[2]) + 1);
-        let day = String(d.getDate()).padStart(2, '0');
-        let month = String(d.getMonth() + 1).padStart(2, '0');
-        let year = d.getFullYear();
-        formattedNext = `${day}/${month}/${year} 08:00`;
-    }
-    document.getElementById('lastUpdateVal').innerText = formattedLatest;
-    document.getElementById('nextUpdateVal').innerText = formattedNext;
-    // Μορφή κινητού: χωρίς έτος, ώστε η ένδειξη να χωράει σε μία γραμμή
-    const short = v => v.replace(/^(\d{2}\/\d{2})\/\d{4}/, '$1');
-    const lvs = document.getElementById('lastUpdateValShort'); if (lvs) lvs.innerText = short(formattedLatest);
-    const nvs = document.getElementById('nextUpdateValShort'); if (nvs) nvs.innerText = short(formattedNext);
+// Ώρα Αθήνας, όποια κι αν είναι η ζώνη ώρας του επισκέπτη (όπως στο live / Flows).
+function fmtTimeAthens(isoTs) {
+    if (!isoTs) return '–';
+    const dt = new Date(isoTs);
+    if (Number.isNaN(dt.getTime())) return '–';
+    return new Intl.DateTimeFormat(i18n[currentLang].locale, {
+        day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'Europe/Athens'
+    }).format(dt);
 }
 
-async function init() {
-    try {
-        // Προσθέτουμε timestamp στο URL (cache-busting) για να μην κρατάει ο browser παλιά δεδομένα
-        const res = await fetch(`${API_URL}?t=${new Date().getTime()}`);
-        if (!res.ok) throw new Error("JSON file not found. Ensure the GitHub action has run.");
-        
-        const json = await res.json();
-        
-        rawData.isp = normalizeData(json.isp);
-        rawData.scada = normalizeData(json.scada);
-        rawData.bessHourly = json.bessHourly || [];
-        rawData.mcpHourly = json.mcpHourly || [];
-        rawData.surplusHourly = json.surplusHourly || [];
-        rawData.pumpHourly = json.pumpHourly || [];
-        
-        if (json.surplus) {
-            rawData.surplus = json.surplus.map(d => ({
-                date: d["Ημερομηνία"],
-                val: parseNum(d["Daily Surplus (MWh)"])
-            }));
-        }
+// Τελευταία ενημέρωση = πότε έτρεξε πραγματικά η λήψη· Επόμενη = η επόμενη προγραμματισμένη (cron-job.org, 07:04 Αθήνας).
+// Και οι δύο τιμές γράφονται από το update_data.py στο data/meta.json (D06)· η σελίδα μόνο τις δείχνει.
+// Στο κινητό χρησιμοποιούνται οι ίδιες τιμές (χωρίς έτος), ώστε η ένδειξη να χωράει σε μία γραμμή.
+function updateHeader() {
+    const m = metaData;
+    const last = m ? fmtTimeAthens(m.fetched) : '–';
+    const next = m ? fmtTimeAthens(m.next_update) : '–';
+    ['lastUpdateVal', 'lastUpdateValShort'].forEach(id => { const el = document.getElementById(id); if (el) el.innerText = last; });
+    ['nextUpdateVal', 'nextUpdateValShort'].forEach(id => { const el = document.getElementById(id); if (el) el.innerText = next; });
+}
 
-        if (json.pump) {
-            rawData.pump = json.pump.map(d => ({
-                date: d["Ημερομηνία"],
-                val: parseNum(d["Daily Pumping (MWh)"])
-            }));
-        }
-        
+// Περνά το ιστορικό JSON στο rawData. Η εμφάνιση (επιλογείς, tabs) γίνεται από το boot() στο dashboard.js.
+function applyData(json) {
+    rawData.isp = normalizeData(json.isp);
+    rawData.scada = normalizeData(json.scada);
+    rawData.bessHourly = json.bessHourly || [];
+    rawData.mcpHourly = json.mcpHourly || [];
+    rawData.surplusHourly = json.surplusHourly || [];
+    rawData.pumpHourly = json.pumpHourly || [];
 
-        const dates = [...new Set([
-            ...rawData.isp.map(d => d.date),
-            ...rawData.scada.map(d => d.date)
-        ])].filter(d => d).sort().reverse();
-        
-        document.getElementById('dateSelect').innerHTML = dates.map(d => `<option value="${d}">${d}</option>`).join('');
-
-        const months = [...new Set(dates.map(d => d.substring(0, 7)))].sort().reverse();
-        const monthOptions = months.map(m => {
-            const parts = m.split('-');
-            return `<option value="${m}">${parts[1]}/${parts[0]}</option>`;
-        }).join('');
-        
-        document.getElementById('monthSelect').innerHTML = monthOptions;
-        document.getElementById('monthSelectSurplus').innerHTML = monthOptions;
-
-        updateFreshness(dates);
-        if (typeof updateDashboard === "function") updateDashboard();
-        if (typeof updateMonthlyDashboard === "function") updateMonthlyDashboard();
-        if (typeof updateSurplusDashboard === "function") updateSurplusDashboard();
-    } catch (err) {
-        console.warn("Σφάλμα κατά τη φόρτωση των δεδομένων (Αναμενόμενο αν δεν έχει τρέξει το Action): " + err.message);
+    if (json.surplus) {
+        rawData.surplus = json.surplus.map(d => ({
+            date: d["Ημερομηνία"],
+            val: parseNum(d["Daily Surplus (MWh)"])
+        }));
+    }
+    if (json.pump) {
+        rawData.pump = json.pump.map(d => ({
+            date: d["Ημερομηνία"],
+            val: parseNum(d["Daily Pumping (MWh)"])
+        }));
     }
 }
-init();

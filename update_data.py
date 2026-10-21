@@ -20,6 +20,12 @@ DAYS_TO_FETCH = 5
 MARKET_TZ = ZoneInfo("Europe/Brussels")
 UTC = timezone.utc
 
+# Η ενημέρωση ξεκινά ΜΟΝΟ από το εξωτερικό cron-job.org, κάθε μέρα στις 07:04 ώρα Ελλάδος (D05).
+# Το data/meta.json (D06) γράφεται αποκλειστικά από αυτό το script, αφού γραφτούν επιτυχώς τα δεδομένα.
+ATHENS = ZoneInfo("Europe/Athens")
+UPDATE_TIME_ATHENS = (7, 4)
+META_PATH = "data/meta.json"
+
 DB_KEYS = ["isp", "scada", "surplus", "pump", "bessHourly", "mcpHourly", "surplusHourly", "pumpHourly"]
 
 # Πριν από αυτή την ημερομηνία τα αρχεία SCADA δεν περιέχουν μονάδες BESS (η καταγραφή BESS ξεκινά 18/6).
@@ -486,6 +492,40 @@ def fetch_entsoe(date_str, db):
 
 
 # ---------------------------------------------------------------------------
+# meta.json: πότε έτρεξε η λήψη και πότε είναι η επόμενη (D06)
+# ---------------------------------------------------------------------------
+def next_update_utc(now_utc):
+    """Η επόμενη προγραμματισμένη εκτέλεση (07:04 Αθήνας) μετά από τώρα, σε UTC.
+    Η ώρα Αθήνας λογαριάζεται με τη ζώνη ώρας, άρα σωστά και πριν/μετά την αλλαγή ώρας."""
+    now_ath = now_utc.astimezone(ATHENS)
+    h, m = UPDATE_TIME_ATHENS
+    day = now_ath.date()
+    for _ in range(3):
+        cand = datetime(day.year, day.month, day.day, h, m, tzinfo=ATHENS)
+        if cand > now_ath:
+            return cand.astimezone(timezone.utc)
+        day = day + timedelta(days=1)
+    return None
+
+
+def write_meta(now_utc):
+    """data/meta.json: μοναδικός writer αυτό το script. Η σελίδα το διαβάζει για τα
+    «Τελευταία / Επόμενη ενημέρωση». Γράφεται ΜΟΝΟ αφού γραφτούν επιτυχώς τα δεδομένα (ατομική εγγραφή)."""
+    nxt = next_update_utc(now_utc)
+    meta = {
+        "fetched": now_utc.replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+        "next_update": nxt.replace(microsecond=0).isoformat().replace("+00:00", "Z") if nxt else None,
+    }
+    os.makedirs(os.path.dirname(META_PATH), exist_ok=True)
+    tmp = META_PATH + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(meta, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+    os.replace(tmp, META_PATH)
+    print(f"meta.json: fetched={meta['fetched']} next_update={meta['next_update']}")
+
+
+# ---------------------------------------------------------------------------
 def main():
     db = load_existing_data()
 
@@ -531,6 +571,7 @@ def main():
         time.sleep(float(os.environ.get("DAY_DELAY_SECONDS", "2")))
 
     save_data(db)
+    write_meta(datetime.now(timezone.utc))
     print("\n✔ Η ενημέρωση ολοκληρώθηκε!")
 
 

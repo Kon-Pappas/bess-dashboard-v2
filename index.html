@@ -4,100 +4,67 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title id="pageTitle">Daily Greek BESS Market Analytics</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+    <script>
+        // ΕΝΑ σημείο για το accent της σελίδας (D02: emerald, το χρώμα του BESS στο hub).
+        // Αλλάζεις μόνο αυτές τις τιμές. Tailwind: acc-200…acc-500.
+        window.ACCENT = { 200: '#a7f3d0', 300: '#6ee7b7', 400: '#34d399', 500: '#10b981' };
+        tailwind.config = { theme: { extend: { colors: { acc: window.ACCENT } } } };
+        document.documentElement.style.setProperty('--acc', window.ACCENT[400]);
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+    <style>
+        /* Λιγότερη κίνηση: μόνο στην οθόνη φόρτωσης (D03). Οι χρόνοι ρυθμίζονται και στο dashboard.js. */
+        @media (prefers-reduced-motion: reduce) { #loading-overlay *, #loading-overlay *::before, #loading-overlay *::after { transition: none !important; animation: none !important; } }
+    </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen p-4 md:p-8 flex flex-col justify-between">
 
-    <!-- NEO LOADING OVERLAY (Waterfall Boot Sequence) -->
+    <!-- Loading overlay (D03, όπως live-greekpower D47 / Flows): όλα τα βήματα ορατά από την αρχή, αχνά·
+         κάθε βήμα «ανάβει», κάνει τη δουλειά του και ΜΕΤΑ η μπάρα γεμίζει ομαλά. Το 1ο ακολουθεί την πραγματική λήψη. -->
     <div id="loading-overlay" class="fixed inset-0 z-[9999] bg-slate-900/95 backdrop-blur-sm flex flex-col items-center justify-center transition-opacity duration-500 px-4">
-        
-        <!-- Main Container (Compact & Mobile Safe) -->
         <div class="w-full max-w-sm bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl p-5 flex flex-col gap-4">
-            
-            <!-- Header -->
             <div class="flex items-center gap-3 mb-1 border-b border-slate-700/50 pb-3">
-                <div class="w-5 h-5 border-2 border-slate-600 border-t-emerald-500 rounded-full animate-spin" id="mainSpinner"></div>
-                <h2 class="text-white text-base font-bold tracking-wide">System Initialization</h2>
+                <div class="w-5 h-5 border-2 border-slate-600 border-t-acc-400 rounded-full animate-spin" id="mainSpinner"></div>
+                <h2 class="text-white text-base font-bold tracking-wide" id="loadTitle">System Initialization</h2>
             </div>
-
-            <!-- Κουτί (Α): Data -->
             <div class="bg-slate-900/50 rounded-xl p-3 border border-slate-700/50 flex flex-col gap-2">
                 <div class="flex items-center gap-2 mb-1">
                     <svg class="w-3.5 h-3.5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" /></svg>
-                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Data Fetching</span>
+                    <span class="text-[10px] font-bold text-slate-400 tracking-wider" id="loadGroup1">Data fetching</span>
                 </div>
-                
-                <!-- (α) Σειρά 1 -->
-                <div class="opacity-0 transition-opacity duration-300" id="loadRow1">
-                    <div class="flex justify-between items-end mb-1">
-                        <span class="text-xs text-slate-300">Reading data files</span>
-                        <span class="text-[10px] font-mono text-emerald-400 font-bold" id="loadPct1">0%</span>
-                    </div>
-                    <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
-                        <div class="bg-blue-500 h-full rounded-full w-0 transition-all duration-300 ease-out" id="loadBar1"></div>
-                    </div>
+                <div class="load-row opacity-50 transition-opacity duration-300" data-step="1">
+                    <div class="flex justify-between items-center mb-1"><span class="text-xs text-slate-300" data-load-label></span><svg class="w-3.5 h-3.5 text-lime-400 opacity-0 transition-opacity duration-300" data-load-ck fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg></div>
+                    <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden"><div class="bg-blue-500 h-full rounded-full w-0 ease-out" style="transition-property: width, background-color; transition-duration: 300ms;" data-load-bar></div></div>
                 </div>
             </div>
-
-            <!-- Κουτί (Β): Analytics Engine -->
             <div class="bg-slate-900/50 rounded-xl p-3 border border-slate-700/50 flex flex-col gap-3 mt-1">
                 <div class="flex items-center gap-2 mb-1">
-                    <svg class="w-3.5 h-3.5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
-                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Analytics Engine</span>
+                    <svg class="w-3.5 h-3.5 text-acc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                    <span class="text-[10px] font-bold text-slate-400 tracking-wider" id="loadGroup2">Building views</span>
                 </div>
-                
-                <!-- (β) Σειρά 2 -->
-                <div class="opacity-0 transition-opacity duration-300" id="loadRow2">
-                    <div class="flex justify-between items-end mb-1">
-                        <span class="text-xs text-slate-300">Loading Daily Analytics</span>
-                        <span class="text-[10px] font-mono text-emerald-400 font-bold" id="loadPct2">0%</span>
-                    </div>
-                    <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
-                        <div class="bg-purple-500 h-full rounded-full w-0 transition-all duration-300 ease-out" id="loadBar2"></div>
-                    </div>
+                <div class="load-row opacity-50 transition-opacity duration-300" data-step="2">
+                    <div class="flex justify-between items-center mb-1"><span class="text-xs text-slate-300" data-load-label></span><svg class="w-3.5 h-3.5 text-lime-400 opacity-0 transition-opacity duration-300" data-load-ck fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg></div>
+                    <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden"><div class="bg-acc-500 h-full rounded-full w-0 ease-out" style="transition-property: width, background-color; transition-duration: 300ms;" data-load-bar></div></div>
                 </div>
-
-                <!-- (γ) Σειρά 3 -->
-                <div class="opacity-0 transition-opacity duration-300" id="loadRow3">
-                    <div class="flex justify-between items-end mb-1">
-                        <span class="text-xs text-slate-300">Loading Monthly Impact</span>
-                        <span class="text-[10px] font-mono text-emerald-400 font-bold" id="loadPct3">0%</span>
-                    </div>
-                    <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
-                        <div class="bg-purple-500 h-full rounded-full w-0 transition-all duration-300 ease-out" id="loadBar3"></div>
-                    </div>
+                <div class="load-row opacity-50 transition-opacity duration-300" data-step="3">
+                    <div class="flex justify-between items-center mb-1"><span class="text-xs text-slate-300" data-load-label></span><svg class="w-3.5 h-3.5 text-lime-400 opacity-0 transition-opacity duration-300" data-load-ck fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg></div>
+                    <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden"><div class="bg-acc-500 h-full rounded-full w-0 ease-out" style="transition-property: width, background-color; transition-duration: 300ms;" data-load-bar></div></div>
                 </div>
-
-                <!-- (δ) Σειρά 4 -->
-                <div class="opacity-0 transition-opacity duration-300" id="loadRow4">
-                    <div class="flex justify-between items-end mb-1">
-                        <span class="text-xs text-slate-300">Loading Surplus & Flex</span>
-                        <span class="text-[10px] font-mono text-emerald-400 font-bold" id="loadPct4">0%</span>
-                    </div>
-                    <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
-                        <div class="bg-purple-500 h-full rounded-full w-0 transition-all duration-300 ease-out" id="loadBar4"></div>
-                    </div>
+                <div class="load-row opacity-50 transition-opacity duration-300" data-step="4">
+                    <div class="flex justify-between items-center mb-1"><span class="text-xs text-slate-300" data-load-label></span><svg class="w-3.5 h-3.5 text-lime-400 opacity-0 transition-opacity duration-300" data-load-ck fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg></div>
+                    <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden"><div class="bg-acc-500 h-full rounded-full w-0 ease-out" style="transition-property: width, background-color; transition-duration: 300ms;" data-load-bar></div></div>
                 </div>
-
-                <!-- (ε) Σειρά 5 -->
-                <div class="opacity-0 transition-opacity duration-300" id="loadRow5">
-                    <div class="flex justify-between items-end mb-1">
-                        <span class="text-xs text-slate-300">Loading Arbitrage P&L</span>
-                        <span class="text-[10px] font-mono text-emerald-400 font-bold" id="loadPct5">0%</span>
-                    </div>
-                    <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
-                        <div class="bg-purple-500 h-full rounded-full w-0 transition-all duration-300 ease-out" id="loadBar5"></div>
-                    </div>
+                <div class="load-row opacity-50 transition-opacity duration-300" data-step="5">
+                    <div class="flex justify-between items-center mb-1"><span class="text-xs text-slate-300" data-load-label></span><svg class="w-3.5 h-3.5 text-lime-400 opacity-0 transition-opacity duration-300" data-load-ck fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg></div>
+                    <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden"><div class="bg-acc-500 h-full rounded-full w-0 ease-out" style="transition-property: width, background-color; transition-duration: 300ms;" data-load-bar></div></div>
                 </div>
             </div>
-
-            <!-- Κουτί (Γ): Ready -->
-            <div class="opacity-0 transition-all duration-500 transform translate-y-2 flex items-center justify-center p-3 mt-1 rounded-xl border border-emerald-500/30 bg-emerald-500/10 gap-2" id="loadRow6">
-                <svg class="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                <span class="text-emerald-400 font-bold text-sm tracking-wide">Dashboard is ready!</span>
+            <div class="opacity-0 transition-all duration-500 transform translate-y-2 flex items-center justify-center p-3 mt-1 rounded-xl border border-lime-500/30 bg-lime-500/10 gap-2" id="loadRowFinal">
+                <svg class="w-5 h-5 text-lime-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <span class="text-lime-400 font-bold text-sm tracking-wide" id="loadReady">Dashboard is ready!</span>
             </div>
-
+            <p class="hidden text-sm text-red-300 text-center" id="loadError"></p>
         </div>
     </div>
 
@@ -122,9 +89,9 @@
                         <h1 class="text-3xl font-bold text-emerald-400" id="mainTitle">Greek BESS Market Analytics</h1>
                     </div>
                     <div class="flex flex-nowrap items-center gap-x-3 md:gap-x-4 whitespace-nowrap text-[11px] md:text-xs text-slate-400 mt-2">
-                        <div><span class="md:hidden" id="lastUpdateLabelShort">Updated</span><span class="hidden md:inline" id="lastUpdateLabel">Last Update:</span> <strong class="text-emerald-400"><span class="md:hidden" id="lastUpdateValShort">-</span><span class="hidden md:inline" id="lastUpdateVal">-</span></strong></div>
+                        <div><span class="md:hidden" id="lastUpdateLabelShort">Updated:</span><span class="hidden md:inline" id="lastUpdateLabel">Last update:</span> <strong class="text-emerald-400"><span class="md:hidden" id="lastUpdateValShort">-</span><span class="hidden md:inline" id="lastUpdateVal">-</span></strong></div>
                         <span class="md:hidden text-slate-600">·</span>
-                        <div><span class="md:hidden" id="nextUpdateLabelShort">Next</span><span class="hidden md:inline" id="nextUpdateLabel">Next Update:</span> <strong class="text-blue-400"><span class="md:hidden" id="nextUpdateValShort">-</span><span class="hidden md:inline" id="nextUpdateVal">-</span></strong></div>
+                        <div><span class="md:hidden" id="nextUpdateLabelShort">Next:</span><span class="hidden md:inline" id="nextUpdateLabel">Next update:</span> <strong class="text-blue-400"><span class="md:hidden" id="nextUpdateValShort">-</span><span class="hidden md:inline" id="nextUpdateVal">-</span></strong></div>
                     </div>
                 </div>
 
