@@ -229,9 +229,14 @@ function getMcpData() {
 // SMART DEFAULT SELECTION (Κανόνας 7)
 // ==========================================
 // Ημερομηνίες στη γλώσσα του επισκέπτη, όπως στο live και στο Flows: «21 Οκτ 2026 (σήμερα)», «Οκτώβριος 2026»
-function fmtDay(iso) {
+// Σε κινητό (< 640 px) το έτος παραλείπεται όταν όλες οι ημέρες είναι της ίδιας χρονιάς: το κουτί είναι μόλις 310 px (D31)
+const PHONE_MQ = '(max-width: 639px)';
+const isPhone = () => !!(window.matchMedia && window.matchMedia(PHONE_MQ).matches);
+function fmtDay(iso, noYear) {
     const [y, m, d] = iso.split('-').map(Number);
-    return new Intl.DateTimeFormat(i18n[currentLang].locale, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(Date.UTC(y, m - 1, d)));
+    const opts = { day: 'numeric', month: 'short', timeZone: 'UTC' };
+    if (!noYear) opts.year = 'numeric';
+    return new Intl.DateTimeFormat(i18n[currentLang].locale, opts).format(new Date(Date.UTC(y, m - 1, d)));
 }
 function fmtMonth(ym) {
     const [y, m] = ym.split('-').map(Number);
@@ -244,6 +249,7 @@ function todayAthens() {
 
 // Ένα κουτί επιλογής (D22): μία ημέρα για Daily + Arbitrage, ένας μήνας για Monthly + Surplus.
 // Γεμίζει ξανά και όταν αλλάζει η γλώσσα, κρατώντας την τρέχουσα επιλογή. Πρώτη φορά: τελευταία ημέρα ΜΕ SCADA και τελευταίος μήνας.
+var pickerNoYear = null;
 function fillPickers() {
     if (!rawData || !rawData.isp || rawData.isp.length === 0) return;
     const t = i18n[currentLang], today = todayAthens();
@@ -256,13 +262,15 @@ function fillPickers() {
     const dates = Array.from(datesSet).sort().reverse();
     const hasScada = new Set((rawData.scada || []).filter(d => d.unit === 'TOTAL BESS').map(d => d.date));
 
+    const noYear = isPhone() && new Set(dates.map(x => x.substring(0, 4))).size === 1;
+    pickerNoYear = noYear;
     const keepDay = dates.includes(dSel.value) ? dSel.value : null;
     dSel.innerHTML = '';
     dates.forEach(date => {
         const pending = !hasScada.has(date);
         const opt = document.createElement('option');
         opt.value = date;
-        opt.textContent = fmtDay(date) + (date === today ? ` (${t.today})` : '') + (pending ? ' ⚠' : '');
+        opt.textContent = fmtDay(date, noYear) + (date === today ? ` (${t.today})` : '') + (pending ? ' ⚠' : '');
         opt.dataset.pending = pending;
         dSel.appendChild(opt);
     });
@@ -280,6 +288,12 @@ function fillPickers() {
         mSel.appendChild(opt);
     });
     mSel.value = keepMonth || months[0] || '';
+}
+
+if (window.matchMedia) {
+    const mq = window.matchMedia(PHONE_MQ);
+    const onChange = () => { if (pickerNoYear !== null) { fillPickers(); updatePicker(); } };
+    if (mq.addEventListener) mq.addEventListener('change', onChange); else if (mq.addListener) mq.addListener(onChange);
 }
 
 // Η ετικέτα και ο επιλογέας του κουτιού ακολουθούν το tab: «Ημέρα» (Daily, Arbitrage) ή «Μήνας» (Monthly, Surplus)
@@ -322,9 +336,10 @@ function updateStatusBadge() {
         badge.className = "flex shrink-0 items-center gap-1.5 px-2 py-0.5 rounded border border-lime-500/30 bg-lime-500/10 text-[10px] md:text-xs font-bold text-lime-400 shadow-sm";
         badge.querySelector('div').className = "w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-lime-500 shrink-0";
     }
-    // Σε στενή οθόνη (< 400 px) μόνο η τελεία· το κείμενο μένει στο title
-    textEl.className = "hidden min-[400px]:inline whitespace-nowrap";
-    textEl.innerText = text;
+    // Το κείμενο φαίνεται πάντα (D23, αναθεωρημένο στο D31): μικρή μορφή στο κινητό, πλήρης από 640 px και πάνω
+    const sh = document.getElementById('dataStatusTextShort'), lg = document.getElementById('dataStatusTextLong');
+    if (sh) sh.innerText = isPending ? t.pillPendingShort : t.pillCompleteShort;
+    if (lg) lg.innerText = text;
     badge.title = text;
 }
 
