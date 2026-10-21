@@ -18,7 +18,7 @@
         @media (prefers-reduced-motion: reduce) { #loading-overlay *, #loading-overlay *::before, #loading-overlay *::after { transition: none !important; animation: none !important; } }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen p-4 md:p-8 flex flex-col justify-between">
+<body class="bg-slate-900 text-slate-100 min-h-screen p-4 md:p-8 flex flex-col justify-between overflow-x-clip">
 
     <!-- Loading overlay (D03, όπως live-greekpower D47 / Flows): όλα τα βήματα ορατά από την αρχή, αχνά·
          κάθε βήμα «ανάβει», κάνει τη δουλειά του και ΜΕΤΑ η μπάρα γεμίζει ομαλά. Το 1ο ακολουθεί την πραγματική λήψη. -->
@@ -308,7 +308,7 @@
 
                 <h2 class="text-base sm:text-lg font-semibold text-slate-200 mb-1" id="monthlyChargeTitle">Potential Avoided RES Curtailment (Cumulative Charge)</h2>
                 <p class="text-xs text-slate-400 mb-4" id="monthlyChargeSub">SCADA Data - Energy saved from curtailment</p>
-                <div class="mb-2"><label class="mcp-shift-chip inline-flex items-center gap-1.5 text-[11px] text-slate-400 cursor-pointer" title="">
+                <div class="mb-2"><label class="mcp-shift-chip inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 text-[11px] text-slate-400 cursor-pointer" title="">
                         <input type="checkbox" class="mcp-shift-toggle accent-acc-500 cursor-pointer" onchange="setMcpShift(this.checked)" checked>
                         <span class="mcp-shift-label">⏱ Hour alignment</span>
                     </label></div>
@@ -325,12 +325,12 @@
                         <h2 class="text-lg font-semibold text-slate-200 mb-1" id="surplusHourlyTitle">Hourly Profile: Surplus (ISP) vs BESS & PUMP Charging</h2>
                         <p class="text-xs text-slate-400" id="surplusHourlySub">Average day of the selected month (MWh per hour). Shows whether flexibility charging coincides with the surplus hours.</p>
                     </div>
-                    <div class="flex items-center gap-3">
-                        <label class="mcp-shift-chip inline-flex items-center gap-1.5 text-[11px] text-slate-400 cursor-pointer" title="">
+                    <div class="flex flex-wrap items-center gap-x-3 gap-y-2 w-full sm:w-auto">
+                        <label class="mcp-shift-chip inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 text-[11px] text-slate-400 cursor-pointer" title="">
                         <input type="checkbox" class="mcp-shift-toggle accent-acc-500 cursor-pointer" onchange="setMcpShift(this.checked)" checked>
                         <span class="mcp-shift-label">⏱ Hour alignment</span>
                     </label>
-                        <select id="surplusHourlyMode" onchange="renderSurplusHourlyProfile()" class="bg-slate-900 border border-slate-600 text-slate-200 text-xs rounded px-2 py-1 outline-none cursor-pointer">
+                        <select id="surplusHourlyMode" onchange="renderSurplusHourlyProfile()" class="w-full sm:w-auto min-w-0 max-w-full bg-slate-900 border border-slate-600 text-slate-200 text-xs rounded px-2 py-1 outline-none cursor-pointer">
                             <option value="all" id="optHourlyAll">All days</option>
                             <option value="high" id="optHourlyHigh">High-surplus days (top 25%)</option>
                         </select>
@@ -348,7 +348,7 @@
                 </div>
                 <p class="text-xs text-slate-400 mb-4" id="surplusStackedSub">Absolute values. Days with no red bar (Surplus = 0) indicate purely market-driven arbitrage charging.</p>
                 
-                <div class="mb-3"><label class="mcp-shift-chip inline-flex items-center gap-1.5 text-[11px] text-slate-400 cursor-pointer" title="">
+                <div class="mb-3"><label class="mcp-shift-chip inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 text-[11px] text-slate-400 cursor-pointer" title="">
                         <input type="checkbox" class="mcp-shift-toggle accent-acc-500 cursor-pointer" onchange="setMcpShift(this.checked)" checked>
                         <span class="mcp-shift-label">⏱ Hour alignment</span>
                     </label></div>
