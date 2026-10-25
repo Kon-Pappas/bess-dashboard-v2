@@ -43,6 +43,7 @@ The four tabs were opened in a real Chromium at 360 px (Greek and English) and m
 
 - Arbitrage: legend per site on a phone, fitted table, same hour-alignment chip as the other tabs (D46–D48)
 - Daily: every unit name on the axis (D49); "–" when the SCADA file is missing (D50); shorter red tile (D51)
+- Follow-up (batch 13): the phone legend follows the chosen unit (D52)
 
 ## Phase 7: data files — later, not urgent
 
