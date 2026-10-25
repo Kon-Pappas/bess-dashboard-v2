@@ -1599,7 +1599,9 @@ function loadFailed(err) {
 
 // Λήψη JSON. Και τα δύο αρχεία αλλάζουν κάθε μέρα, οπότε παίρνουν cache-busting.
 async function getJSON(path, bust = false) {
-    const r = await fetch(path + (bust ? `?v=${Date.now()}` : ''));
+    // «no-cache»: ο browser ρωτά τον server αν το αρχείο άλλαξε (ETag). Αν όχι, παίρνει την αντίγραφη από την cache (απάντηση 304, λίγα bytes).
+    // Πριν, το ?v=<ώρα> έκανε το αρχείο «νέο» σε κάθε επίσκεψη και το ιστορικό κατέβαινε ολόκληρο κάθε φορά (D53).
+    const r = await fetch(path, bust ? { cache: 'no-cache' } : undefined);
     if (!r.ok) throw new Error(`${path}: HTTP ${r.status}`);
     return r.json();
 }

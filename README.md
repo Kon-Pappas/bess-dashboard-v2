@@ -37,6 +37,7 @@ index.html               page (Tailwind + Chart.js)
 dashboard.js             page logic, charts, loading sequence
 data.js                  texts in English and Greek, methodology, data loading
 update_data.py           data pipeline (Python)
+scripts/data_size.py      measures data/historical.json (size, gzip, growth) and warns at the limit
 data/                    data files written by the pipeline
 docs/                    decisions, known issues, roadmap
 .github/workflows/       the update workflow
