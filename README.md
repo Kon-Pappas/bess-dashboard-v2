@@ -10,7 +10,7 @@ Public dashboard of battery energy storage (BESS) in the Greek electricity marke
 | Tab | Content |
 |---|---|
 | Daily Analytics | Per unit and for the whole fleet: scheduled (ISP) against actual (SCADA) charge, discharge and round-trip efficiency for the selected day. |
-| Monthly Impact | Monthly discharge (theoretical thermal displacement) and charging in hours with a day-ahead price of at most 5 €/MWh (possible avoided curtailment of renewables). |
+| Monthly Impact | Cumulative month: thermal displacement as an upper bound (all discharge) and a net estimate (only energy charged from RES surplus, times the efficiency of the month), and potential avoided RES curtailment in two layers: core (charging at a price ≤ €5/MWh) and an additional layer with reservation (ISP residual surplus but price > €5). |
 | Surplus & Flexibility | Hourly profile of the ISP residual surplus against BESS and pumped-hydro charging; daily and cumulative absorption, with charging outside the surplus hours shown apart as arbitrage. |
 | Arbitrage P&L | Hourly day-ahead result per unit (volume × price), with an optional one-hour alignment between SCADA and market clocks. |
 | Capacity & duration | Estimated power (MW), energy per cycle (MWh) and duration of every ADMIE unit code, from the hourly SCADA of the last 30 days: class 2h / 3h / 4h from the assured discharge, status (stable, changing, little data); **changes and upgrades** (a unit that moves to a new level of power or energy, with the date and, when it happens, the change of class); fleet progression and records. |
@@ -41,6 +41,7 @@ update_data.py           data pipeline (Python)
 capacity.py              estimates power, energy per cycle and duration of each unit (SCADA only), runs after every update
 scripts/data_size.py      measures data/historical.json (size, gzip, growth) and warns at the limit
 scripts/test_capacity.py  self-test of capacity.py with synthetic units
+scripts/check_curtailment_rule.py  compares the price rule with the ISP surplus hour by hour and gives the monthly layers (the page must give the same numbers)
 data/                    data files written by the pipeline: historical.json, meta.json, capacity.json
 docs/                    decisions, known issues, roadmap
 .github/workflows/       the update workflow

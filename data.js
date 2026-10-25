@@ -31,7 +31,7 @@ const i18n = {
     el: {
         title: "Ανάλυση Αγοράς BESS στην Ελλάδα",
         source: "Πηγή δεδομένων: επίσημα αρχεία ISP και SCADA του ΑΔΜΗΕ (IPTO)",
-        scopeTooltip: "Αφορά αποκλειστικά τις μονάδες BESS στο Σύστημα Μεταφοράς (ΑΔΜΗΕ). Δεν περιλαμβάνονται τα συστήματα στο Δίκτυο Διανομής (ΔΕΔΔΗΕ).",
+        scopeTooltip: "Αφορά αποκλειστικά τις μονάδες BESS στο Σύστημα Μεταφοράς (ΑΔΜΗΕ). Για το Δίκτυο Διανομής (ΔΕΔΔΗΕ) και για συστήματα πίσω από τον μετρητή δεν υπάρχουν δεδομένα.",
         locale: "el-GR",
         today: "σήμερα",
         pillComplete: "Πλήρη δεδομένα",
@@ -52,12 +52,12 @@ const i18n = {
         tabSurplus: "Πλεόνασμα & ευελιξία",
         tabArbitrage: "Arbitrage P&L",
         btnMethodology: "Μεθοδολογία & παραδοχές",
-        modalTitle: "Μεθοδολογία & βασικές παραδοχές",
+        modalTitle: "Μεθοδολογία, παραδοχές και περιορισμοί",
         modalBodyShort: `
             <p class="mb-1 text-slate-300">Ανεξάρτητο εργαλείο πάνω σε ανοιχτά δεδομένα. Τα νούμερα είναι εκτιμήσεις και ενδείξεις, όχι επίσημα στοιχεία.</p>
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="all" style="scroll-margin-top:8px">Όλες οι καρτέλες</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
-                <li><strong class="text-slate-200">Εύρος:</strong> μόνο οι μονάδες BESS του Συστήματος Μεταφοράς (ΑΔΜΗΕ). Δεν περιλαμβάνονται συστήματα στο Δίκτυο Διανομής (ΔΕΔΔΗΕ).</li>
+                <li><strong class="text-slate-200">Εύρος:</strong> μόνο οι μονάδες BESS του Συστήματος Μεταφοράς (ΑΔΜΗΕ). Για το Δίκτυο Διανομής (ΔΕΔΔΗΕ) και για συστήματα πίσω από τον μετρητή δεν υπάρχουν δεδομένα.</li>
                 <li><strong class="text-slate-200">Πηγές:</strong> ΑΔΜΗΕ (ISP = πρόγραμμα, SCADA = πραγματική λειτουργία, μη πιστοποιημένο) και ENTSO-E (τιμές MCP). Ενημέρωση καθημερινά. Μετρήσεις SCADA για BESS υπάρχουν από 18/6.</li>
                 <li><strong class="text-slate-200">⏱ Ευθυγράμμιση ωρών:</strong> το SCADA είναι μία ώρα μπροστά από την αγορά. Με τον διακόπτη ενεργό (προεπιλογή), η ώρα SCADA h αντιστοιχεί στην ώρα MCP h−1. Στηρίζεται σε στατιστική συσχέτιση, όχι σε τεκμηρίωση του ΑΔΜΗΕ.</li>
             </ul>
@@ -67,7 +67,7 @@ const i18n = {
             </ul>
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="monthly" style="scroll-margin-top:8px">Μηνιαίος αντίκτυπος</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
-                <li><strong class="text-slate-200">Αποφυγή περικοπών:</strong> μετράει μόνο φόρτιση όταν η τιμή MCP είναι ≤ 5 €/MWh. Η υποκατάσταση θερμικών μονάδων είναι θεωρητική.</li>
+                <li><strong class="text-slate-200">Αποφυγή περικοπών:</strong> δύο στρώματα. Πυρήνας: φόρτιση με τιμή MCP ≤ 5 €/MWh. Πρόσθετο, με επιφύλαξη: φόρτιση σε ώρες με πλεόνασμα στο ISP αλλά τιμή > 5 €. Η υποκατάσταση θερμικών δείχνεται ως ανώτατο όριο και ως καθαρή εκτίμηση.</li>
             </ul>
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="surplus" style="scroll-margin-top:8px">Πλεόνασμα &amp; ευελιξία</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
@@ -88,7 +88,7 @@ const i18n = {
             <p class="mb-1 text-slate-300">Το Dashboard είναι ένα ανεξάρτητο εργαλείο παρακολούθησης των μονάδων αποθήκευσης (BESS) στην ελληνική αγορά, βασισμένο σε ανοιχτά δεδομένα. Τα νούμερα είναι εκτιμήσεις και ενδείξεις, όχι επίσημα στοιχεία.</p>
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="all" style="scroll-margin-top:8px">Όλες οι καρτέλες</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
-                <li><strong class="text-slate-200">Εύρος:</strong> αφορά αποκλειστικά τις μονάδες BESS που είναι συνδεδεμένες στο Σύστημα Μεταφοράς (ΑΔΜΗΕ) και εμφανίζονται στα αρχεία του. Δεν περιλαμβάνονται συστήματα στο Δίκτυο Διανομής (ΔΕΔΔΗΕ).</li>
+                <li><strong class="text-slate-200">Εύρος:</strong> αφορά αποκλειστικά τις μονάδες BESS που είναι συνδεδεμένες στο Σύστημα Μεταφοράς (ΑΔΜΗΕ) και εμφανίζονται στα αρχεία του. Για το Δίκτυο Διανομής (ΔΕΔΔΗΕ) και για συστήματα πίσω από τον μετρητή δεν υπάρχουν δεδομένα, άρα δεν αποτυπώνονται. Τα μεγέθη του dashboard, και η ισχύς και η ενέργεια των μονάδων ΑΔΜΗΕ, δεν είναι το σύνολο της αποθήκευσης της χώρας.</li>
                 <li><strong class="text-slate-200">Πηγές:</strong> ΑΔΜΗΕ ISP (προγραμματισμός), ΑΔΜΗΕ System Realization SCADA (πραγματική λειτουργία, με στοιχεία που ο ΑΔΜΗΕ χαρακτηρίζει μη πιστοποιημένα) και ENTSO-E (τιμές Αγοράς Επόμενης Ημέρας, MCP).</li>
                 <li><strong class="text-slate-200">Ενημέρωση:</strong> καθημερινά το πρωί. Οι τελευταίες 5 ημέρες ελέγχονται ξανά, ώστε να πιάνονται καθυστερημένες δημοσιεύσεις και διορθώσεις.</li>
                 <li><strong class="text-slate-200">Διαθεσιμότητα:</strong> ISP και MCP από 1/6/2026. SCADA για τις μονάδες BESS από 18/6/2026 (πριν από αυτή την ημερομηνία δεν υπάρχουν μετρήσεις). SCADA για την άντληση από 1/6/2026.</li>
@@ -103,8 +103,10 @@ const i18n = {
             </ul>
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="monthly" style="scroll-margin-top:8px">Μηνιαίος αντίκτυπος</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
-                <li><strong class="text-slate-200">Αποφόρτιση και θερμική υποκατάσταση:</strong> θεωρητική μετρική. Υποθέτει ότι κάθε MWh αποφόρτισης BESS υποκαθιστά ακριβότερη θερμική παραγωγή (φυσικό αέριο ή λιγνίτη). Δεν μετράται η πραγματική υποκατάσταση.</li>
-                <li><strong class="text-slate-200">Φόρτιση και αποφυγή περικοπών ΑΠΕ:</strong> μετράει μόνο η φόρτιση σε ώρες με τιμή MCP ≤ 5 €/MWh, δηλαδή όταν η παραγωγή ΑΠΕ ξεπερνά όσα μπορεί να απορροφήσει η αγορά και η τιμή πέφτει περίπου στο μηδέν. Η φόρτιση σε υψηλότερες τιμές (π.χ. νυχτερινό arbitrage) δεν μετράει. Το όριο των 5 € είναι σταθερό.</li>
+                <li><strong class="text-slate-200">Υποκατάσταση θερμικών, ανώτατο:</strong> υποθέτει ότι κάθε MWh αποφόρτισης BESS υποκαθιστά ακριβότερη θερμική παραγωγή (φυσικό αέριο ή λιγνίτη). Είναι ανώτατο όριο, γιατί η ενέργεια που φορτίστηκε από ακριβές ώρες απλώς μεταφέρεται σε άλλη ώρα.</li>
+                <li><strong class="text-slate-200">Υποκατάσταση θερμικών, καθαρή εκτίμηση:</strong> μετράει μόνο την ενέργεια που φορτίστηκε από πλεόνασμα ΑΠΕ (και τα δύο στρώματα της αποφυγής περικοπών) επί την απόδοση του μήνα (εκφόρτιση ÷ φόρτιση όλων των μονάδων). Υποθέτει ότι η ενέργεια των μπαταριών εκφορτίζεται αναλογικά με το πώς φορτίστηκε.</li>
+                <li><strong class="text-slate-200">Αποφυγή περικοπών ΑΠΕ, πυρήνας:</strong> φόρτιση σε ώρες με τιμή MCP ≤ 5 €/MWh, δηλαδή όταν η παραγωγή ΑΠΕ ξεπερνά όσα μπορεί να απορροφήσει η αγορά και η τιμή πέφτει περίπου στο μηδέν. Τότε το ISP δείχνει σχεδόν πάντα πλεόνασμα (στα δεδομένα Ιουνίου–Οκτωβρίου 2026, στο 99% αυτών των ωρών). Το όριο των 5 € είναι σταθερό.</li>
+                <li><strong class="text-slate-200">Αποφυγή περικοπών ΑΠΕ, πρόσθετο στρώμα (με επιφύλαξη):</strong> φόρτιση σε ώρες που το ISP δείχνει υπολειπόμενο πλεόνασμα (τουλάχιστον 1 MWh) αλλά η τιμή είναι πάνω από 5 €. Είναι περίπου οι μισές από τις ώρες πλεονάσματος. Η αιτία δεν φαίνεται στα δεδομένα: μπορεί να είναι ενημερωμένες προβλέψεις μετά την Αγορά Επόμενης Ημέρας ή τοπικοί περιορισμοί του δικτύου. Η φόρτιση σε ώρες χωρίς πλεόνασμα και με υψηλή τιμή (π.χ. νυχτερινό arbitrage) δεν μετράει.</li>
             </ul>
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="surplus" style="scroll-margin-top:8px">Πλεόνασμα &amp; ευελιξία</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
@@ -150,10 +152,10 @@ const i18n = {
         rte: "Απόδοση κύκλου (RTE), σύνολο BESS",
         schedIsp: "Προγραμματισμένο (ISP)",
         actScada: "Πραγματικό (SCADA)",
-        monthlyDischargeTitle: "Πιθανή υποκατάσταση θερμικών μονάδων (λιγνίτης ή/και φυσικό αέριο), αθροιστική αποφόρτιση",
-        monthlyDischargeSub: "Δεδομένα SCADA: εξοικονόμηση θερμικής παραγωγής",
-        monthlyChargeTitle: "Πιθανή αποφυγή περικοπών ΑΠΕ (αθροιστική φόρτιση)",
-        monthlyChargeSub: "Δεδομένα SCADA: μόνο φόρτιση σε ώρες με τιμή MCP ≤ 5 €/MWh, δηλαδή όταν η παραγωγή ΑΠΕ ξεπερνά όσα μπορεί να απορροφήσει η αγορά. Η φόρτιση σε υψηλότερες τιμές (π.χ. νυχτερινό arbitrage) δεν μετράει ως αποφυγή περικοπής.",
+        monthlyDischargeTitle: "Υποκατάσταση θερμικών μονάδων: ανώτατο και καθαρό (αθροιστικά)",
+        monthlyDischargeSub: "Δεδομένα SCADA. Ανώτατο: όλη η εκφόρτιση ως υποκατάσταση λιγνίτη ή αερίου. Καθαρό: μόνο η ενέργεια που φορτίστηκε από πλεόνασμα ΑΠΕ (και τα δύο στρώματα παρακάτω), επί την απόδοση του μήνα.",
+        monthlyChargeTitle: "Πιθανή αποφυγή περικοπών ΑΠΕ (αθροιστική φόρτιση, δύο στρώματα)",
+        monthlyChargeSub: "Δεδομένα SCADA. Πυρήνας: τιμή ≤ 5 €/MWh, όπου το ISP σχεδόν πάντα δείχνει πλεόνασμα. Πρόσθετο, με επιφύλαξη: πλεόνασμα στο ISP αλλά τιμή > 5 €. Η αιτία δεν φαίνεται στα δεδομένα.",
         kpiLabelAvoided: "Μηνιαία αποφυγή",
         kpiLabelDisplaced: "Μηνιαία υποκατάσταση",
         surplusStackedTitle: "Ημερήσιο πλεόνασμα και απορρόφηση από την ευελιξία (MWh)",
@@ -207,9 +209,9 @@ const i18n = {
         capTitle: "Ισχύς, ενέργεια και διάρκεια ανά μονάδα",
         capSub: "Εκτίμηση από τα ωριαία SCADA των τελευταίων 30 ημερών (έως {d}). Ξαναϋπολογίζεται κάθε μέρα. Δεν είναι η ονομαστική χωρητικότητα.",
         capEmpty: "Δεν υπάρχουν ακόμα εκτιμήσεις χωρητικότητας.",
-        capKpiPower: "Ισχύς στόλου",
+        capKpiPower: "Ισχύς μονάδων ΑΔΜΗΕ",
         capKpiPowerSub: "άθροισμα {n} μονάδων με εκτίμηση",
-        capKpiEnergy: "Ενέργεια στόλου",
+        capKpiEnergy: "Ενέργεια μονάδων ΑΔΜΗΕ",
         capKpiEnergySub: "ανά κύκλο, εξασφαλισμένη",
         capKpiDuration: "Μέση διάρκεια",
         capKpiDurationSub: "ενέργεια ÷ ισχύς",
@@ -234,7 +236,7 @@ const i18n = {
         capTrend: "Μεταβολή έναντι των προηγούμενων 30 ημερών",
         capAnomalies: "Ανώμαλες ημέρες (30 ημ.)",
         capChargeEnergy: "Ενέργεια φόρτισης του κύκλου",
-        capFleetTitle: "Στόλος: παρατηρούμενη ισχύς και ενέργεια",
+        capFleetTitle: "Μονάδες ΑΔΜΗΕ: παρατηρούμενη ισχύς και ενέργεια",
         capFleetSub: "Άθροισμα των εκτιμήσεων κάθε μονάδας ανά εβδομάδα, μόνο για μονάδες με αρκετούς κύκλους. Η μέση διάρκεια δείχνει αν ο στόλος μεγαλώνει περισσότερο σε ενέργεια ή σε ισχύ.",
         capSeriesEnergy: "Ενέργεια (MWh)",
         capSeriesPower: "Ισχύς (MW)",
@@ -246,7 +248,7 @@ const i18n = {
         capSeriesUnitPower: "Ισχύς (MW)",
         capSeriesUnitEnergy: "Ενέργεια ανά κύκλο (MWh)",
         capCyclesWord: "έγκυροι κύκλοι",
-        capRecTitle: "Ρεκόρ στόλου",
+        capRecTitle: "Ρεκόρ των μονάδων ΑΔΜΗΕ",
         capRecSub: "Από την έναρξη της καταγραφής ({d}). Δεν μετράνε ημέρες μονάδας με εκφόρτιση πάνω από 1,3 φορές τη φόρτιση. Τα περισσότερα ρεκόρ προέρχονται από την ένταξη νέων μονάδων.",
         capRecEventsTitle: "Τελευταία ρεκόρ",
         capNew: "Νέο",
@@ -255,6 +257,17 @@ const i18n = {
         capRecFleetDisMwh: "Μέγιστη ημερήσια εκφόρτιση",
         capRecFleetChgMwh: "Μέγιστη ημερήσια φόρτιση",
         capRecPrev: "προηγούμενο {v} στις {d}",
+        scopeLine: "Μονάδες του Συστήματος Μεταφοράς (ΑΔΜΗΕ). Δεν υπάρχουν δεδομένα για το Δίκτυο Διανομής (ΔΕΔΔΗΕ) ούτε για συστήματα πίσω από τον μετρητή.",
+        lblGross: "Ανώτατο (όλη η εκφόρτιση)",
+        lblNet: "Καθαρό (εκτίμηση)",
+        layerCore: "Πυρήνας: τιμή ≤ 5 €/MWh",
+        layerExt: "Πρόσθετο: πλεόνασμα ISP, τιμή > 5 €",
+        layerCoreShort: "πυρήνας",
+        layerExtShort: "πρόσθετο",
+        layerCoreTip: "Πυρήνας (τιμή ≤ 5 €)",
+        layerExtTip: "Πρόσθετο (ISP, τιμή > 5 €)",
+        kpiNetSub: "καθαρή εκτίμηση: {v} MWh",
+        kpiUpToSub: "έως {v} MWh με το πρόσθετο στρώμα",
         capChangesTitle: "Αλλαγές και αναβαθμίσεις",
         capChangesSub: "Πότε μια μονάδα άλλαξε επίπεδο ισχύος ή ενέργειας (αναβάθμιση, δοκιμή, υποβάθμιση): η εκτίμηση των τελευταίων 14 ημερών ξεφεύγει πάνω από 12% για 5 ημέρες. Οι πιο πρόσφατες φαίνονται «προς επιβεβαίωση».",
         capChangesNone: "Δεν έχει ανιχνευτεί καμία αλλαγή επιπέδου.",
@@ -288,7 +301,7 @@ const i18n = {
     en: {
         title: "Greek BESS Market Analytics",
         source: "Data source: IPTO (ADMIE) official ISP & SCADA files",
-        scopeTooltip: "Refers exclusively to BESS units connected to the Transmission System (IPTO/ADMIE). Excludes distributed systems on the Distribution Network (HEDNO).",
+        scopeTooltip: "Refers exclusively to BESS units connected to the Transmission System (IPTO/ADMIE). There are no data for the Distribution Network (HEDNO) or for behind-the-meter systems.",
         locale: "en-GB",
         today: "today",
         pillComplete: "Complete data",
@@ -309,12 +322,12 @@ const i18n = {
         tabSurplus: "Surplus & Flexibility",
         tabArbitrage: "Arbitrage P&L",
         btnMethodology: "Methodology & Assumptions",
-        modalTitle: "Methodology & Core Assumptions",
+        modalTitle: "Methodology, assumptions and limitations",
         modalBodyShort: `
             <p class="mb-1 text-slate-300">An independent tool built on open data. Figures are estimates and indications, not official statistics.</p>
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="all" style="scroll-margin-top:8px">All tabs</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
-                <li><strong class="text-slate-200">Scope:</strong> only BESS units on the Transmission System (IPTO/ADMIE). Systems on the Distribution Network (HEDNO) are not included.</li>
+                <li><strong class="text-slate-200">Scope:</strong> only BESS units on the Transmission System (IPTO/ADMIE). There are no data for the Distribution Network (HEDNO) or for behind-the-meter systems.</li>
                 <li><strong class="text-slate-200">Sources:</strong> IPTO/ADMIE (ISP = schedule, SCADA = actual operation, uncertified) and ENTSO-E (MCP prices). Updated daily. BESS SCADA measurements exist from 18/6.</li>
                 <li><strong class="text-slate-200">⏱ Hour alignment:</strong> SCADA runs one hour ahead of the market. With the checkbox on (default), SCADA hour h is matched with MCP hour h−1. Based on statistical correlation, not on IPTO documentation.</li>
             </ul>
@@ -324,7 +337,7 @@ const i18n = {
             </ul>
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="monthly" style="scroll-margin-top:8px">Monthly Impact</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
-                <li><strong class="text-slate-200">Avoided curtailment:</strong> counts only charging when the MCP price is ≤ €5/MWh. Thermal displacement is theoretical.</li>
+                <li><strong class="text-slate-200">Avoided curtailment:</strong> two layers. Core: charging at an MCP price ≤ €5/MWh. Additional, with reservation: charging in hours with an ISP surplus but a price > €5. Thermal displacement is shown as an upper bound and as a net estimate.</li>
             </ul>
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="surplus" style="scroll-margin-top:8px">Surplus &amp; Flexibility</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
@@ -345,7 +358,7 @@ const i18n = {
             <p class="mb-1 text-slate-300">This Dashboard is an independent tool for monitoring battery energy storage (BESS) in the Greek market, built on open data. Figures are estimates and indications, not official statistics.</p>
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="all" style="scroll-margin-top:8px">All tabs</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
-                <li><strong class="text-slate-200">Scope:</strong> refers exclusively to BESS units connected to the Transmission System (IPTO/ADMIE) that appear in its files. Systems on the Distribution Network (HEDNO) are not included.</li>
+                <li><strong class="text-slate-200">Scope:</strong> refers exclusively to BESS units connected to the Transmission System (IPTO/ADMIE) that appear in its files. There are no data for the Distribution Network (HEDNO) or for behind-the-meter systems, so they are not shown. The figures of the dashboard, including the power and energy of the IPTO units, are not the total storage of the country.</li>
                 <li><strong class="text-slate-200">Sources:</strong> IPTO/ADMIE ISP (scheduling), IPTO/ADMIE System Realization SCADA (actual operation, data that IPTO labels as uncertified) and ENTSO-E (Day-Ahead prices, MCP).</li>
                 <li><strong class="text-slate-200">Updates:</strong> daily in the morning. The last 5 days are re-checked to catch late publications and corrections.</li>
                 <li><strong class="text-slate-200">Availability:</strong> ISP and MCP from 1/6/2026. SCADA for BESS units from 18/6/2026 (no measurements exist before that date). SCADA for pumping (PUMP) from 1/6/2026.</li>
@@ -360,8 +373,10 @@ const i18n = {
             </ul>
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="monthly" style="scroll-margin-top:8px">Monthly Impact</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
-                <li><strong class="text-slate-200">Discharge and thermal displacement:</strong> a theoretical metric. It assumes every MWh of BESS discharge displaces more expensive thermal generation (gas or lignite). Actual displacement is not measured.</li>
-                <li><strong class="text-slate-200">Charging and avoided RES curtailment:</strong> only charging in hours with an MCP price ≤ €5/MWh counts, i.e. when RES saturate the market and the price drops to about zero. Charging at higher prices (e.g. overnight arbitrage) does not count. The €5 threshold is fixed.</li>
+                <li><strong class="text-slate-200">Thermal displacement, upper bound:</strong> assumes every MWh of BESS discharge displaces more expensive thermal generation (gas or lignite). It is an upper bound, because energy charged in expensive hours is only moved to another hour.</li>
+                <li><strong class="text-slate-200">Thermal displacement, net estimate:</strong> counts only the energy charged from RES surplus (both layers of the avoided curtailment) times the efficiency of the month (discharge ÷ charge of all units). It assumes that the energy of the batteries is discharged in proportion to how it was charged.</li>
+                <li><strong class="text-slate-200">Avoided RES curtailment, core:</strong> charging in hours with an MCP price ≤ €5/MWh, i.e. when RES output exceeds what the market can absorb and the price falls to about zero. The ISP then almost always shows a surplus (in the June–October 2026 data, in 99% of those hours). The €5 threshold is fixed.</li>
+                <li><strong class="text-slate-200">Avoided RES curtailment, additional layer (with reservation):</strong> charging in hours when the ISP shows a residual surplus (at least 1 MWh) but the price is above €5. These are about half of all surplus hours. The cause is not visible in the data: it may be updated forecasts after the Day-Ahead Market or local grid constraints. Charging in hours without a surplus and with a high price (e.g. overnight arbitrage) does not count.</li>
             </ul>
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="surplus" style="scroll-margin-top:8px">Surplus &amp; Flexibility</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
@@ -407,10 +422,10 @@ const i18n = {
         rte: "Round-trip efficiency (RTE), total BESS",
         schedIsp: "Scheduled (ISP)",
         actScada: "Actual (SCADA)",
-        monthlyDischargeTitle: "Potential Displaced Thermal Generation (Lignite/Gas) - (Cumulative Discharge)",
-        monthlyDischargeSub: "SCADA Data - Avoided Thermal Generation",
-        monthlyChargeTitle: "Potential Avoided RES Curtailment (Cumulative Charge)",
-        monthlyChargeSub: "SCADA Data - Only charging in hours with MCP ≤ €5/MWh (RES saturation). Charging at higher prices (e.g. overnight arbitrage) is not counted as avoided curtailment.",
+        monthlyDischargeTitle: "Thermal displacement: upper bound and net (cumulative)",
+        monthlyDischargeSub: "SCADA data. Upper bound: all discharge as displacing lignite or gas. Net: only the energy charged from RES surplus (both layers below), times the efficiency of the month.",
+        monthlyChargeTitle: "Potential avoided RES curtailment (cumulative charge, two layers)",
+        monthlyChargeSub: "SCADA data. Core: price ≤ €5/MWh, where the ISP almost always shows a surplus. Additional, with reservation: ISP surplus but price > €5. The cause is not visible in the data.",
         kpiLabelAvoided: "Monthly avoided",
         kpiLabelDisplaced: "Monthly displaced",
         surplusStackedTitle: "Daily Energy Surplus & Flexibility Absorption (MWh)",
@@ -464,9 +479,9 @@ const i18n = {
         capTitle: "Power, energy and duration per unit",
         capSub: "Estimated from the hourly SCADA of the last 30 days (to {d}). Recalculated every day. It is not the nameplate capacity.",
         capEmpty: "There are no capacity estimates yet.",
-        capKpiPower: "Fleet power",
+        capKpiPower: "Power of IPTO units",
         capKpiPowerSub: "sum of {n} units with an estimate",
-        capKpiEnergy: "Fleet energy",
+        capKpiEnergy: "Energy of IPTO units",
         capKpiEnergySub: "per cycle, assured",
         capKpiDuration: "Average duration",
         capKpiDurationSub: "energy ÷ power",
@@ -491,7 +506,7 @@ const i18n = {
         capTrend: "Change against the previous 30 days",
         capAnomalies: "Anomalous days (30 days)",
         capChargeEnergy: "Charging energy of the cycle",
-        capFleetTitle: "Fleet: observed power and energy",
+        capFleetTitle: "IPTO units: observed power and energy",
         capFleetSub: "Sum of the estimates of each unit per week, only for units with enough cycles. The average duration shows whether the fleet grows more in energy or in power.",
         capSeriesEnergy: "Energy (MWh)",
         capSeriesPower: "Power (MW)",
@@ -503,7 +518,7 @@ const i18n = {
         capSeriesUnitPower: "Power (MW)",
         capSeriesUnitEnergy: "Energy per cycle (MWh)",
         capCyclesWord: "valid cycles",
-        capRecTitle: "Fleet records",
+        capRecTitle: "Records of the IPTO units",
         capRecSub: "Since recording began ({d}). Unit-days with discharge above 1.3 times the charge are not counted. Most records come from new units joining.",
         capRecEventsTitle: "Latest records",
         capNew: "New",
@@ -512,6 +527,17 @@ const i18n = {
         capRecFleetDisMwh: "Highest daily discharge",
         capRecFleetChgMwh: "Highest daily charge",
         capRecPrev: "previous {v} on {d}",
+        scopeLine: "Units of the Transmission System (IPTO/ADMIE). There are no data for the Distribution Network (HEDNO) or for behind-the-meter systems.",
+        lblGross: "Upper bound (all discharge)",
+        lblNet: "Net (estimate)",
+        layerCore: "Core: price ≤ €5/MWh",
+        layerExt: "Additional: ISP surplus, price > €5",
+        layerCoreShort: "core",
+        layerExtShort: "additional",
+        layerCoreTip: "Core (price ≤ €5)",
+        layerExtTip: "Additional (ISP, price > €5)",
+        kpiNetSub: "net estimate: {v} MWh",
+        kpiUpToSub: "up to {v} MWh with the additional layer",
         capChangesTitle: "Changes and upgrades",
         capChangesSub: "When a unit changed its power or energy level (upgrade, test, downgrade): the estimate of the last 14 days moves by more than 12% for 5 days. The most recent ones show as \"to be confirmed\".",
         capChangesNone: "No change of level has been detected.",
@@ -587,6 +613,7 @@ function setLang(lang) {
     ['capTitle', 'capThUnit', 'capThPower', 'capThEnergy', 'capThDuration', 'capThStatus', 'capFleetTitle', 'capFleetSub', 'capRecEventsTitle', 'capRecTitle'].forEach(id => setT(id, t[id]));
     setT('capUnitTitle', t.capUnitTitle.replace('{u}', '–'));   // η καρτέλα το ξαναγράφει με το όνομα της επιλεγμένης μονάδας
     setT('capUnitSub', t.capUnitSub);
+    setT('scopeLine', t.scopeLine);
     setT('capChangesTitle', t.capChangesTitle); setT('capChangesSub', t.capChangesSub);
     
     setT('dischargeTitle', t.dischargeTitle);

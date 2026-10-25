@@ -30,7 +30,8 @@ const COLORS = {
     mcpThreshold: '#94a3b8',  // όριο 5 €/MWh
     fleetPower:   '#e2e8f0',  // ισχύς στόλου (Capacity tab): ουδέτερη γραμμή
     fleetEnergy:  '#a78bfa',  // ενέργεια στόλου: το χρώμα της εκφόρτισης, γιατί μετριέται στην εκφόρτιση
-    duration:     '#94a3b8'   // μέση διάρκεια
+    duration:     '#94a3b8',  // μέση διάρκεια
+    netDisplaced: '#c4b5fd'   // καθαρή υποκατάσταση θερμικών (Μηνιαίος): ανοιχτό βιολετί, διακεκομμένη
 };
 // Ετικέτα γραφήματος στη γλώσσα της σελίδας (κλειδιά lbl… του i18n στο data.js)
 function L(key, fallback) {
@@ -278,17 +279,21 @@ function getPrevDayLastPrice(dateStr, mcpData, fallback) {
 }
 
 // Επιστρέφει { 'YYYY-MM-DD': MWh } με τη φόρτιση BESS σε ώρες όπου η (ευθυγραμμισμένη) τιμή MCP <= όριο.
-function computeCheapChargeByDate(selectedMonth) {
+// Αποφυγή περικοπών σε δύο στρώματα (D67). Και τα δύο μετρούν φόρτιση BESS ανά ημέρα:
+//   core = ώρες με τιμή MCP <= CURTAILMENT_PRICE_THRESHOLD (εδώ το ISP δείχνει σχεδόν πάντα πλεόνασμα)
+//   ext  = ώρες με υπολειπόμενο πλεόνασμα ISP >= SURPLUS_HOUR_MIN_MWH αλλά τιμή πάνω από το όριο (με επιφύλαξη)
+// Η στοίχιση ωρών (MCP, ISP) ακολουθεί τον διακόπτη μίας ώρας, όπως στα άλλα tabs.
+function computeAvoidedLayersByDate(selectedMonth) {
     const out = {};
     const mcpData = getMcpData();
-    const mcpByDate = {};
-    mcpData.forEach(item => {
-        const d = item["Ημερομηνία"] || item["date"];
-        if (d) mcpByDate[String(d).substring(0, 10)] = item;
-    });
+    const dateOf = (r) => String(r["Ημερομηνία"] || r["date"] || '').substring(0, 10);
+    const mcpByDate = {}, surpByDate = {};
+    mcpData.forEach(item => { const d = dateOf(item); if (d) mcpByDate[d] = item; });
+    (rawData.surplusHourly || []).forEach(r => { surpByDate[dateOf(r)] = hourlyRowToArray(r, 25); });
+    const marketShift = mcpShiftEnabled ? 1 : 0;
 
     getHourlyData().forEach(row => {
-        const date = String(row["Ημερομηνία"] || row["date"] || '').substring(0, 10);
+        const date = dateOf(row);
         if (!date.startsWith(selectedMonth)) return;
         const mcpRow = mcpByDate[date];
         if (!mcpRow) return; // χωρίς τιμές MCP δεν μπορούμε να ταξινομήσουμε τις ώρες
@@ -296,11 +301,17 @@ function computeCheapChargeByDate(selectedMonth) {
         const nH = (row['25:00'] !== undefined && row['25:00'] !== null) ? 25 : 24;
         const raw = getMcpHoursFromRow(mcpRow, nH);
         const prices = alignMcpToScadaHours(raw, mcpShiftEnabled ? getPrevDayLastPrice(date, mcpData, raw[0]) : raw[0], mcpShiftEnabled);
+        const surp = surpByDate[date], prevSurp = surpByDate[prevDateString(date)];
 
         for (let h = 1; h <= nH; h++) {
             const v = parseFloat(row[(h < 10 ? '0' + h : h) + ':00']);
-            if (!isNaN(v) && v < 0 && prices[h - 1] <= CURTAILMENT_PRICE_THRESHOLD) {
-                out[date] = (out[date] || 0) + (-v);
+            if (isNaN(v) || v >= 0) continue;
+            let layer = null;
+            if (prices[h - 1] <= CURTAILMENT_PRICE_THRESHOLD) layer = 'core';
+            else if (surp && localHourValue(surp, prevSurp, h - 1, marketShift) >= SURPLUS_HOUR_MIN_MWH) layer = 'ext';
+            if (layer) {
+                if (!out[date]) out[date] = { core: 0, ext: 0 };
+                out[date][layer] += -v;
             }
         }
     });
@@ -681,89 +692,90 @@ function updateMonthlyDashboard() {
     if (typeof syncMcpShiftControls === 'function') syncMcpShiftControls();
     const selectedMonth = document.getElementById('monthSelect').value;
     if (!selectedMonth || !rawData || !rawData.scada || rawData.scada.length === 0) return;
+    const T = TT();
 
-    const monthData = rawData.scada.filter(d => d.date.startsWith(selectedMonth));
-    const dailyTotals = {};
-    const cheapCharge = computeCheapChargeByDate(selectedMonth);
-    
-    monthData.forEach(d => {
+    const layers = computeAvoidedLayersByDate(selectedMonth);
+    const daily = {};
+    let monthCharge = 0, monthDischarge = 0;
+    rawData.scada.filter(d => d.date.startsWith(selectedMonth)).forEach(d => {
         if (d.unit === "TOTAL BESS") return;
-        if (!dailyTotals[d.date]) dailyTotals[d.date] = { charge: 0, discharge: 0 };
-        dailyTotals[d.date].discharge += d.discharge;
+        if (!daily[d.date]) daily[d.date] = { discharge: 0 };
+        daily[d.date].discharge += d.discharge;
+        monthDischarge += d.discharge; monthCharge += d.charge;
     });
-    // Φόρτιση = μόνο ώρες με τιμή MCP <= CURTAILMENT_PRICE_THRESHOLD (πιθανή αποφυγή περικοπής)
-    Object.keys(dailyTotals).forEach(date => { dailyTotals[date].charge = cheapCharge[date] || 0; });
+    // Απόδοση του μήνα (εκφόρτιση ÷ φόρτιση όλων των μονάδων): μετατρέπει την ενέργεια που φορτίστηκε από πλεόνασμα σε ενέργεια που επιστρέφει (D68)
+    const eta = monthCharge > 0 ? Math.min(1, monthDischarge / monthCharge) : 0;
 
-    const sortedDates = Object.keys(dailyTotals).sort();
-    let cumCharge = 0, cumDischarge = 0;
-    const labels = [], chargeData = [], dischargeData = [];
-
-    sortedDates.forEach(date => {
-        let parts = date.split('-');
-        if (parts.length >= 3) labels.push(`${parts[2]}/${parts[1]}`);
-        else labels.push(date);
-        
-        cumCharge += dailyTotals[date].charge;
-        cumDischarge += dailyTotals[date].discharge;
-        chargeData.push(cumCharge); 
-        dischargeData.push(cumDischarge); 
+    const dates = Object.keys(daily).sort();
+    const labels = [], S = { gross: [], net: [], core: [], ext: [] };
+    let cg = 0, cc = 0, ce = 0;
+    dates.forEach(date => {
+        const parts = date.split('-');
+        labels.push(parts.length >= 3 ? `${parts[2]}/${parts[1]}` : date);
+        const l = layers[date] || { core: 0, ext: 0 };
+        cg += daily[date].discharge; cc += l.core; ce += l.ext;
+        S.gross.push(cg); S.core.push(cc); S.ext.push(ce);
+        S.net.push(Math.min(cg, (cc + ce) * eta));       // το καθαρό δεν ξεπερνά ποτέ το ανώτατο
     });
+    const netNow = S.net.length ? S.net[S.net.length - 1] : 0;
 
-    const strCharge = formatMWh(cumCharge);
-    const strDischarge = formatMWh(cumDischarge);
+    const put = (id, txt) => { const el = document.getElementById(id); if (el) el.innerText = txt; };
+    put('kpiMonthlyDischarge', formatMWh(cg)); put('kpiMonthlyDischarge_mob', formatMWh(cg));
+    put('kpiMonthlyCharge', formatMWh(cc));    put('kpiMonthlyCharge_mob', formatMWh(cc));
+    const netSub = fillTpl(T.kpiNetSub, { v: formatMWh(netNow) }), upSub = fillTpl(T.kpiUpToSub, { v: formatMWh(cc + ce) });
+    put('kpiMonthlyDischargeSub', netSub); put('kpiMonthlyDischargeSub_mob', netSub);
+    put('kpiMonthlyChargeSub', upSub);     put('kpiMonthlyChargeSub_mob', upSub);
 
-    const kpiChargePc = document.getElementById('kpiMonthlyCharge');
-    if (kpiChargePc) kpiChargePc.innerText = strCharge;
-    
-    const kpiDischargePc = document.getElementById('kpiMonthlyDischarge');
-    if (kpiDischargePc) kpiDischargePc.innerText = strDischarge;
-
-    const kpiChargeMob = document.getElementById('kpiMonthlyCharge_mob');
-    if (kpiChargeMob) kpiChargeMob.innerText = strCharge;
-
-    const kpiDischargeMob = document.getElementById('kpiMonthlyDischarge_mob');
-    if (kpiDischargeMob) kpiDischargeMob.innerText = strDischarge;
-
-    renderMonthlyCharts(labels, chargeData, dischargeData, sortedDates);
+    renderMonthlyCharts(labels, dates, S);
 }
 
-function renderMonthlyCharts(labels, chargeData, dischargeData, dates) {
+function renderMonthlyCharts(labels, dates, S) {
     hideChartTip();
+    const T = TT();
+    const dayOf = (arr, i) => arr[i] - (i > 0 ? arr[i - 1] : 0);
 
+    // Γράφημα 1: υποκατάσταση θερμικών, ανώτατο (όλη η εκφόρτιση) και καθαρή εκτίμηση (D68)
     const ctxDischarge = document.getElementById('monthlyDischargeChart').getContext('2d');
     if (monthlyDischargeChartInst) monthlyDischargeChartInst.destroy();
-    
-    monthlyDischargeChartInst = new Chart(ctxDischarge, { 
-        type: 'line', 
-        data: { 
-            labels: labels, 
-            datasets: [{ 
-                label: 'MWh', data: dischargeData, borderColor: COLORS.discharge, 
-                backgroundColor: rgba(COLORS.discharge, 0.2), fill: true, tension: 0.3, pointRadius: 3, pointBackgroundColor: COLORS.discharge 
-            }] 
-        }, 
-        options: { 
-            responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: tipOff(cumTip(dates, dischargeData, COLORS.discharge)) }, 
-            scales: { x: { grid: { display: false } }, y: { grid: { color: '#334155' }, ticks: yTicks, title: { display: true, text: 'MWh' } } } 
-        } 
+    monthlyDischargeChartInst = new Chart(ctxDischarge, {
+        type: 'line',
+        data: { labels: labels, datasets: [
+            { label: T.lblGross, data: S.gross, borderColor: COLORS.discharge, backgroundColor: rgba(COLORS.discharge, 0.2), fill: true, tension: 0.3, pointRadius: 3, pointBackgroundColor: COLORS.discharge },
+            { label: T.lblNet, data: S.net, borderColor: COLORS.netDisplaced, borderDash: [6, 4], fill: false, tension: 0.3, pointRadius: 0, borderWidth: 2 }
+        ] },
+        options: {
+            responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+            plugins: { legend: { position: 'top' }, tooltip: tipOff(i => tipHead(fmtDay(dates[i]))
+                + tipRow(T.lblGross, fmtN(S.gross[i]), COLORS.discharge, { strong: true, unit: 'MWh' })
+                + tipRow(T.lblNet, fmtN(S.net[i]), COLORS.netDisplaced, { unit: 'MWh' })
+                + tipRule + tipRow(T.tipDay, fmtN(dayOf(S.gross, i)), null, { unit: 'MWh' })) },
+            scales: { x: { grid: { display: false } }, y: { grid: { color: '#334155' }, ticks: yTicks, title: { display: true, text: 'MWh' } } }
+        }
     });
 
+    // Γράφημα 2: αποφυγή περικοπών σε δύο στρώματα (D67): πυρήνας (τιμή ≤ 5 €) και πρόσθετο (πλεόνασμα ISP, τιμή > 5 €)
     const ctxCharge = document.getElementById('monthlyChargeChart').getContext('2d');
     if (monthlyChargeChartInst) monthlyChargeChartInst.destroy();
-    
-    monthlyChargeChartInst = new Chart(ctxCharge, { 
-        type: 'line', 
-        data: { 
-            labels: labels, 
-            datasets: [{ 
-                label: 'MWh', data: chargeData, borderColor: COLORS.charge, 
-                backgroundColor: rgba(COLORS.charge, 0.2), fill: true, tension: 0.3, pointRadius: 3, pointBackgroundColor: COLORS.charge 
-            }] 
-        }, 
-        options: { 
-            responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: tipOff(cumTip(dates, chargeData, COLORS.charge)) }, 
-            scales: { x: { grid: { display: false } }, y: { grid: { color: '#334155' }, ticks: yTicks, title: { display: true, text: 'MWh' } } } 
-        } 
+    monthlyChargeChartInst = new Chart(ctxCharge, {
+        type: 'line',
+        data: { labels: labels, datasets: [
+            { label: T.layerCore, data: S.core, borderColor: COLORS.charge, backgroundColor: rgba(COLORS.charge, 0.35), fill: true, tension: 0.3, pointRadius: 2, pointBackgroundColor: COLORS.charge },
+            { label: T.layerExt, data: S.ext, borderColor: COLORS.charge, borderDash: [5, 4], backgroundColor: rgba(COLORS.charge, 0.18), fill: '-1', tension: 0.3, pointRadius: 0 }
+        ] },
+        options: {
+            responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+            plugins: { legend: { position: 'top' }, tooltip: tipOff(i => {
+                const dc = dayOf(S.core, i), de = dayOf(S.ext, i);
+                const days = (dc >= 0.5 ? tipRow(T.tipDay + ': ' + T.layerCoreShort, fmtN(dc), null, { unit: 'MWh' }) : '')
+                           + (de >= 0.5 ? tipRow(T.tipDay + ': ' + T.layerExtShort, fmtN(de), null, { unit: 'MWh' }) : '');
+                return tipHead(fmtDay(dates[i]))
+                    + tipRow(T.layerCoreTip, fmtN(S.core[i]), COLORS.charge, { strong: true, unit: 'MWh' })
+                    + tipRow(T.layerExtTip, fmtN(S.ext[i]), rgba(COLORS.charge, 0.45), { unit: 'MWh' })
+                    + tipRow(T.tipTotal, fmtN(S.core[i] + S.ext[i]), null, { unit: 'MWh' })
+                    + (days ? tipRule + days : '');
+            }) },
+            scales: { x: { grid: { display: false } }, y: { stacked: true, grid: { color: '#334155' }, ticks: yTicks, title: { display: true, text: 'MWh' } } }
+        }
     });
 }
 

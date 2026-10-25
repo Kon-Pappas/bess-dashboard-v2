@@ -69,6 +69,14 @@ Next, when there is a reason:
 - Look at STO_02SP (K15)
 - A small chart of the cycles of one unit on one day (state of charge), if the owner wants to *see* why a unit is classed 2h; not built because it was not asked
 
+## Monthly tab review (batch 19, 26 Oct 2026)
+
+Done: the avoided curtailment in two layers (D67), the thermal displacement as upper bound and net (D68), the scope line (D66) and the methodology title (D69).
+
+Next, when there is a reason:
+- Read the ISP and Day-Ahead forecast files to find out why the surplus appears at prices above 5 € (K17)
+- Re-run `scripts/check_curtailment_rule.py` after a few months: if the share of cheap hours with a surplus falls under 97%, review the core rule
+
 ## Checks with a date
 
 - 22 Oct 2026: first 07:04 run after batch 1; check that `data/meta.json` appears (K09), that there is one run per day, and that the previous day's SCADA file was already there (K08)
