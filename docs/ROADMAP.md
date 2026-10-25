@@ -37,9 +37,12 @@ Order of work for aligning this dashboard with the hub house style (live-greekpo
 - Own HTML tooltips on all 8 charts (D40); Arbitrage tooltip by site or one unit alone (D41)
 - Follow-up (batch 11): repeated title removed, inactive units faded with "–" for zeros, shorter price legend, "5k" ticks on phones (D42–D45)
 
-## Phase 6: mobile
+## Phase 6: mobile (batch 12, 21 Oct 2026) — done
 
-- Tables that do not fit become cards; "–" instead of 0 (already done for the Arbitrage table in batch 11, D43); one divider line (K11, H01)
+The four tabs were opened in a real Chromium at 360 px (Greek and English) and measured: no horizontal overflow, one divider line under the header (H01), and these fixes:
+
+- Arbitrage: legend per site on a phone, fitted table, same hour-alignment chip as the other tabs (D46–D48)
+- Daily: every unit name on the axis (D49); "–" when the SCADA file is missing (D50); shorter red tile (D51)
 
 ## Phase 7: data files — later, not urgent
 

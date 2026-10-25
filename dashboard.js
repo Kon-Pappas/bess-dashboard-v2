@@ -117,6 +117,8 @@ function axisTick(v, idx, ticks) {
     return (typeof Chart !== 'undefined' && Chart.Ticks && Chart.Ticks.formatters) ? Chart.Ticks.formatters.numeric.call(this, v, idx, ticks) : v;
 }
 const yTicks = { callback: axisTick };
+// Στο κινητό δείχνουμε ΟΛΕΣ τις μονάδες στον οριζόντιο άξονα, κάθετες και μικρότερες· αλλιώς το Chart.js παραλείπει τις μισές (D48)
+const unitXTicks = () => isPhone() ? { autoSkip: false, maxRotation: 90, minRotation: 90, font: { size: 10 } } : {};
 
 // ---- Daily Analytics: μία μονάδα, πρόγραμμα έναντι πραγματικού
 function unitTip(unit, isp, sc, cIsp, cSc) {
@@ -402,7 +404,7 @@ function fillPickers() {
 
 if (window.matchMedia) {
     const mq = window.matchMedia(PHONE_MQ);
-    const onChange = () => { if (pickerNoYear !== null) { fillPickers(); updatePicker(); } };
+    const onChange = () => { if (pickerNoYear !== null) { fillPickers(); updatePicker(); if (typeof switchTab === 'function') switchTab(currentTab); } };
     if (mq.addEventListener) mq.addEventListener('change', onChange); else if (mq.addListener) mq.addListener(onChange);
 }
 
@@ -560,6 +562,8 @@ function updateDashboard() {
     const ispTotal = ispDay.find(d => d.unit === "TOTAL BESS") || { charge: 0, discharge: 0, rte: "0.00%" };
     const scadaTotal = scadaDay.find(d => d.unit === "TOTAL BESS") || { charge: 0, discharge: 0, rte: "0.00%" };
 
+    const hasIsp = ispDay.some(d => d.unit === "TOTAL BESS"), hasScada = scadaDay.some(d => d.unit === "TOTAL BESS");
+    const shown = (id, text) => (id.includes('Scada') ? hasScada : hasIsp) ? text : '–';   // λείπει το αρχείο → «–», όχι 0 (D49)
     const kpiMap = {
         'kpiChargeIsp': ispTotal.charge,
         'kpiChargeIsp_mob': ispTotal.charge,
@@ -573,7 +577,7 @@ function updateDashboard() {
 
     for (const [id, val] of Object.entries(kpiMap)) {
         const el = document.getElementById(id);
-        if (el) el.innerText = formatMWh(val);
+        if (el) el.innerText = shown(id, formatMWh(val));
     }
 
     const rteMap = {
@@ -585,7 +589,7 @@ function updateDashboard() {
 
     for (const [id, val] of Object.entries(rteMap)) {
         const el = document.getElementById(id);
-        if (el) el.innerText = val;
+        if (el) el.innerText = shown(id, val);
     }
 
     const unitMap = {};
@@ -639,7 +643,7 @@ function renderDailyCharts(labels, ispDischarge, scadaDischarge, ispCharge, scad
         options: { 
             responsive: true, maintainAspectRatio: false, 
             plugins: { legend: { position: 'top' }, tooltip: tipOff(i => unitTip(labels[i], ispDischarge[i], scadaDischarge[i], COLORS.dischargeIsp, COLORS.discharge)) }, 
-            scales: { x: { grid: { display: false } }, y: { grid: { color: '#334155' }, ticks: yTicks } } 
+            scales: { x: { grid: { display: false }, ticks: unitXTicks() }, y: { grid: { color: '#334155' }, ticks: yTicks } } 
         } 
     });
 
@@ -658,7 +662,7 @@ function renderDailyCharts(labels, ispDischarge, scadaDischarge, ispCharge, scad
         options: { 
             responsive: true, maintainAspectRatio: false, 
             plugins: { legend: { position: 'top' }, tooltip: tipOff(i => unitTip(labels[i], ispCharge[i], scadaCharge[i], COLORS.chargeIsp, COLORS.charge)) }, 
-            scales: { x: { grid: { display: false } }, y: { grid: { color: '#334155' }, ticks: yTicks } } 
+            scales: { x: { grid: { display: false }, ticks: unitXTicks() }, y: { grid: { color: '#334155' }, ticks: yTicks } } 
         } 
     });
 }
@@ -907,7 +911,7 @@ function renderSurplusKpis(kpi, bigDays, daysWithSurplus, peak, lang) {
         ? `${peak.date} · ${el ? 'ευελιξία' : 'flex'} ${(peak.flexIn / peak.res * 100).toFixed(0)}%`
         : '';
     const surpCard = card('bg-fuchsia-900/10', 'border-fuchsia-500/20',
-        half(el ? 'Μέρες πλεονάσματος > ευελιξία' : 'Days residual > flex', daysWithSurplus > 0 ? `${bigDays} / ${daysWithSurplus}` : '–', el ? 'υπολειπόμενο πλεόνασμα μεγαλύτερο από BESS και άντληση σε ώρες πλεονάσματος' : 'residual above BESS+PUMP in surplus hours', 'text-fuchsia-400', 'text-fuchsia-400/70'),
+        half(el ? 'Μέρες πλεονάσματος > ευελιξία' : 'Days residual > flex', daysWithSurplus > 0 ? `${bigDays} / ${daysWithSurplus}` : '–', el ? 'πάνω από BESS και άντληση' : 'above BESS and PUMP', 'text-fuchsia-400', 'text-fuchsia-400/70'),
         half(el ? 'Μέρα μέγιστου πλεονάσματος' : 'Peak surplus day', peakTxt, peakSub, 'text-fuchsia-400', 'text-fuchsia-400/70'));
     box.innerHTML = bessCard + pumpCard + surpCard;
 }
@@ -1398,6 +1402,20 @@ function renderArbitrageTab() {
         return html + chg + (chg && dis ? tipRule : '') + dis + (chg && dis ? tipRule + tipRow(T.tipNet, fmtN(net, 0, true), null, { strong: true }) : '') + tipNote(T.tipHint);
     };
 
+    // Υπόμνημα για κινητό (D46): ένα ανά σταθμό και η τιμή MCP, αντί για 16+ μονάδες που το Chart.js κόβει πάνω στο γράφημα
+    const legendBox = document.getElementById('arbitrageSiteLegend');
+    if (legendBox) {
+        const seen = [];
+        datasets.forEach(ds => {
+            if (ds.stack !== 'bessStack') return;
+            const key = ds.site || ds.label;
+            if (!seen.some(x => x.key === key)) seen.push({ key, color: key === '__others' ? SITE_OTHERS_COLOR : siteColour(key, reg), label: key === '__others' ? TT().tipOtherSites : key });
+        });
+        const chip = (swatch, label) => `<span class="inline-flex items-center gap-1.5 whitespace-nowrap">${swatch}${escapeHtml(label)}</span>`;
+        legendBox.innerHTML = seen.map(x => chip(`<span class="w-2.5 h-2.5 rounded-sm shrink-0" style="background:${x.color}"></span>`, x.label)).join('')
+            + (mcpRow ? chip(`<span class="w-3 h-0.5 shrink-0" style="background:${COLORS.mcp}"></span>`, mcpLegendLabelFinal) : '');
+    }
+
     const canvasCtx = document.getElementById('arbitrageDualChart');
     if (!canvasCtx) return;
     const ctx = canvasCtx.getContext('2d');
@@ -1429,7 +1447,7 @@ function renderArbitrageTab() {
                 }
             },
             plugins: { 
-                legend: { position: 'top', labels: { padding: isPhone() ? 16 : 12 } },
+                legend: { display: !isPhone(), position: 'top', labels: { padding: 12 } },
                 tooltip: tipOff(arbTip) 
             }
         }

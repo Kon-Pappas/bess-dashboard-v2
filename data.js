@@ -192,7 +192,9 @@ const i18n = {
         arbitrageTableTitle: "Οικονομική απόδοση και arbitrage ημέρας",
         thUnit: "Μονάδα BESS",
         thCharge: "Συνολική φόρτιση (MWh)",
+        thChargeShort: "Φόρτιση (MWh)",
         thDischarge: "Συνολική αποφόρτιση (MWh)",
+        thDischargeShort: "Αποφόρτιση (MWh)",
         thRte: "RTE (%)",
         thPnl: "Πιθανό ημερήσιο P&L (€)",
         thProfit: "Κέρδος ανά MWh (€)"
@@ -361,7 +363,9 @@ const i18n = {
         arbitrageTableTitle: "Daily Financial Performance & Arbitrage",
         thUnit: "BESS unit",
         thCharge: "Total charge (MWh)",
+        thChargeShort: "Charge (MWh)",
         thDischarge: "Total discharge (MWh)",
+        thDischargeShort: "Discharge (MWh)",
         thRte: "RTE (%)",
         thPnl: "Potential daily P&L (€)",
         thProfit: "Unit profit (€/MWh)"
@@ -448,8 +452,10 @@ function setLang(lang) {
     setT('arbitrageChartSub', t.arbitrageChartSub);
     setT('arbitrageTableTitle', t.arbitrageTableTitle);
     setT('thUnit', t.thUnit);
-    setT('thCharge', t.thCharge);
-    setT('thDischarge', t.thDischarge);
+    setT('thChargeLong', t.thCharge);
+    setT('thChargeShort', t.thChargeShort);
+    setT('thDischargeLong', t.thDischarge);
+    setT('thDischargeShort', t.thDischargeShort);
     setT('thRte', t.thRte);
     setT('thPnl', t.thPnl);
     setT('thProfit', t.thProfit);

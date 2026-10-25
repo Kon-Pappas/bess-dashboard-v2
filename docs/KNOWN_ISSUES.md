@@ -10,12 +10,11 @@ Open problems found in the review of 21 October 2026, when the alignment with th
 | K08 | With the two GitHub crons removed (D05), the only run of the day is the cron-job.org one at 07:04 Athens time; the earlier backup runs at 08:00 and 08:30 no longer exist. If the previous day's SCADA or ISP file is not published by 07:04, that day is completed by the next day's run | The day would be missing for up to 24 hours (the last five days are re-fetched, so nothing is lost for good) | Check the first days after batch 1; move the time later in cron-job.org if needed |
 | K09 | Right after batch 1 is uploaded, `data/meta.json` does not exist until the first run, so the header shows "–" | Cosmetic, one day at most | Resolved by one manual run of the workflow |
 | K10 | `data.js` holds the texts, the methodology, the data loading and the header, while its name suggests only data | Misleading when looking for code | Decide with the data files phase (Phase 7) |
-| K11 | Mobile (≈ 342 px) has not been reviewed against the hub rules: tables that do not fit, "–" instead of 0, one divider line | Same issues as Flows had before its batches 8–9 | Phase 6 |
 | K12 | The RTE warnings use hub-reserved hues (yellow below 83%, rose above 92%) | Yellow and red mean imports and exports across the hub; a warning could be misread as data (the orange *pending* pill was accepted in D26) | Decide with the other repositories (hub-wide pass) |
 | K13 | Colour space is nearly used up: emerald (accent), lime (OK), red and yellow are reserved, so units have only about eight families (sky, pink, indigo, purple, orange, neutral, cyan, magenta). The newest site (ENW, since 6 Oct) took cyan, which is close to SUS sky | Beyond roughly six sites the colours of neighbouring sites get hard to tell apart; the per-site mode takes over only after 20 units | Look at the chart on real days; if needed move the switch to per-site earlier or darken the new sites' shades |
 | K14 | 16 units on 21 Oct 2026 (7 sites), so the per-site switch (20 units) is 4 units away | The first day with a 21st unit changes the chart from units to sites | Check the chart on that day (see `ROADMAP.md`) |
 
-Resolved: K01 → D38; K02 → D25; K03 → D32; K04 → D33, D34.
+Resolved: K01 → D38; K11 → D46–D51; K02 → D25; K03 → D32; K04 → D33, D34.
 
 ## Hub-wide issues
 

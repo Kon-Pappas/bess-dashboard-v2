@@ -369,12 +369,13 @@
             <div class="bg-slate-800/40 p-6 rounded-xl border border-slate-700">
                 <h3 id="arbitrageChartTitle" class="text-lg font-semibold text-slate-200 mb-1">Hourly BESS Operation per Unit (MWh)</h3>
                 <p id="arbitrageChartSub" class="text-xs text-slate-400 mb-4">Negative values = Charging, Positive values = Discharging</p>
-                <div class="flex flex-wrap items-center gap-2 mb-1">
-                    <input type="checkbox" id="mcpShiftToggle" class="mcp-shift-toggle accent-acc-500 cursor-pointer" onchange="setMcpShift(this.checked)" checked>
-                    <label for="mcpShiftToggle" id="mcpShiftLabel" class="text-xs text-slate-300 cursor-pointer">Align MCP to SCADA hours (MCP hour h−1 ↔ SCADA hour h)</label>
-                </div>
+                <div class="mb-2"><label class="mcp-shift-chip inline-flex items-center gap-1.5 text-[11px] text-slate-400 cursor-pointer whitespace-nowrap shrink-0" title="">
+                        <input type="checkbox" class="mcp-shift-toggle accent-acc-500 cursor-pointer" onchange="setMcpShift(this.checked)" checked>
+                        <span class="mcp-shift-label">⏱ Hour alignment</span>
+                    </label></div>
                 <p id="arbitrageModeNote" class="hidden text-[11px] text-slate-400 mb-1"></p>
-                <p id="arbitrageAlignNote" class="text-[11px] text-slate-500 mb-4"></p>
+                <p id="arbitrageAlignNote" class="hidden md:block text-[11px] text-slate-500 mb-4"></p>
+                <div id="arbitrageSiteLegend" class="sm:hidden flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs text-slate-300 mb-2"></div>
                 <div class="relative h-96"><canvas id="arbitrageDualChart"></canvas></div>
             </div>
 
@@ -382,12 +383,12 @@
             <div class="bg-slate-800/40 p-4 sm:p-6 rounded-xl border border-slate-700">
                 <h3 id="arbitrageTableTitle" class="text-lg font-semibold text-slate-200 mb-4">Daily Financial Performance & Arbitrage</h3>
                 <div class="overflow-x-auto">
-                    <table class="w-full text-sm text-slate-300">
+                    <table class="w-full table-fixed md:table-auto text-sm text-slate-300">
                         <thead class="bg-slate-900 text-slate-400 text-xs">
                             <tr>
-                                <th id="thUnit" class="p-3 text-left">BESS unit</th>
-                                <th id="thCharge" class="p-3 text-right">Total charge (MWh)</th>
-                                <th id="thDischarge" class="p-3 text-right">Total discharge (MWh)</th>
+                                <th id="thUnit" class="p-3 text-left w-[36%] md:w-auto">BESS unit</th>
+                                <th class="p-3 text-right w-[32%] md:w-auto"><span id="thChargeShort" class="md:hidden">Charge (MWh)</span><span id="thChargeLong" class="hidden md:inline">Total charge (MWh)</span></th>
+                                <th class="p-3 text-right w-[32%] md:w-auto"><span id="thDischargeShort" class="md:hidden">Discharge (MWh)</span><span id="thDischargeLong" class="hidden md:inline">Total discharge (MWh)</span></th>
                                 <th id="thRte" class="p-3 hidden md:table-cell text-right">RTE (%)</th>
                                 <th id="thPnl" class="p-3 hidden md:table-cell text-right">Potential daily P&L (€)</th>
                                 <th id="thProfit" class="p-3 hidden md:table-cell text-right">Unit profit (€/MWh)</th>
