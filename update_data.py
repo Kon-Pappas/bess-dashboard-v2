@@ -572,6 +572,14 @@ def main():
 
     save_data(db)
     write_meta(datetime.now(timezone.utc))
+
+    # Εκτίμηση ισχύος / ενέργειας / διάρκειας ανά μονάδα (μόνο από SCADA). Δεν πρέπει ποτέ να χαλά την ενημέρωση των δεδομένων.
+    try:
+        import capacity
+        res = capacity.write()
+        print(f"✔ Εκτίμηση χωρητικότητας: {len(res['units'])} μονάδες (capacity.json).")
+    except Exception as exc:
+        print(f"   ⚠ capacity.json δεν ενημερώθηκε: {exc}")
     print("\n✔ Η ενημέρωση ολοκληρώθηκε!")
 
 

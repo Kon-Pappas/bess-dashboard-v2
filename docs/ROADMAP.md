@@ -60,10 +60,19 @@ The four tabs were opened in a real Chromium at 360 px (Greek and English) and m
 4. The one-hour alignment needs the last hour of the previous day: each month file also carries that one day from the month before.
 5. Old files never change, so the browser caches them for good; only the current month is revalidated.
 
+## Capacity & duration tab (batches 16 and 18, 25 Oct 2026)
+
+Done: `capacity.py` (SCADA only, phases, assured value, status), `data/capacity.json`, the fifth tab with unit table, changes and upgrades, fleet chart, unit progression and records (D56–D65). ADMIE codes only (D63).
+
+Next, when there is a reason:
+- Watch the first real upgrades the detector reports (D64) and tune the 12% / 5-day thresholds if it is late or noisy
+- Look at STO_02SP (K15)
+- A small chart of the cycles of one unit on one day (state of charge), if the owner wants to *see* why a unit is classed 2h; not built because it was not asked
+
 ## Checks with a date
 
 - 22 Oct 2026: first 07:04 run after batch 1; check that `data/meta.json` appears (K09), that there is one run per day, and that the previous day's SCADA file was already there (K08)
-- 26 Oct 2026 (after the 07:04 run): the real SCADA of the 25-hour day (K06). In `data/historical.json` the rows of `bessHourly` for 2026-10-25 must have `25:00`; the log of the run must show no "⚠ SCADA … SUM" lines for that day; the Arbitrage tab for 25 Oct shows 25 columns (00 … 24). Spring 2027 (28 Mar) is the 23-hour day: repeat this check then
+- 26 Oct 2026 (after the 07:04 run): `data/capacity.json` must be committed by the workflow for the first time (the file comes with batch 16 for 24 Oct); then the real SCADA of the 25-hour day (K06). In `data/historical.json` the rows of `bessHourly` for 2026-10-25 must have `25:00`; the log of the run must show no "⚠ SCADA … SUM" lines for that day; the Arbitrage tab for 25 Oct shows 25 columns (00 … 24). Spring 2027 (28 Mar) is the 23-hour day: repeat this check then
 - First day with more than 20 units (now 16): check the Arbitrage chart switches to sites and reads well (K14)
 
 ## Later

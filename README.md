@@ -13,6 +13,7 @@ Public dashboard of battery energy storage (BESS) in the Greek electricity marke
 | Monthly Impact | Monthly discharge (theoretical thermal displacement) and charging in hours with a day-ahead price of at most 5 €/MWh (possible avoided curtailment of renewables). |
 | Surplus & Flexibility | Hourly profile of the ISP residual surplus against BESS and pumped-hydro charging; daily and cumulative absorption, with charging outside the surplus hours shown apart as arbitrage. |
 | Arbitrage P&L | Hourly day-ahead result per unit (volume × price), with an optional one-hour alignment between SCADA and market clocks. |
+| Capacity & duration | Estimated power (MW), energy per cycle (MWh) and duration of every ADMIE unit code, from the hourly SCADA of the last 30 days: class 2h / 3h / 4h from the assured discharge, status (stable, changing, little data); **changes and upgrades** (a unit that moves to a new level of power or energy, with the date and, when it happens, the change of class); fleet progression and records. |
 
 The *Methodology & Assumptions* button opens a short and a detailed version of the assumptions behind every tab.
 
@@ -37,8 +38,10 @@ index.html               page (Tailwind + Chart.js)
 dashboard.js             page logic, charts, loading sequence
 data.js                  texts in English and Greek, methodology, data loading
 update_data.py           data pipeline (Python)
+capacity.py              estimates power, energy per cycle and duration of each unit (SCADA only), runs after every update
 scripts/data_size.py      measures data/historical.json (size, gzip, growth) and warns at the limit
-data/                    data files written by the pipeline
+scripts/test_capacity.py  self-test of capacity.py with synthetic units
+data/                    data files written by the pipeline: historical.json, meta.json, capacity.json
 docs/                    decisions, known issues, roadmap
 .github/workflows/       the update workflow
 ```

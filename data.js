@@ -77,7 +77,13 @@ const i18n = {
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
                 <li><strong class="text-slate-200">Έσοδα:</strong> μόνο Αγορά Επόμενης Ημέρας, στο MCP. Δεν περιλαμβάνονται εξισορρόπηση, επικουρικές υπηρεσίες, χρεώσεις και φόροι. Είναι ακαθάριστη εκτίμηση, όχι λογιστικό αποτέλεσμα.</li>
             </ul>
-        `,
+
+            <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="capacity" style="scroll-margin-top:8px">Χωρητικότητα και διάρκεια</h3>
+            <ul class="list-disc pl-5 space-y-2 text-slate-400">
+                <li><strong class="text-slate-200">Εκτίμηση από SCADA:</strong> η ισχύς (MW) και η ενέργεια ανά κύκλο (MWh) κάθε μονάδας εκτιμώνται από τις ωριαίες τιμές των τελευταίων 30 ημερών και ξαναϋπολογίζονται κάθε μέρα. Δεν είναι η ονομαστική χωρητικότητα.</li>
+                <li><strong class="text-slate-200">Κατηγορία:</strong> 2ωρη, 3ωρη, 4ωρη από την εξασφαλισμένη εκφόρτιση (ενέργεια ÷ ισχύς), δηλαδή μια τιμή που επιτεύχθηκε τουλάχιστον 3 φορές. Οι νέες μονάδες, που μόλις εντάσσονται σε λειτουργία, σημειώνονται «λίγα δεδομένα» ή «σε αλλαγή».</li>
+            </ul>
+`,
         modalBodyFull: `
             <p class="mb-1 text-slate-300">Το Dashboard είναι ένα ανεξάρτητο εργαλείο παρακολούθησης των μονάδων αποθήκευσης (BESS) στην ελληνική αγορά, βασισμένο σε ανοιχτά δεδομένα. Τα νούμερα είναι εκτιμήσεις και ενδείξεις, όχι επίσημα στοιχεία.</p>
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="all" style="scroll-margin-top:8px">Όλες οι καρτέλες</h3>
@@ -116,7 +122,18 @@ const i18n = {
                 <li><strong class="text-slate-200">Αντιστοίχιση ωρών:</strong> με ενεργή την ευθυγράμμιση, η ώρα SCADA h αποτιμάται με την τιμή της ώρας h−1 (η ώρα 1 με την ώρα 24 της προηγούμενης ημέρας). Χωρίς αυτήν, με την ίδια ώρα. Η διαφορά στο συνολικό P&amp;L Ιουνίου–Σεπτεμβρίου είναι ενδεικτικά περίπου 10%.</li>
                 <li><strong class="text-slate-200">Τι δεν περιλαμβάνεται:</strong> χρεώσεις δικτύου, φόροι, κόστος λειτουργίας και φθοράς, χρηματοδοτικό κόστος. Το P&amp;L είναι ακαθάριστη εκτίμηση αξίας ενέργειας, όχι λογιστικό αποτέλεσμα.</li>
             </ul>
-            <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="limits" style="scroll-margin-top:8px">Περιορισμοί</h3>
+                        <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="capacity" style="scroll-margin-top:8px">Χωρητικότητα και διάρκεια</h3>
+            <ul class="list-disc pl-5 space-y-2 text-slate-400">
+                <li><strong class="text-slate-200">Πηγή:</strong> μόνο τα ωριαία SCADA. Το ISP δεν χρησιμοποιείται: είναι πρόγραμμα και δεν δείχνει τι έγινε πραγματικά.</li>
+                <li><strong class="text-slate-200">Κύκλοι:</strong> οι ώρες χωρίζονται σε φάσεις φόρτισης και εκφόρτισης, ώστε οι διπλοί κύκλοι μέσα στη μέρα, ή ένας κύκλος που περνά τα μεσάνυχτα, να μετρούν σωστά. Έγκυρος είναι ο κύκλος που η εκφόρτισή του έχει απόδοση 70–100% της φόρτισης· οι υπόλοιποι, όπως η 9/9 με RTE 207%, αγνοούνται.</li>
+                <li><strong class="text-slate-200">Εξασφαλισμένη τιμή:</strong> η 3η υψηλότερη τιμή των τελευταίων 30 ημερών, δηλαδή αυτή που επιτεύχθηκε τουλάχιστον τρεις φορές. Έτσι μία ανώμαλη ή δοκιμαστική τιμή δεν αλλάζει την εκτίμηση.</li>
+                <li><strong class="text-slate-200">Ισχύς και ενέργεια:</strong> η ισχύς είναι ο μέσος όρος κάθε ώρας (MWh ανά ώρα = MW)· η στιγμιαία κορυφή μπορεί να είναι λίγο υψηλότερη. Η ενέργεια είναι η εκφόρτιση στον μετρητή (AC) ανά κύκλο και είναι περίπου 10% χαμηλότερη από την ονομαστική, λόγω απωλειών. Δείχνεται και η ενέργεια φόρτισης του κύκλου.</li>
+                <li><strong class="text-slate-200">Κατηγορία:</strong> το ακέραιο μέρος της διάρκειας (ενέργεια ÷ ισχύς), με ανοχή 0,1 ώρας: 2,4 → 2ωρη, 3,1 → 3ωρη, 4,0 → 4ωρη, 2,6 → 2ωρη. Μια μονάδα που δεν έχει φτάσει ποτέ πλήρη κύκλο φαίνεται μικρότερη από ό,τι είναι: η εκτίμηση είναι κάτω όριο.</li>
+                <li><strong class="text-slate-200">Κατάσταση:</strong> «λίγα δεδομένα» (λιγότεροι από 8 έγκυροι κύκλοι ή πρώτη λειτουργία πριν από λιγότερο από 21 ημέρες), «σε αλλαγή» (η ισχύς ή η ενέργεια διαφέρει πάνω από 10% από τις προηγούμενες 30 ημέρες, π.χ. ένταξη σε λειτουργία) ή «σταθερή». Η κατηγορία των δύο πρώτων είναι προσωρινή.</li>
+                <li><strong class="text-slate-200">Αλλαγές και αναβαθμίσεις:</strong> κάθε ημέρα υπολογίζεται η ίδια εκτίμηση για τις τελευταίες 14 ημέρες. Όταν ξεφεύγει πάνω από 12% από το προηγούμενο επίπεδο για 5 συνεχόμενες ημέρες, καταγράφεται αλλαγή (π.χ. από 2ωρη σε 3ωρη, διπλασιασμός ισχύος, δοκιμή που επιστρέφει). Αν κρατά 2–4 ημέρες φαίνεται «προς επιβεβαίωση». Μια πτώση που ανακάμπτει καταγράφεται ως επεισόδιο. Δεν χρησιμοποιούνται ονόματα εταιρειών: μόνο οι κωδικοί του ΑΔΜΗΕ.</li>
+                <li><strong class="text-slate-200">Ρεκόρ:</strong> ταυτόχρονη ισχύς και ημερήσια ενέργεια του στόλου από την αρχή της καταγραφής (18/6/2026). Ημέρες μονάδας με εκφόρτιση πάνω από 1,3 φορές τη φόρτιση δεν μετράνε.</li>
+            </ul>
+<h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="limits" style="scroll-margin-top:8px">Περιορισμοί</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
                 <li><strong class="text-slate-200">Δεδομένα:</strong> τα στοιχεία SCADA είναι μη πιστοποιημένα και μπορεί να αναθεωρηθούν. Το ISP είναι προγραμματισμός.</li>
                 <li><strong class="text-slate-200">Αλλαγή ώρας:</strong> οι ημέρες αλλαγής ώρας (25 ώρες στις 25/10, 23 ώρες τον Μάρτιο) χειρίζονται ειδικά, αλλά δεν έχουν ακόμα δοκιμαστεί με πραγματικά δεδομένα.</li>
@@ -186,6 +203,74 @@ const i18n = {
         tipOtherSites: "Λοιποί σταθμοί",
         tipHint: "Κλικ σε μονάδα στον πίνακα για να τη δεις μόνη της.",
         tipShowAll: "Εμφάνιση όλων των μονάδων",
+        tabCapacity: "Χωρητικότητα & διάρκεια",
+        capTitle: "Ισχύς, ενέργεια και διάρκεια ανά μονάδα",
+        capSub: "Εκτίμηση από τα ωριαία SCADA των τελευταίων 30 ημερών (έως {d}). Ξαναϋπολογίζεται κάθε μέρα. Δεν είναι η ονομαστική χωρητικότητα.",
+        capEmpty: "Δεν υπάρχουν ακόμα εκτιμήσεις χωρητικότητας.",
+        capKpiPower: "Ισχύς στόλου",
+        capKpiPowerSub: "άθροισμα {n} μονάδων με εκτίμηση",
+        capKpiEnergy: "Ενέργεια στόλου",
+        capKpiEnergySub: "ανά κύκλο, εξασφαλισμένη",
+        capKpiDuration: "Μέση διάρκεια",
+        capKpiDurationSub: "ενέργεια ÷ ισχύς",
+        capKpiUnits: "Μονάδες",
+        capKpiUnitsSub: "σταθερές {s} · σε αλλαγή {c} · λίγα δεδομένα {f}",
+        capThUnit: "Μονάδα",
+        capThPower: "Ισχύς (MW)",
+        capThEnergy: "Ενέργεια (MWh)",
+        capThDuration: "Διάρκεια",
+        capThStatus: "Κατάσταση",
+        capStatusStable: "Σταθερή",
+        capStatusChanging: "Σε αλλαγή",
+        capStatusFew: "Λίγα δεδομένα",
+        capStatusTipStable: "Η εκτίμηση δεν άλλαξε πάνω από 10% σε σχέση με τις προηγούμενες 30 ημέρες.",
+        capStatusTipChanging: "Η ισχύς ή η ενέργεια άλλαξε πάνω από 10% σε σχέση με τις προηγούμενες 30 ημέρες (π.χ. ένταξη σε λειτουργία). Η κατηγορία είναι προσωρινή.",
+        capStatusTipFew: "Λιγότεροι από 8 έγκυροι κύκλοι ή πρώτη λειτουργία πριν από λιγότερο από 21 ημέρες. Η κατηγορία είναι προσωρινή.",
+        capProvisional: "προσωρινή",
+        capFootnote: "Ενέργεια εκφόρτισης στον μετρητή (AC) ανά κύκλο, η τιμή που επιτεύχθηκε τουλάχιστον 3 φορές στις τελευταίες 30 ημέρες. Η κατηγορία είναι το ακέραιο μέρος της διάρκειας. Είναι κάτω όριο: μια μονάδα που δεν έχει εκφορτιστεί πλήρως φαίνεται μικρότερη.",
+        capMeasured: "Από τα δεδομένα",
+        capFirstSeen: "Πρώτη λειτουργία",
+        capCycles: "Έγκυροι κύκλοι (30 ημ.)",
+        capTrend: "Μεταβολή έναντι των προηγούμενων 30 ημερών",
+        capAnomalies: "Ανώμαλες ημέρες (30 ημ.)",
+        capChargeEnergy: "Ενέργεια φόρτισης του κύκλου",
+        capFleetTitle: "Στόλος: παρατηρούμενη ισχύς και ενέργεια",
+        capFleetSub: "Άθροισμα των εκτιμήσεων κάθε μονάδας ανά εβδομάδα, μόνο για μονάδες με αρκετούς κύκλους. Η μέση διάρκεια δείχνει αν ο στόλος μεγαλώνει περισσότερο σε ενέργεια ή σε ισχύ.",
+        capSeriesEnergy: "Ενέργεια (MWh)",
+        capSeriesPower: "Ισχύς (MW)",
+        capSeriesDuration: "Μέση διάρκεια (h)",
+        capWeek: "Εβδομάδα",
+        capUnitsWord: "μονάδες",
+        capUnitTitle: "Πορεία μονάδας: {u}",
+        capUnitSub: "Η εκτίμηση των τελευταίων 14 ημερών, κάθε ημέρα. Τα τρίγωνα σημαδεύουν αλλαγές επιπέδου. Πάτησε μια γραμμή του πίνακα για να αλλάξεις μονάδα.",
+        capSeriesUnitPower: "Ισχύς (MW)",
+        capSeriesUnitEnergy: "Ενέργεια ανά κύκλο (MWh)",
+        capCyclesWord: "έγκυροι κύκλοι",
+        capRecTitle: "Ρεκόρ στόλου",
+        capRecSub: "Από την έναρξη της καταγραφής ({d}). Δεν μετράνε ημέρες μονάδας με εκφόρτιση πάνω από 1,3 φορές τη φόρτιση. Τα περισσότερα ρεκόρ προέρχονται από την ένταξη νέων μονάδων.",
+        capRecEventsTitle: "Τελευταία ρεκόρ",
+        capNew: "Νέο",
+        capRecFleetDisMw: "Μέγιστη ταυτόχρονη εκφόρτιση",
+        capRecFleetChgMw: "Μέγιστη ταυτόχρονη φόρτιση",
+        capRecFleetDisMwh: "Μέγιστη ημερήσια εκφόρτιση",
+        capRecFleetChgMwh: "Μέγιστη ημερήσια φόρτιση",
+        capRecPrev: "προηγούμενο {v} στις {d}",
+        capChangesTitle: "Αλλαγές και αναβαθμίσεις",
+        capChangesSub: "Πότε μια μονάδα άλλαξε επίπεδο ισχύος ή ενέργειας (αναβάθμιση, δοκιμή, υποβάθμιση): η εκτίμηση των τελευταίων 14 ημερών ξεφεύγει πάνω από 12% για 5 ημέρες. Οι πιο πρόσφατες φαίνονται «προς επιβεβαίωση».",
+        capChangesNone: "Δεν έχει ανιχνευτεί καμία αλλαγή επιπέδου.",
+        capChangeUp: "Άνοδος",
+        capChangeDown: "Πτώση",
+        capChangeMixed: "Μεικτή αλλαγή",
+        capChangeDip: "Επεισόδιο μειωμένης λειτουργίας",
+        capChangeSurge: "Επεισόδιο αυξημένης λειτουργίας",
+        capPending: "Προς επιβεβαίωση",
+        capChangePower: "Ισχύς",
+        capChangeEnergy: "Ενέργεια",
+        capChangeLowest: "χαμηλότερο σημείο: {p} MW, {e} MWh",
+        capUnitChangesTitle: "Αλλαγές αυτής της μονάδας",
+        capUnitNoChanges: "Καμία αλλαγή επιπέδου από την πρώτη λειτουργία.",
+        capUnitNoSeries: "Η μονάδα λειτουργεί λιγότερο από 14 ημέρες: δεν υπάρχει ακόμα πορεία.",
+        capSeriesMarker: "Αλλαγή",
         tipMcpLabel: "Τιμή MCP",
         tipHourValue: "Αξία ώρας",
         arbitrageChartTitle: "Ωριαία κίνηση BESS ανά μονάδα (MWh)",
@@ -249,7 +334,13 @@ const i18n = {
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
                 <li><strong class="text-slate-200">Revenue:</strong> Day-Ahead Market only, at the MCP. Balancing, ancillary services, charges and taxes are excluded. It is a gross estimate, not an accounting result.</li>
             </ul>
-        `,
+
+            <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="capacity" style="scroll-margin-top:8px">Capacity and duration</h3>
+            <ul class="list-disc pl-5 space-y-2 text-slate-400">
+                <li><strong class="text-slate-200">Estimated from SCADA:</strong> the power (MW) and the energy per cycle (MWh) of each unit are estimated from the hourly values of the last 30 days and recalculated every day. They are not the nameplate capacity.</li>
+                <li><strong class="text-slate-200">Class:</strong> 2h, 3h, 4h from the assured discharge (energy ÷ power), meaning a value reached at least 3 times. New units in commissioning are marked "little data" or "changing".</li>
+            </ul>
+`,
         modalBodyFull: `
             <p class="mb-1 text-slate-300">This Dashboard is an independent tool for monitoring battery energy storage (BESS) in the Greek market, built on open data. Figures are estimates and indications, not official statistics.</p>
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="all" style="scroll-margin-top:8px">All tabs</h3>
@@ -288,7 +379,18 @@ const i18n = {
                 <li><strong class="text-slate-200">Hour matching:</strong> with alignment on, SCADA hour h is valued at the price of hour h−1 (hour 1 uses hour 24 of the previous day). Without it, the same hour is used. The difference in total June–September P&amp;L is roughly 10%, indicatively.</li>
                 <li><strong class="text-slate-200">What is not included:</strong> network charges, taxes, operating and degradation costs, financing costs. P&amp;L is a gross estimate of energy value, not an accounting result.</li>
             </ul>
-            <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="limits" style="scroll-margin-top:8px">Limitations</h3>
+                        <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="capacity" style="scroll-margin-top:8px">Capacity and duration</h3>
+            <ul class="list-disc pl-5 space-y-2 text-slate-400">
+                <li><strong class="text-slate-200">Source:</strong> the hourly SCADA only. The ISP is not used: it is a schedule and does not show what actually happened.</li>
+                <li><strong class="text-slate-200">Cycles:</strong> the hours are split into charging and discharging phases, so that double cycles in a day, or a cycle that crosses midnight, are counted correctly. A cycle is valid when its discharge is 70–100% of its charge; the others, like 9 Sep with an RTE of 207%, are ignored.</li>
+                <li><strong class="text-slate-200">Assured value:</strong> the 3rd highest value of the last 30 days, that is a value reached at least three times. A single anomalous or test value does not change the estimate.</li>
+                <li><strong class="text-slate-200">Power and energy:</strong> power is the average of each hour (MWh per hour = MW); the instantaneous peak can be a little higher. Energy is the discharge at the meter (AC) per cycle and is about 10% below the nameplate because of losses. The charging energy of the cycle is shown too.</li>
+                <li><strong class="text-slate-200">Class:</strong> the whole-hour part of the duration (energy ÷ power), with a tolerance of 0.1 hour: 2.4 → 2h, 3.1 → 3h, 4.0 → 4h, 2.6 → 2h. A unit that has never run a full cycle looks smaller than it is: the estimate is a lower bound.</li>
+                <li><strong class="text-slate-200">Status:</strong> "little data" (fewer than 8 valid cycles, or first operation less than 21 days ago), "changing" (power or energy differs by more than 10% from the previous 30 days, e.g. commissioning) or "stable". The class of the first two is provisional.</li>
+                <li><strong class="text-slate-200">Changes and upgrades:</strong> every day the same estimate is made for the last 14 days. When it moves by more than 12% from the previous level for 5 days in a row, a change is recorded (e.g. from 2h to 3h, a doubling of power, a test that returns). If it holds for 2–4 days it shows as "to be confirmed". A dip that recovers is recorded as an episode. No company names are used: only the ADMIE unit codes.</li>
+                <li><strong class="text-slate-200">Records:</strong> simultaneous power and daily energy of the fleet since recording began (18 Jun 2026). Unit-days with discharge above 1.3 times the charge are not counted.</li>
+            </ul>
+<h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="limits" style="scroll-margin-top:8px">Limitations</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
                 <li><strong class="text-slate-200">Data:</strong> SCADA data is uncertified and may be revised. The ISP is a schedule.</li>
                 <li><strong class="text-slate-200">Clock changes:</strong> clock-change days (25 hours on 25/10, 23 hours in March) are handled specifically but have not yet been tested with real data.</li>
@@ -358,6 +460,74 @@ const i18n = {
         tipOtherSites: "Other sites",
         tipHint: "Click a unit in the table to see it alone.",
         tipShowAll: "Show all units",
+        tabCapacity: "Capacity & duration",
+        capTitle: "Power, energy and duration per unit",
+        capSub: "Estimated from the hourly SCADA of the last 30 days (to {d}). Recalculated every day. It is not the nameplate capacity.",
+        capEmpty: "There are no capacity estimates yet.",
+        capKpiPower: "Fleet power",
+        capKpiPowerSub: "sum of {n} units with an estimate",
+        capKpiEnergy: "Fleet energy",
+        capKpiEnergySub: "per cycle, assured",
+        capKpiDuration: "Average duration",
+        capKpiDurationSub: "energy ÷ power",
+        capKpiUnits: "Units",
+        capKpiUnitsSub: "stable {s} · changing {c} · little data {f}",
+        capThUnit: "Unit",
+        capThPower: "Power (MW)",
+        capThEnergy: "Energy (MWh)",
+        capThDuration: "Duration",
+        capThStatus: "Status",
+        capStatusStable: "Stable",
+        capStatusChanging: "Changing",
+        capStatusFew: "Little data",
+        capStatusTipStable: "The estimate did not change by more than 10% against the previous 30 days.",
+        capStatusTipChanging: "Power or energy changed by more than 10% against the previous 30 days (e.g. commissioning). The class is provisional.",
+        capStatusTipFew: "Fewer than 8 valid cycles, or first operation less than 21 days ago. The class is provisional.",
+        capProvisional: "provisional",
+        capFootnote: "Discharged energy at the meter (AC) per cycle, the value reached at least 3 times in the last 30 days. The class is the whole-hour part of the duration. It is a lower bound: a unit that has not discharged fully looks smaller.",
+        capMeasured: "From the data",
+        capFirstSeen: "First operation",
+        capCycles: "Valid cycles (30 days)",
+        capTrend: "Change against the previous 30 days",
+        capAnomalies: "Anomalous days (30 days)",
+        capChargeEnergy: "Charging energy of the cycle",
+        capFleetTitle: "Fleet: observed power and energy",
+        capFleetSub: "Sum of the estimates of each unit per week, only for units with enough cycles. The average duration shows whether the fleet grows more in energy or in power.",
+        capSeriesEnergy: "Energy (MWh)",
+        capSeriesPower: "Power (MW)",
+        capSeriesDuration: "Average duration (h)",
+        capWeek: "Week",
+        capUnitsWord: "units",
+        capUnitTitle: "Unit progression: {u}",
+        capUnitSub: "The estimate of the last 14 days, each day. Triangles mark changes of level. Tap a row of the table to change unit.",
+        capSeriesUnitPower: "Power (MW)",
+        capSeriesUnitEnergy: "Energy per cycle (MWh)",
+        capCyclesWord: "valid cycles",
+        capRecTitle: "Fleet records",
+        capRecSub: "Since recording began ({d}). Unit-days with discharge above 1.3 times the charge are not counted. Most records come from new units joining.",
+        capRecEventsTitle: "Latest records",
+        capNew: "New",
+        capRecFleetDisMw: "Highest simultaneous discharge",
+        capRecFleetChgMw: "Highest simultaneous charge",
+        capRecFleetDisMwh: "Highest daily discharge",
+        capRecFleetChgMwh: "Highest daily charge",
+        capRecPrev: "previous {v} on {d}",
+        capChangesTitle: "Changes and upgrades",
+        capChangesSub: "When a unit changed its power or energy level (upgrade, test, downgrade): the estimate of the last 14 days moves by more than 12% for 5 days. The most recent ones show as \"to be confirmed\".",
+        capChangesNone: "No change of level has been detected.",
+        capChangeUp: "Increase",
+        capChangeDown: "Decrease",
+        capChangeMixed: "Mixed change",
+        capChangeDip: "Episode of reduced operation",
+        capChangeSurge: "Episode of increased operation",
+        capPending: "To be confirmed",
+        capChangePower: "Power",
+        capChangeEnergy: "Energy",
+        capChangeLowest: "lowest point: {p} MW, {e} MWh",
+        capUnitChangesTitle: "Changes of this unit",
+        capUnitNoChanges: "No change of level since the first operation.",
+        capUnitNoSeries: "The unit has run for less than 14 days: there is no progression yet.",
+        capSeriesMarker: "Change",
         tipMcpLabel: "MCP price",
         tipHourValue: "Value of the hour",
         arbitrageChartTitle: "Hourly BESS Operation per Unit (MWh)",
@@ -384,7 +554,7 @@ function setLang(lang) {
 
     // Οθόνη φόρτωσης: τα βήματα 2…5 παίρνουν τα ονόματα των tabs, με τη σειρά τους
     const L = t.load;
-    const stepText = { 1: L.s1, 2: t.tabDaily, 3: t.tabMonthly, 4: t.tabSurplus, 5: t.tabArbitrage };
+    const stepText = { 1: L.s1, 2: t.tabDaily, 3: t.tabMonthly, 4: t.tabSurplus, 5: t.tabArbitrage, 6: t.tabCapacity };
     const loadIds = { loadTitle: L.title, loadGroup1: L.g1, loadGroup2: L.g2, loadReady: L.ready };
     Object.entries(loadIds).forEach(([id, txt]) => { const el = document.getElementById(id); if (el) el.textContent = txt; });
     document.querySelectorAll('.load-row').forEach(r => { const lb = r.querySelector('[data-load-label]'); if (lb) lb.textContent = stepText[r.dataset.step] || ''; });
@@ -413,6 +583,11 @@ function setLang(lang) {
     setT('tabBtnMonthly', t.tabMonthly);
     setT('tabBtnSurplus', t.tabSurplus);
     setT('tabBtnArbitrage', t.tabArbitrage);
+    setT('tabBtnCapacity', t.tabCapacity);
+    ['capTitle', 'capThUnit', 'capThPower', 'capThEnergy', 'capThDuration', 'capThStatus', 'capFleetTitle', 'capFleetSub', 'capRecEventsTitle', 'capRecTitle'].forEach(id => setT(id, t[id]));
+    setT('capUnitTitle', t.capUnitTitle.replace('{u}', '–'));   // η καρτέλα το ξαναγράφει με το όνομα της επιλεγμένης μονάδας
+    setT('capUnitSub', t.capUnitSub);
+    setT('capChangesTitle', t.capChangesTitle); setT('capChangesSub', t.capChangesSub);
     
     setT('dischargeTitle', t.dischargeTitle);
     setT('dischargeTitle', t.dischargeTitle);
@@ -478,6 +653,7 @@ function setLang(lang) {
     if (typeof updateMonthlyDashboard === "function") updateMonthlyDashboard();
     if (typeof updateSurplusDashboard === "function") updateSurplusDashboard();
     if (typeof renderArbitrageTab === "function") renderArbitrageTab(); 
+    if (typeof renderCapacityTab === "function") renderCapacityTab();
 }
 
 function parseNum(val) {

@@ -59,6 +59,10 @@
                     <div class="flex justify-between items-center mb-1"><span class="text-xs text-slate-300" data-load-label></span><svg class="w-3.5 h-3.5 text-acc-400 opacity-0 transition-opacity duration-300" data-load-ck fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg></div>
                     <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden"><div class="bg-lime-500 h-full rounded-full w-0 ease-out" style="transition-property: width, background-color; transition-duration: 300ms;" data-load-bar></div></div>
                 </div>
+                <div class="load-row opacity-50 transition-opacity duration-300" data-step="6">
+                    <div class="flex justify-between items-center mb-1"><span class="text-xs text-slate-300" data-load-label></span><svg class="w-3.5 h-3.5 text-acc-400 opacity-0 transition-opacity duration-300" data-load-ck fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg></div>
+                    <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden"><div class="bg-lime-500 h-full rounded-full w-0 ease-out" style="transition-property: width, background-color; transition-duration: 300ms;" data-load-bar></div></div>
+                </div>
             </div>
             <div class="opacity-0 transition-all duration-500 transform translate-y-2 flex items-center justify-center p-3 mt-1 rounded-xl border border-acc-500/30 bg-acc-500/10 gap-2" id="loadRowFinal">
                 <svg class="w-5 h-5 text-acc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -130,11 +134,12 @@
         </header>
 
         <!-- VIEWS / SECTIONS NAVIGATION -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-0 md:border-b md:border-slate-800 mt-3 md:mt-2">
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-0 md:border-b md:border-slate-800 mt-3 md:mt-2">
   <button id="tabBtnDaily" onclick="switchTab('daily')" role="tab" class="tab-btn">Daily Analytics</button>
   <button id="tabBtnMonthly" onclick="switchTab('monthly')" role="tab" class="tab-btn">Monthly Impact</button>
   <button id="tabBtnSurplus" onclick="switchTab('surplus')" role="tab" class="tab-btn">Surplus &amp; Flexibility</button>
   <button id="tabBtnArbitrage" onclick="switchTab('arbitrage')" role="tab" class="tab-btn">Arbitrage P&amp;L</button>
+  <button id="tabBtnCapacity" onclick="switchTab('capacity')" role="tab" class="tab-btn col-span-2 md:col-span-1">Capacity &amp; duration</button>
   </div>
 
         <!-- VIEW 1: DAILY ANALYTICS -->
@@ -400,6 +405,62 @@
                 </div>
             </div>
         </div>
+
+            <!-- ==========================================
+                 VIEW 5: CAPACITY & DURATION (εκτίμηση από SCADA, D56–D61)
+                 ========================================== -->
+            <div id="viewCapacity" class="space-y-6 hidden">
+                <div class="flex justify-end -mb-3"><button type="button" onclick="openMethodologyAt('capacity')" class="meth-link text-xs text-slate-400 hover:text-acc-300 transition-colors">Methodology →</button></div>
+
+                <div class="bg-slate-800/40 p-5 md:p-6 rounded-xl border border-slate-700">
+                    <h3 id="capTitle" class="text-lg font-semibold text-slate-200 mb-1">Capacity and duration per unit</h3>
+                    <p id="capSub" class="text-xs text-slate-400 mb-4"></p>
+                    <p id="capEmpty" class="hidden text-sm text-slate-400 py-6 text-center"></p>
+                    <div id="capBody">
+                        <div id="capKpis" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5"></div>
+                        <table class="w-full table-fixed md:table-auto text-sm text-slate-300">
+                            <thead class="bg-slate-900 text-slate-400 text-xs">
+                                <tr>
+                                    <th class="p-2 md:p-3 text-left w-[31%] md:w-auto"><span id="capThUnit">Unit</span></th>
+                                    <th class="p-2 md:p-3 text-right w-[17%] md:w-auto"><span id="capThPower">Power (MW)</span></th>
+                                    <th class="p-2 md:p-3 text-right w-[22%] md:w-auto"><span id="capThEnergy">Energy (MWh)</span></th>
+                                    <th class="p-2 md:p-3 text-right w-[30%] md:w-auto"><span id="capThDuration">Duration</span></th>
+                                    <th class="p-3 text-left hidden md:table-cell"><span id="capThStatus">Status</span></th>
+                                </tr>
+                            </thead>
+                            <tbody id="capTbody" class="divide-y divide-slate-700/60"></tbody>
+                        </table>
+                        <p id="capFootnote" class="text-[11px] text-slate-500 mt-3"></p>
+                    </div>
+                </div>
+
+                <div id="capChanges" class="bg-slate-800/40 p-5 md:p-6 rounded-xl border border-slate-700">
+                    <h3 id="capChangesTitle" class="text-lg font-semibold text-slate-200 mb-1">Changes and upgrades</h3>
+                    <p id="capChangesSub" class="text-xs text-slate-400 mb-3"></p>
+                    <ul id="capChangeList" class="divide-y divide-slate-700/50"></ul>
+                </div>
+
+                <div id="capCharts" class="space-y-6">
+                    <div class="bg-slate-800/40 p-5 md:p-6 rounded-xl border border-slate-700">
+                        <h3 id="capFleetTitle" class="text-lg font-semibold text-slate-200 mb-1">Fleet: observed power and energy</h3>
+                        <p id="capFleetSub" class="text-xs text-slate-400 mb-4"></p>
+                        <div class="relative h-72"><canvas id="capFleetChart"></canvas></div>
+                    </div>
+                    <div class="bg-slate-800/40 p-5 md:p-6 rounded-xl border border-slate-700">
+                        <h3 id="capUnitTitle" class="text-lg font-semibold text-slate-200 mb-1">Unit progression</h3>
+                        <p id="capUnitSub" class="text-xs text-slate-400 mb-4"></p>
+                        <div class="relative h-72"><canvas id="capUnitChart"></canvas></div>
+                    </div>
+                </div>
+
+                <div id="capRecords" class="bg-slate-800/40 p-5 md:p-6 rounded-xl border border-slate-700">
+                    <h3 id="capRecTitle" class="text-lg font-semibold text-slate-200 mb-1">Fleet records</h3>
+                    <p id="capRecSub" class="text-xs text-slate-400 mb-4"></p>
+                    <div id="capRecCards" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5"></div>
+                    <h4 id="capRecEventsTitle" class="text-sm font-semibold text-slate-300 mb-2">Latest records</h4>
+                    <ul id="capRecEvents" class="text-sm text-slate-300 divide-y divide-slate-700/50"></ul>
+                </div>
+            </div>
 
     </div>
 

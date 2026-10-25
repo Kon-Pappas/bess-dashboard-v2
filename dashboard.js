@@ -27,7 +27,10 @@ const COLORS = {
     residual:     '#e879f9',  // residual surplus (ISP): φούξια
     offSurplus:   '#64748b',  // φόρτιση εκτός ωρών πλεονάσματος (arbitrage): γκρι
     mcp:          '#f1f5f9',  // τιμή MCP: ουδέτερη γραμμή αναφοράς
-    mcpThreshold: '#94a3b8'   // όριο 5 €/MWh
+    mcpThreshold: '#94a3b8',  // όριο 5 €/MWh
+    fleetPower:   '#e2e8f0',  // ισχύς στόλου (Capacity tab): ουδέτερη γραμμή
+    fleetEnergy:  '#a78bfa',  // ενέργεια στόλου: το χρώμα της εκφόρτισης, γιατί μετριέται στην εκφόρτιση
+    duration:     '#94a3b8'   // μέση διάρκεια
 };
 // Ετικέτα γραφήματος στη γλώσσα της σελίδας (κλειδιά lbl… του i18n στο data.js)
 function L(key, fallback) {
@@ -416,6 +419,8 @@ function updatePicker() {
         label.textContent = monthTab ? t.monthLabel : t.dateLabel;
         label.setAttribute('for', monthTab ? 'monthSelect' : 'dateSelect');
     }
+    const box = document.getElementById('pickerBox');
+    if (box) box.classList.toggle('hidden', currentTab === 'capacity');   // το Capacity δείχνει την τρέχουσα εκτίμηση, χωρίς επιλογή ημέρας
     const dSel = document.getElementById('dateSelect'), mSel = document.getElementById('monthSelect');
     if (dSel) dSel.classList.toggle('hidden', monthTab);
     if (mSel) mSel.classList.toggle('hidden', !monthTab);
@@ -464,14 +469,14 @@ var currentTab = 'daily';
 const TAB_BASE = 'tab-btn flex items-center justify-center text-xs md:text-base font-bold rounded-lg md:rounded-none h-12 w-full transition whitespace-nowrap px-2 border md:border-0 md:border-b-2 cursor-pointer ';
 const TAB_ON = 'bg-acc-400 text-slate-900 border-acc-400 md:bg-transparent md:text-acc-400 md:border-b-acc-400';
 const TAB_OFF = 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white md:bg-transparent md:border-transparent md:hover:text-acc-200';
-const TABS = { daily: ['tabBtnDaily', 'viewDaily'], monthly: ['tabBtnMonthly', 'viewMonthly'], surplus: ['tabBtnSurplus', 'viewSurplus'], arbitrage: ['tabBtnArbitrage', 'viewArbitrage'] };
+const TABS = { daily: ['tabBtnDaily', 'viewDaily'], monthly: ['tabBtnMonthly', 'viewMonthly'], surplus: ['tabBtnSurplus', 'viewSurplus'], arbitrage: ['tabBtnArbitrage', 'viewArbitrage'], capacity: ['tabBtnCapacity', 'viewCapacity'] };
 
 function paintTabs() {
     hideChartTip();
     Object.entries(TABS).forEach(([key, [btn, view]]) => {
         const on = key === currentTab;
         const b = document.getElementById(btn);
-        b.className = TAB_BASE + (on ? TAB_ON : TAB_OFF);
+        b.className = TAB_BASE + (on ? TAB_ON : TAB_OFF) + (key === 'capacity' ? ' col-span-2 md:col-span-1' : '');   // το πέμπτο tab πιάνει όλο το πλάτος στο κινητό
         b.setAttribute('aria-selected', on ? 'true' : 'false');
         document.getElementById(view).classList.toggle('hidden', !on);
     });
@@ -487,6 +492,7 @@ function switchTab(tabName) {
     else if (tabName === 'monthly') updateMonthlyDashboard();
     else if (tabName === 'surplus') updateSurplusDashboard();
     else if (tabName === 'arbitrage') renderArbitrageTab();
+    else if (tabName === 'capacity') renderCapacityTab();
 
     updateStatusBadge();
 }
@@ -1617,6 +1623,246 @@ function populateSelectors() {
     updatePicker();
 }
 
+// ==========================================
+// 5. CAPACITY & DURATION (D56–D61)
+// Οι εκτιμήσεις υπολογίζονται κάθε μέρα από το capacity.py (data/capacity.json)· η σελίδα μόνο τις δείχνει.
+// Μόνο κωδικοί ΑΔΜΗΕ: δεν χρησιμοποιούνται ονόματα εταιρειών (D63).
+// ==========================================
+let capacityData = null, capSelectedUnit = null, capOpenUnit = null, capFleetChartInst = null, capUnitChartInst = null;
+
+function applyCapacity(json) {
+    capacityData = (json && Array.isArray(json.units) && json.units.length) ? json : null;
+}
+const classLabel = (n) => (n === null || n === undefined) ? '–' : (currentLang === 'el' ? `${n}ωρη` : `${n}h`);
+const fillTpl = (txt, vars) => String(txt).replace(/\{(\w+)\}/g, (m, k) => (vars[k] !== undefined ? vars[k] : m));
+const capColour = (unit) => { const reg = getUnitRegistry(); return reg.unitMode ? unitColour(unit, reg) : siteColour(reg.siteOf(unit), reg); };
+const STATUS_TEXT_CLASS = { stable: 'text-lime-400', changing: 'text-orange-400', few_data: 'text-slate-400' };
+const STATUS_DOT_CLASS = { stable: 'bg-lime-400', changing: 'bg-orange-400', few_data: 'bg-slate-500' };
+const statusText = (st) => { const T = TT(); return st === 'stable' ? T.capStatusStable : st === 'changing' ? T.capStatusChanging : T.capStatusFew; };
+const statusTip = (st) => { const T = TT(); return st === 'stable' ? T.capStatusTipStable : st === 'changing' ? T.capStatusTipChanging : T.capStatusTipFew; };
+const capSortedUnits = () => [...capacityData.units].sort((a, b) => (b.energy_mwh || -1) - (a.energy_mwh || -1) || a.unit.localeCompare(b.unit));
+const weekEnd = (w) => { const d = new Date(w + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + 6); return d.toISOString().substring(0, 10); };
+const weekLabel = (w) => { const d = new Date(w + 'T00:00:00Z'); return pad2(d.getUTCDate()) + '/' + pad2(d.getUTCMonth() + 1); };
+
+const capYear = () => String((capacityData && capacityData.as_of) || '').substring(0, 4);
+const capDay = (iso) => fmtDay(iso, iso.substring(0, 4) === capYear());
+const CHANGE_CLASS = { up: 'text-lime-400', down: 'text-orange-400', mixed: 'text-slate-300', dip: 'text-orange-400', surge: 'text-slate-300' };
+const changeKindText = (k) => { const T = TT(); return { up: T.capChangeUp, down: T.capChangeDown, mixed: T.capChangeMixed, dip: T.capChangeDip, surge: T.capChangeSurge }[k] || k; };
+function changeDetail(c) {
+    const T = TT(), parts = [];
+    if (c.power) parts.push(`${T.capChangePower}: ${fmtN(c.power.from)} → ${fmtN(c.power.to)} MW (${fmtN(c.power.pct, 0, true)}%)`);
+    if (c.energy) parts.push(`${T.capChangeEnergy}: ${fmtN(c.energy.from)} → ${fmtN(c.energy.to)} MWh (${fmtN(c.energy.pct, 0, true)}%)`);
+    if (c.kind === 'dip' || c.kind === 'surge') parts.push(fillTpl(T.capChangeLowest, { p: fmtN(c.extreme_power), e: fmtN(c.extreme_energy) }));
+    else if (c.duration_from && c.duration_to) parts.push(`${fmtN(c.duration_from, 2)} → ${fmtN(c.duration_to, 2)} h`);
+    return parts.join(' · ');
+}
+function changeHtml(c, withUnit) {
+    const T = TT();
+    const episode = c.kind === 'dip' || c.kind === 'surge';
+    const when = episode ? `${capDay(c.date)} – ${capDay(c.date_to)}` : capDay(c.since || c.date);
+    const cls = (c.class_from && c.class_to && c.class_from !== c.class_to)
+        ? `<span class="rounded-full border border-acc-400/60 px-2 py-0.5 text-[11px] font-bold text-acc-300">${escapeHtml(classLabel(c.class_from))} → ${escapeHtml(classLabel(c.class_to))}</span>` : '';
+    const pend = c.confirmed ? '' : `<span class="rounded border border-orange-500/40 bg-orange-500/10 px-1.5 py-0.5 text-[10px] font-bold text-orange-400">${escapeHtml(T.capPending)}</span>`;
+    const unit = withUnit ? `<button type="button" data-cap-unit="${escapeHtml(c.unit)}" class="font-bold text-slate-100 hover:text-acc-300">${escapeHtml(c.unit)}</button>` : '';
+    return `<li class="py-2"><div class="flex flex-wrap items-baseline gap-x-2 gap-y-1"><span class="text-slate-400 tabular-nums text-sm">${escapeHtml(when)}</span>${unit}<span class="text-xs font-semibold ${CHANGE_CLASS[c.kind] || 'text-slate-300'}">${escapeHtml(changeKindText(c.kind))}</span>${cls}${pend}</div><div class="text-xs text-slate-300 mt-0.5">${escapeHtml(changeDetail(c))}</div></li>`;
+}
+
+function capDetailHtml(u) {
+    const T = TT();
+    const row = (k, v) => `<div class="flex justify-between gap-4 py-0.5"><span class="text-slate-400">${escapeHtml(k)}</span><span class="text-slate-200 text-right">${v}</span></div>`;
+    const pctTxt = (v) => (v === null || v === undefined) ? '–' : fmtN(v, 0, true) + '%';
+    const left = row(T.capChargeEnergy, u.energy_charge_mwh ? fmtN(u.energy_charge_mwh) + ' MWh' : '–')
+        + row(T.capFirstSeen, capDay(u.first_seen))
+        + row(T.capCycles, `${u.valid_30} / ${u.cycles_30}`)
+        + row(T.capTrend, `${pctTxt(u.trend_power_pct)} MW · ${pctTxt(u.trend_energy_pct)} MWh`)
+        + row(T.capAnomalies, String(u.anomaly_days_30));
+    const ch = (u.changes || []).slice().reverse();
+    const right = `<div class="text-xs font-semibold text-slate-300 mb-1">${escapeHtml(T.capUnitChangesTitle)}</div>`
+        + (ch.length ? `<ul class="divide-y divide-slate-700/40">${ch.map(c => changeHtml(c, false)).join('')}</ul>` : `<p class="text-slate-500">${escapeHtml(T.capUnitNoChanges)}</p>`);
+    return `<div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 text-xs"><div><div class="text-xs font-semibold text-slate-300 mb-1">${escapeHtml(T.capMeasured)}</div>${left}</div><div>${right}</div></div>`;
+}
+
+function renderCapacityChanges() {
+    const T = TT(), ul = document.getElementById('capChangeList');
+    if (!ul || !capacityData) return;
+    const list = (capacityData.changes && capacityData.changes.latest) || [];
+    ul.innerHTML = list.length ? list.map(c => changeHtml(c, true)).join('') : `<li class="py-3 text-sm text-slate-500">${escapeHtml(T.capChangesNone)}</li>`;
+    ul.querySelectorAll('[data-cap-unit]').forEach(b => b.addEventListener('click', () => { capOpenUnit = null; capSelect(b.dataset.capUnit); const t = document.getElementById('capUnitChart'); if (t && t.scrollIntoView) t.scrollIntoView({ behavior: 'smooth', block: 'center' }); }));
+}
+
+function renderCapacityTable() {
+    const T = TT(), tb = document.getElementById('capTbody');
+    if (!tb || !capacityData) return;
+    tb.innerHTML = '';
+    capSortedUnits().forEach(u => {
+        const prov = u.status !== 'stable', hasEst = !!(u.energy_mwh && u.power_mw);
+        const badge = u.class_h
+            ? `<span class="inline-block rounded-full border ${prov ? 'border-dashed border-slate-500 text-slate-300' : 'border-acc-400/60 text-acc-300'} px-2 py-0.5 text-[11px] font-bold"${prov ? ` title="${escapeHtml(T.capProvisional)}"` : ''}>${escapeHtml(classLabel(u.class_h))}${prov ? '*' : ''}</span>`
+            : '<span class="text-slate-500">–</span>';
+        const tr = document.createElement('tr');
+        tr.className = 'cap-row cursor-pointer hover:bg-slate-700/40 transition-colors' + (u.unit === capSelectedUnit ? ' bg-slate-700/30' : '') + (u.status === 'few_data' ? ' text-slate-400' : '');
+        tr.dataset.unit = u.unit;
+        tr.innerHTML =
+            `<td class="p-2 md:p-3 font-bold text-slate-100 whitespace-nowrap"><span class="inline-block w-2.5 h-2.5 rounded-sm mr-1.5 align-middle" style="background:${capColour(u.unit)}"></span>${escapeHtml(u.unit)}${u.status !== 'stable' ? `<div class="md:hidden text-[10px] font-semibold ${STATUS_TEXT_CLASS[u.status]} leading-tight mt-0.5">${escapeHtml(statusText(u.status))}</div>` : ''}</td>` +
+            `<td class="p-2 md:p-3 text-right">${u.power_mw ? fmtN(u.power_mw) : '–'}</td>` +
+            `<td class="p-2 md:p-3 text-right">${hasEst || u.energy_mwh ? fmtN(u.energy_mwh) : '–'}</td>` +
+            `<td class="p-2 md:p-3 text-right">${badge}<div class="text-[11px] text-slate-400 mt-0.5">${u.duration_h ? fmtN(u.duration_h, 2) + ' h' : '–'}</div></td>` +
+            `<td class="p-3 hidden md:table-cell"><span class="${STATUS_TEXT_CLASS[u.status]} text-xs font-semibold" title="${escapeHtml(statusTip(u.status))}">● ${escapeHtml(statusText(u.status))}</span></td>`;
+        const detail = document.createElement('tr');
+        detail.className = 'cap-detail bg-slate-800/30' + (capOpenUnit === u.unit ? '' : ' hidden');
+        detail.innerHTML = `<td colspan="5" class="p-3 md:p-4">${capDetailHtml(u)}</td>`;
+        tr.onclick = () => capSelect(u.unit);
+        tb.appendChild(tr); tb.appendChild(detail);
+    });
+}
+
+function capSelect(unit) {
+    capOpenUnit = (capOpenUnit === unit) ? null : unit;
+    capSelectedUnit = unit;
+    renderCapacityTable();
+    renderCapacityUnitChart();
+}
+
+function renderCapacityKpis() {
+    const T = TT(), units = capSortedUnits(), box = document.getElementById('capKpis');
+    if (!box) return;
+    const est = units.filter(u => u.power_mw && u.energy_mwh);
+    const mw = est.reduce((a, u) => a + u.power_mw, 0), mwh = est.reduce((a, u) => a + u.energy_mwh, 0);
+    const cnt = (st) => units.filter(u => u.status === st).length;
+    const tile = (label, value, unit, sub) => `<div class="bg-slate-900/50 border border-slate-700/60 rounded-lg p-3"><div class="text-xs text-slate-400">${escapeHtml(label)}</div><div class="text-xl font-bold text-slate-100 mt-0.5">${value}${unit ? ` <span class="text-xs font-normal text-slate-500">${escapeHtml(unit)}</span>` : ''}</div><div class="text-[11px] text-slate-500 mt-0.5">${escapeHtml(sub)}</div></div>`;
+    box.innerHTML = tile(T.capKpiPower, fmtN(mw), 'MW', fillTpl(T.capKpiPowerSub, { n: est.length }))
+        + tile(T.capKpiEnergy, fmtN(mwh), 'MWh', T.capKpiEnergySub)
+        + tile(T.capKpiDuration, mw ? fmtN(mwh / mw, 2) : '–', 'h', T.capKpiDurationSub)
+        + tile(T.capKpiUnits, String(units.length), '', fillTpl(T.capKpiUnitsSub, { s: cnt('stable'), c: cnt('changing'), f: cnt('few_data') }));
+}
+
+function renderCapacityFleetChart() {
+    const T = TT(), cv = document.getElementById('capFleetChart');
+    if (!cv || !capacityData) return;
+    const wk = (capacityData.fleet && capacityData.fleet.weekly) || [];
+    if (capFleetChartInst) capFleetChartInst.destroy();
+    capFleetChartInst = new Chart(cv.getContext('2d'), {
+        type: 'line',
+        data: { labels: wk.map(w => weekLabel(w.w)), datasets: [
+            { label: T.capSeriesEnergy, data: wk.map(w => w.mwh), borderColor: COLORS.fleetEnergy, backgroundColor: rgba(COLORS.fleetEnergy, 0.15), fill: true, tension: 0.25, pointRadius: 2, yAxisID: 'y' },
+            { label: T.capSeriesPower, data: wk.map(w => w.mw), borderColor: COLORS.fleetPower, tension: 0.25, pointRadius: 2, yAxisID: 'y' },
+            { label: T.capSeriesDuration, data: wk.map(w => w.h), borderColor: COLORS.duration, borderDash: [5, 4], tension: 0.25, pointRadius: 0, yAxisID: 'y2' }
+        ] },
+        options: {
+            responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+            plugins: { legend: { position: 'top' }, tooltip: tipOff(i => {
+                const w = wk[i]; if (!w) return '';
+                return tipHead(`${fmtDay(w.w)} – ${fmtDay(weekEnd(w.w))}`, `${w.units} ${T.capUnitsWord}`)
+                    + tipRow(T.capSeriesEnergy.replace(/ \(MWh\)$/, ''), fmtN(w.mwh), COLORS.fleetEnergy, { strong: true })
+                    + tipRow(T.capSeriesPower.replace(/ \(MW\)$/, ''), fmtN(w.mw), COLORS.fleetPower, { unit: 'MW' })
+                    + tipRule + tipRow(T.capKpiDuration, fmtN(w.h, 2), COLORS.duration, { unit: 'h' });
+            }) },
+            scales: {
+                x: { grid: { display: false }, ticks: { autoSkip: true, maxRotation: 45, maxTicksLimit: isPhone() ? 7 : 14 } },
+                y: { beginAtZero: true, grid: { color: '#334155' }, ticks: yTicks, title: { display: true, text: 'MW / MWh' } },
+                y2: { position: 'right', min: 1, max: 4, grid: { display: false }, ticks: { callback: (v) => fmtN(v, 1) }, title: { display: true, text: 'h' } }
+            }
+        }
+    });
+}
+
+function renderCapacityUnitChart() {
+    const T = TT(), cv = document.getElementById('capUnitChart');
+    if (!cv || !capacityData) return;
+    const u = capacityData.units.find(x => x.unit === capSelectedUnit) || capSortedUnits()[0];
+    if (!u) return;
+    capSelectedUnit = u.unit;
+    document.getElementById('capUnitTitle').textContent = `${fillTpl(T.capUnitTitle, { u: u.unit })} · ${statusText(u.status)}`;
+    const sr = u.series || {};
+    if (capUnitChartInst) { capUnitChartInst.destroy(); capUnitChartInst = null; }
+    if (!sr.start || !sr.e || !sr.e.length) { document.getElementById('capUnitSub').textContent = T.capUnitNoSeries; return; }
+    document.getElementById('capUnitSub').textContent = T.capUnitSub;
+    const start = new Date(sr.start + 'T00:00:00Z'), n = sr.e.length;
+    const isoAt = (i) => { const d = new Date(start.getTime() + i * 86400000); return d.toISOString().substring(0, 10); };
+    const labels = Array.from({ length: n }, (_, i) => { const d = new Date(start.getTime() + i * 86400000); return pad2(d.getUTCDate()) + '/' + pad2(d.getUTCMonth() + 1); });
+    // σημάδια: η αλλαγή στη θέση της πρώτης ημέρας ανίχνευσης (επεισόδια: στην αρχή τους)
+    const marks = new Array(n).fill(null), markInfo = {};
+    (u.changes || []).forEach(c => {
+        const i = Math.round((new Date(c.date + 'T00:00:00Z').getTime() - start.getTime()) / 86400000);
+        if (i >= 0 && i < n) { marks[i] = sr.e[i] || sr.p[i]; markInfo[i] = c; }
+    });
+    capUnitChartInst = new Chart(cv.getContext('2d'), {
+        type: 'line',
+        data: { labels, datasets: [
+            { label: T.capSeriesUnitEnergy, data: sr.e, borderColor: COLORS.fleetEnergy, backgroundColor: rgba(COLORS.fleetEnergy, 0.15), fill: true, spanGaps: true, tension: 0, pointRadius: 0, borderWidth: 2 },
+            { label: T.capSeriesUnitPower, data: sr.p, borderColor: COLORS.fleetPower, spanGaps: true, tension: 0, pointRadius: 0, borderWidth: 2 },
+            { label: T.capSeriesMarker, data: marks, showLine: false, pointStyle: 'triangle', pointRadius: 7, pointHoverRadius: 8, borderColor: '#f1f5f9', backgroundColor: '#0f172a', borderWidth: 2 }
+        ] },
+        options: {
+            responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+            plugins: { legend: { position: 'top' }, tooltip: tipOff(i => {
+                const c = markInfo[i];
+                let html = tipHead(capDay(isoAt(i)), u.unit)
+                    + tipRow(T.capSeriesUnitEnergy.replace(/ \(MWh\)$/, ''), sr.e[i] ? fmtN(sr.e[i]) : '–', COLORS.fleetEnergy, { strong: true, unit: 'MWh' })
+                    + tipRow(T.capSeriesUnitPower.replace(/ \(MW\)$/, ''), sr.p[i] ? fmtN(sr.p[i]) : '–', COLORS.fleetPower, { unit: 'MW' });
+                if (c) html += tipRule + `<div class="text-[13px] font-semibold ${CHANGE_CLASS[c.kind] || 'text-slate-200'}">${escapeHtml(changeKindText(c.kind))}${c.confirmed ? '' : ' · ' + escapeHtml(T.capPending)}</div><div class="text-[11px] text-slate-300 mt-0.5">${escapeHtml(changeDetail(c))}</div>`
+                    + ((c.class_from && c.class_to && c.class_from !== c.class_to) ? `<div class="text-[11px] text-acc-300 mt-0.5">${escapeHtml(classLabel(c.class_from))} → ${escapeHtml(classLabel(c.class_to))}</div>` : '');
+                return html;
+            }) },
+            scales: {
+                x: { grid: { display: false }, ticks: { autoSkip: true, maxRotation: 45, maxTicksLimit: isPhone() ? 7 : 14 } },
+                y: { beginAtZero: true, grid: { color: '#334155' }, ticks: yTicks, title: { display: true, text: 'MW / MWh' } }
+            }
+        }
+    });
+}
+
+function renderCapacityRecords() {
+    const T = TT(), c = capacityData, rec = c && c.records, cards = document.getElementById('capRecCards'), ev = document.getElementById('capRecEvents');
+    if (!rec || !cards || !ev) return;
+    const first = c.data_from || null;
+    document.getElementById('capRecSub').textContent = fillTpl(T.capRecSub, { d: first ? fmtDay(first) : '–' });
+    const META = {
+        fleet_dis_mw: [T.capRecFleetDisMw, 'MW', true], fleet_chg_mw: [T.capRecFleetChgMw, 'MW', true],
+        fleet_dis_mwh: [T.capRecFleetDisMwh, 'MWh', false], fleet_chg_mwh: [T.capRecFleetChgMwh, 'MWh', false]
+    };
+    const asOf = new Date((c.as_of || '1970-01-01') + 'T00:00:00Z').getTime();
+    const isNew = (d) => (asOf - new Date(d + 'T00:00:00Z').getTime()) / 86400000 <= 6;
+    cards.innerHTML = rec.cards.map(r => {
+        const m = META[r.metric]; if (!m) return '';
+        const when = fmtDay(r.date) + (m[2] && r.hour ? ` · ${hourRange(r.hour)}` : '');
+        const badge = isNew(r.date) ? `<span class="ml-1.5 rounded bg-lime-500/15 border border-lime-500/30 px-1.5 py-0.5 text-[10px] font-bold text-lime-400">${escapeHtml(T.capNew)}</span>` : '';
+        return `<div class="bg-slate-900/50 border border-slate-700/60 rounded-lg p-3"><div class="text-xs text-slate-400">${escapeHtml(m[0])}</div><div class="text-xl font-bold text-slate-100 mt-0.5">${fmtN(r.value)} <span class="text-xs font-normal text-slate-500">${m[1]}</span></div><div class="text-[11px] text-slate-500 mt-0.5">${escapeHtml(when)}${badge}</div></div>`;
+    }).join('');
+    const sameYear = rec.events.every(e => e.date.substring(0, 4) === String(c.as_of).substring(0, 4));
+    const dd = (iso) => fmtDay(iso, sameYear);
+    ev.innerHTML = rec.events.slice(0, 10).map(e => {
+        const m = META[e.metric]; if (!m) return '';
+        const prev = e.prev ? ` <span class="text-slate-500">(${escapeHtml(fillTpl(T.capRecPrev, { v: fmtN(e.prev), d: dd(e.prev_date) }))})</span>` : '';
+        return `<li class="py-1.5 flex flex-wrap items-baseline gap-x-2"><span class="text-slate-400 tabular-nums shrink-0">${escapeHtml(dd(e.date))}</span><span>${escapeHtml(m[0])}: <strong class="text-slate-100">${fmtN(e.value)} ${m[1]}</strong>${prev}</span></li>`;
+    }).join('');
+}
+
+function renderCapacityTab() {
+    const T = TT(), body = document.getElementById('capBody');
+    if (!body) return;
+    hideChartTip();
+    const empty = document.getElementById('capEmpty'), charts = document.getElementById('capCharts'), rec = document.getElementById('capRecords');
+    if (!capacityData) {
+        empty.textContent = T.capEmpty; empty.classList.remove('hidden');
+        [body, charts, rec, document.getElementById('capChanges')].forEach(el => { if (el) el.classList.add('hidden'); });
+        document.getElementById('capSub').textContent = '';
+        return;
+    }
+    const chg = document.getElementById('capChanges');
+    if (chg) chg.classList.remove('hidden');
+    empty.classList.add('hidden'); [body, charts, rec].forEach(el => el.classList.remove('hidden'));
+    if (!capSelectedUnit || !capacityData.units.some(u => u.unit === capSelectedUnit)) capSelectedUnit = capSortedUnits()[0].unit;
+    document.getElementById('capSub').textContent = fillTpl(T.capSub, { d: fmtDay(capacityData.as_of) });
+    document.getElementById('capFootnote').textContent = T.capFootnote;
+    renderCapacityKpis();
+    renderCapacityTable();
+    renderCapacityChanges();
+    renderCapacityFleetChart();
+    renderCapacityUnitChart();
+    renderCapacityRecords();
+}
+
 async function boot() {
     applyChartDefaults();
     // Γλώσσα (kp_lang) και κουμπιά GR | EN
@@ -1627,12 +1873,14 @@ async function boot() {
         const t0 = Date.now();
         const files = [
             getJSON('data/meta.json', true).catch((e) => { console.warn('meta.json', e); return null; }),   // όχι κρίσιμο
-            getJSON(API_URL, true)
+            getJSON(API_URL, true),
+            getJSON('data/capacity.json', true).catch((e) => { console.warn('capacity.json', e); return null; })    // όχι κρίσιμο: το tab δείχνει «δεν υπάρχουν εκτιμήσεις»
         ];
         let done = 0;
-        const [meta, json] = await Promise.all(files.map((p) => p.then((v) => { loadSet(1, Math.round(++done / files.length * 100)); return v; })));
+        const [meta, json, capJson] = await Promise.all(files.map((p) => p.then((v) => { loadSet(1, Math.round(++done / files.length * 100)); return v; })));
         if (!json || !Array.isArray(json.isp) || json.isp.length === 0) throw new Error('historical.json is empty');
         applyData(json);
+        applyCapacity(capJson);
         metaData = meta;
         updateHeader();
         await pause(Math.max(0, LOAD_MIN_READ - (Date.now() - t0)));
@@ -1645,6 +1893,7 @@ async function boot() {
         await loadStep(3, async () => { updateMonthlyDashboard(); });
         await loadStep(4, async () => { updateSurplusDashboard(); });
         await loadStep(5, async () => { renderArbitrageTab(); });
+        await loadStep(6, async () => { renderCapacityTab(); });
 
         document.getElementById('mainSpinner').classList.add('hidden');
         document.getElementById('loadRowFinal').classList.remove('opacity-0', 'translate-y-2');
