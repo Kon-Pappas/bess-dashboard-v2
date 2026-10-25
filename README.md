@@ -17,6 +17,8 @@ Public dashboard of battery energy storage (BESS) in the Greek electricity marke
 
 The *Methodology & Assumptions* button opens a short and a detailed version of the assumptions behind every tab.
 
+**Mobile layout (below 768 px).** One secondary box (date or month with the completeness badge; methodology and language) with a darker background, above the main tabs, which are lighter and sit in a 3 + 2 grid; no horizontal scroll; an up-arrow button returns to the top. The desktop layout is separate and unchanged. Rules and measurements: `docs/DECISIONS.md` D71–D74.
+
 ## Data sources
 
 - **IPTO / ADMIE**: ISP results (scheduled) and System Realization SCADA (actual operation, files marked by IPTO as uncertified), daily files. Only BESS units on the Transmission System; units on the Distribution Network (HEDNO) are not included.

@@ -477,7 +477,7 @@ function updateStatusBadge() {
 // Tabs όπως στο Flows και στο live (D25): ένα accent για όλα. Ενεργό = γεμάτο accent με σκούρα γράμματα (κινητό)
 // ή χρώμα accent με γραμμή από κάτω (υπολογιστής).
 var currentTab = 'daily';
-const TAB_BASE = 'tab-btn flex items-center justify-center text-xs md:text-base font-bold rounded-lg md:rounded-none h-12 w-full transition whitespace-nowrap px-2 border md:border-0 md:border-b-2 cursor-pointer ';
+const TAB_BASE = 'tab-btn flex items-center justify-center text-xs md:text-base font-bold rounded-lg md:rounded-none h-12 w-full transition max-md:whitespace-normal max-md:leading-tight md:whitespace-nowrap px-2 border md:border-0 md:border-b-2 cursor-pointer ';
 const TAB_ON = 'bg-acc-400 text-slate-900 border-acc-400 md:bg-transparent md:text-acc-400 md:border-b-acc-400';
 const TAB_OFF = 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white md:bg-transparent md:border-transparent md:hover:text-acc-200';
 const TABS = { daily: ['tabBtnDaily', 'viewDaily'], monthly: ['tabBtnMonthly', 'viewMonthly'], surplus: ['tabBtnSurplus', 'viewSurplus'], arbitrage: ['tabBtnArbitrage', 'viewArbitrage'], capacity: ['tabBtnCapacity', 'viewCapacity'] };
@@ -487,7 +487,7 @@ function paintTabs() {
     Object.entries(TABS).forEach(([key, [btn, view]]) => {
         const on = key === currentTab;
         const b = document.getElementById(btn);
-        b.className = TAB_BASE + (on ? TAB_ON : TAB_OFF) + (key === 'capacity' ? ' col-span-2 md:col-span-1' : '');   // το πέμπτο tab πιάνει όλο το πλάτος στο κινητό
+        b.className = TAB_BASE + (on ? TAB_ON : TAB_OFF) + (' ' + ({ daily: 'col-span-2', monthly: 'col-span-2', surplus: 'col-span-2', arbitrage: 'col-span-3', capacity: 'col-span-3' }[key] || '') + ' md:col-span-1');   // το πέμπτο tab πιάνει όλο το πλάτος στο κινητό
         b.setAttribute('aria-selected', on ? 'true' : 'false');
         document.getElementById(view).classList.toggle('hidden', !on);
     });
@@ -1874,6 +1874,34 @@ function renderCapacityTab() {
     renderCapacityUnitChart();
     renderCapacityRecords();
 }
+
+
+// ==========================================
+// ΚΟΥΜΠΙ «ΕΠΑΝΩ» (κινητό, D72): εμφανίζεται όταν τα tabs έχουν βγει από την οθόνη και σε γυρίζει στην κορυφή,
+// όπου είναι η επιλογή ημερομηνίας, η μεθοδολογία, η γλώσσα και τα tabs. Δεν πιάνει μόνιμο χώρο.
+// ==========================================
+function scrollToTop() {
+    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
+}
+(function initToTop() {
+    const btn = document.getElementById('toTopBtn');
+    const first = document.querySelector('[role="tab"]');
+    const nav = first && first.parentElement;
+    if (!btn || !nav) return;
+    let ticking = false;
+    const update = () => {
+        ticking = false;
+        const show = nav.getBoundingClientRect().bottom < 0;      // τα tabs έχουν περάσει πάνω από την οθόνη
+        btn.classList.toggle('opacity-0', !show);
+        btn.classList.toggle('pointer-events-none', !show);
+        btn.tabIndex = show ? 0 : -1;
+        btn.setAttribute('aria-hidden', show ? 'false' : 'true');
+    };
+    window.addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } }, { passive: true });
+    window.addEventListener('resize', update);
+    update();
+})();
 
 async function boot() {
     applyChartDefaults();

@@ -20,11 +20,27 @@ function renderMethodologyBody() {
     if (bs) { bs.className = (methodologyView === 'short') ? on : off; bs.setAttribute('aria-pressed', methodologyView === 'short'); }
     if (bf) { bf.className = (methodologyView === 'full') ? on : off; bf.setAttribute('aria-pressed', methodologyView === 'full'); }
 }
-function setMethodologyView(view) {
+// Η ενότητα που βλέπεις τώρα στο παράθυρο (το τελευταίο data-sec που έχει περάσει από την κορυφή)
+function currentMethodSec() {
+    const body = document.getElementById('modalBody');
+    if (!body) return null;
+    let cur = null;
+    body.querySelectorAll('[data-sec]').forEach(el => { if (methodSecTop(body, el) - 12 <= body.scrollTop) cur = el.dataset.sec; });
+    return cur;
+}
+function setMethodologyView(view, fromOpen) {
+    const body0 = document.getElementById('modalBody');
+    const untouched = body0 && typeof methodOpenSec !== 'undefined' && methodOpenSec && Math.abs(body0.scrollTop - methodOpenScroll) < 2;
+    const keep = fromOpen ? null : (untouched ? methodOpenSec : currentMethodSec());   // στην εναλλαγή Σύντομη/Αναλυτική μένεις στην ίδια ενότητα
     methodologyView = (view === 'full') ? 'full' : 'short';
     renderMethodologyBody();
     const body = document.getElementById('modalBody');
-    if (body) body.scrollTop = 0;
+    if (!body) return;
+    body.scrollTop = 0;
+    if (keep && keep !== 'all') {
+        const el = body.querySelector('[data-sec="' + keep + '"]');
+        if (el) body.scrollTop = Math.max(0, methodSecTop(body, el) - 8);
+    }
 }
 
 const i18n = {
@@ -257,7 +273,6 @@ const i18n = {
         capRecFleetDisMwh: "Μέγιστη ημερήσια εκφόρτιση",
         capRecFleetChgMwh: "Μέγιστη ημερήσια φόρτιση",
         capRecPrev: "προηγούμενο {v} στις {d}",
-        scopeLine: "Μονάδες του Συστήματος Μεταφοράς (ΑΔΜΗΕ). Δεν υπάρχουν δεδομένα για το Δίκτυο Διανομής (ΔΕΔΔΗΕ) ούτε για συστήματα πίσω από τον μετρητή.",
         lblGross: "Ανώτατο (όλη η εκφόρτιση)",
         lblNet: "Καθαρό (εκτίμηση)",
         layerCore: "Πυρήνας: τιμή ≤ 5 €/MWh",
@@ -266,6 +281,7 @@ const i18n = {
         layerExtShort: "πρόσθετο",
         layerCoreTip: "Πυρήνας (τιμή ≤ 5 €)",
         layerExtTip: "Πρόσθετο (ISP, τιμή > 5 €)",
+        toTop: "Επιστροφή επάνω: ημερομηνία, μεθοδολογία και καρτέλες",
         kpiNetSub: "καθαρή εκτίμηση: {v} MWh",
         kpiUpToSub: "έως {v} MWh με το πρόσθετο στρώμα",
         capChangesTitle: "Αλλαγές και αναβαθμίσεις",
@@ -527,7 +543,6 @@ const i18n = {
         capRecFleetDisMwh: "Highest daily discharge",
         capRecFleetChgMwh: "Highest daily charge",
         capRecPrev: "previous {v} on {d}",
-        scopeLine: "Units of the Transmission System (IPTO/ADMIE). There are no data for the Distribution Network (HEDNO) or for behind-the-meter systems.",
         lblGross: "Upper bound (all discharge)",
         lblNet: "Net (estimate)",
         layerCore: "Core: price ≤ €5/MWh",
@@ -536,6 +551,7 @@ const i18n = {
         layerExtShort: "additional",
         layerCoreTip: "Core (price ≤ €5)",
         layerExtTip: "Additional (ISP, price > €5)",
+        toTop: "Back to top: date, methodology and tabs",
         kpiNetSub: "net estimate: {v} MWh",
         kpiUpToSub: "up to {v} MWh with the additional layer",
         capChangesTitle: "Changes and upgrades",
@@ -613,7 +629,8 @@ function setLang(lang) {
     ['capTitle', 'capThUnit', 'capThPower', 'capThEnergy', 'capThDuration', 'capThStatus', 'capFleetTitle', 'capFleetSub', 'capRecEventsTitle', 'capRecTitle'].forEach(id => setT(id, t[id]));
     setT('capUnitTitle', t.capUnitTitle.replace('{u}', '–'));   // η καρτέλα το ξαναγράφει με το όνομα της επιλεγμένης μονάδας
     setT('capUnitSub', t.capUnitSub);
-    setT('scopeLine', t.scopeLine);
+    const toTopBtn = document.getElementById('toTopBtn');
+    if (toTopBtn) { toTopBtn.setAttribute('aria-label', t.toTop); toTopBtn.title = t.toTop; }
     setT('capChangesTitle', t.capChangesTitle); setT('capChangesSub', t.capChangesSub);
     
     setT('dischargeTitle', t.dischargeTitle);

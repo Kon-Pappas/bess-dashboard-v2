@@ -77,6 +77,14 @@ Next, when there is a reason:
 - Read the ISP and Day-Ahead forecast files to find out why the surplus appears at prices above 5 € (K17)
 - Re-run `scripts/check_curtailment_rule.py` after a few months: if the share of cheap hours with a surplus falls under 97%, review the core rule
 
+## Mobile header (batch 20, 26 Oct 2026)
+
+Done: the secondary box, the 3 + 2 tabs, the up-arrow, the methodology button at the current section, no scope line in the header (D70–D74).
+
+Next, when there is a reason:
+- **Hub standard (H06):** if this pattern works in daily use, propose it for the other dashboards of the hub: one dark secondary box, light main tabs, no horizontal scroll on the tabs, an up-arrow, a text of two lines allowed
+- Look again at a bottom navigation bar only if the owner finds it hard to switch tabs on a long page
+
 ## Checks with a date
 
 - 22 Oct 2026: first 07:04 run after batch 1; check that `data/meta.json` appears (K09), that there is one run per day, and that the previous day's SCADA file was already there (K08)
