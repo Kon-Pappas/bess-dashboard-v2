@@ -546,6 +546,7 @@ function toggleBessIsolation(clickedUnit) {
         });
     }
     arbitrageDualChartInst.update();
+    paintArbitrageLegend();
 }
 
 // ==========================================
@@ -1180,6 +1181,33 @@ function renderSurplusCharts(labels, dailyBess, dailyPump, dailySurplus, cumBess
 // ==========================================
 // 4. ARBITRAGE P&L & HOURLY OPERATIONS
 // ==========================================
+// Υπόμνημα του Arbitrage για κινητό (D46, D52). Διαβάζει τα ίδια τα δεδομένα του γραφήματος, άρα τα χρώματα δεν μπορούν να διαφέρουν:
+//  • όλες οι μονάδες: ένα chip ανά σταθμό, με ένα κομμάτι για κάθε μονάδα του στην απόχρωσή της (π.χ. MYT ▮▮)
+//  • μία μονάδα επιλεγμένη από τον πίνακα: ένα μόνο chip με το όνομά της και το ΑΚΡΙΒΕΣ χρώμα των μπαρών· πάτημα = επιστροφή στις όλες
+function paintArbitrageLegend() {
+    const box = document.getElementById('arbitrageSiteLegend'), ch = arbitrageDualChartInst;
+    if (!box || !ch) return;
+    const reg = getUnitRegistry(), T = TT();
+    const dsAll = ch.data.datasets, bars = dsAll.filter(d => d.stack === 'bessStack'), mcpDs = dsAll.find(d => d.yAxisID === 'yMcp');
+    const chip = (swatch, label, extra = '') => `<span class="inline-flex items-center gap-1.5 whitespace-nowrap"${extra}>${swatch}${escapeHtml(label)}</span>`;
+    let html = '';
+    const one = (reg.unitMode && currentlyIsolatedBess) ? bars.find(b => b.label === currentlyIsolatedBess) : null;
+    if (one) {
+        const safe = escapeHtml(one.label);
+        html = `<button type="button" onclick="toggleBessIsolation('${safe}')" class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-slate-600 bg-slate-900/60 pl-2 pr-2.5 py-0.5 text-slate-100" aria-label="${escapeHtml(T.tipShowAll)}" title="${escapeHtml(T.tipShowAll)}">`
+             + `<span class="w-2.5 h-2.5 rounded-sm shrink-0" style="background:${one.backgroundColor}"></span>${safe}<span class="text-slate-400 ml-0.5">✕</span></button>`;
+    } else {
+        const sites = new Map();
+        bars.forEach(d => { const key = d.site || d.label; if (!sites.has(key)) sites.set(key, []); sites.get(key).push(d.backgroundColor); });
+        html = [...sites.entries()].map(([key, cols]) => {
+            const strip = `<span class="inline-flex rounded-sm overflow-hidden shrink-0">${cols.map(c => `<span class="${cols.length > 1 ? 'w-1.5' : 'w-2.5'} h-2.5" style="background:${c}"></span>`).join('')}</span>`;
+            return chip(strip, key === '__others' ? T.tipOtherSites : key);
+        }).join('');
+    }
+    if (mcpDs) html += chip(`<span class="w-3 h-0.5 shrink-0" style="background:${COLORS.mcp}"></span>`, mcpDs.label);
+    box.innerHTML = html;
+}
+
 function renderArbitrageTab() {
     if (typeof syncMcpShiftControls === 'function') syncMcpShiftControls();
     updateStatusBadge();
@@ -1402,20 +1430,6 @@ function renderArbitrageTab() {
         return html + chg + (chg && dis ? tipRule : '') + dis + (chg && dis ? tipRule + tipRow(T.tipNet, fmtN(net, 0, true), null, { strong: true }) : '') + tipNote(T.tipHint);
     };
 
-    // Υπόμνημα για κινητό (D46): ένα ανά σταθμό και η τιμή MCP, αντί για 16+ μονάδες που το Chart.js κόβει πάνω στο γράφημα
-    const legendBox = document.getElementById('arbitrageSiteLegend');
-    if (legendBox) {
-        const seen = [];
-        datasets.forEach(ds => {
-            if (ds.stack !== 'bessStack') return;
-            const key = ds.site || ds.label;
-            if (!seen.some(x => x.key === key)) seen.push({ key, color: key === '__others' ? SITE_OTHERS_COLOR : siteColour(key, reg), label: key === '__others' ? TT().tipOtherSites : key });
-        });
-        const chip = (swatch, label) => `<span class="inline-flex items-center gap-1.5 whitespace-nowrap">${swatch}${escapeHtml(label)}</span>`;
-        legendBox.innerHTML = seen.map(x => chip(`<span class="w-2.5 h-2.5 rounded-sm shrink-0" style="background:${x.color}"></span>`, x.label)).join('')
-            + (mcpRow ? chip(`<span class="w-3 h-0.5 shrink-0" style="background:${COLORS.mcp}"></span>`, mcpLegendLabelFinal) : '');
-    }
-
     const canvasCtx = document.getElementById('arbitrageDualChart');
     if (!canvasCtx) return;
     const ctx = canvasCtx.getContext('2d');
@@ -1452,6 +1466,7 @@ function renderArbitrageTab() {
             }
         }
     });
+    paintArbitrageLegend();
 
     const tbody = document.getElementById('arbitrageTableBody');
     if (tbody) {
