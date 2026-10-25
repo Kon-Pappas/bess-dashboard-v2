@@ -45,9 +45,20 @@ The four tabs were opened in a real Chromium at 360 px (Greek and English) and m
 - Daily: every unit name on the axis (D49); "–" when the SCADA file is missing (D50); shorter red tile (D51)
 - Follow-up (batch 13): the phone legend follows the chosen unit (D52)
 
-## Phase 7: data files — later, not urgent
+## Phase 7: data files (batch 14, 25 Oct 2026) — measured, one file kept
 
-Measured on 21 Oct 2026 (K05): ≈ 93 KB gzipped for 143 days. When the history reaches about a year, or loading becomes noticeably slow, consider one file per month plus a manifest (list of days, last / next update; replaces `meta.json`); step 1 of the loading overlay would then follow several real files. Decide with a new measurement first.
+- Measured in a real browser (D54): 106 KB gzip today, first chart after 3.7 s on Slow 4G; the network is the limit
+- Revisits cost 183 bytes instead of 104 KB (D53)
+- `scripts/data_size.py` measures the file and tells how far the limit is
+
+**Trigger:** gzip above 250 KB, or more than 5 s to the first chart on Slow 4G. At the pace of today's data this is about 190 days away, sooner if the number of units grows faster.
+
+**Plan when the trigger is reached** (not started): every view of the page is one day or one month, so the history can be cut by month.
+1. `data/index.json`: the list of days with their completeness flag, the units and the last update (a few KB).
+2. `data/2026-10.json`, `data/2026-11.json`, …: the rows of one month each, written by `update_data.py` with the same atomic write.
+3. The page loads the index and the month it shows (the latest at first); other months are fetched when the visitor picks them and kept in memory.
+4. The one-hour alignment needs the last hour of the previous day: each month file also carries that one day from the month before.
+5. Old files never change, so the browser caches them for good; only the current month is revalidated.
 
 ## Checks with a date
 
