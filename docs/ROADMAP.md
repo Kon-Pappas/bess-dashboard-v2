@@ -63,7 +63,7 @@ The four tabs were opened in a real Chromium at 360 px (Greek and English) and m
 ## Checks with a date
 
 - 22 Oct 2026: first 07:04 run after batch 1; check that `data/meta.json` appears (K09), that there is one run per day, and that the previous day's SCADA file was already there (K08)
-- 26 Oct 2026: verify the 25-hour day of 25 Oct (K06)
+- 26 Oct 2026 (after the 07:04 run): the real SCADA of the 25-hour day (K06). In `data/historical.json` the rows of `bessHourly` for 2026-10-25 must have `25:00`; the log of the run must show no "⚠ SCADA … SUM" lines for that day; the Arbitrage tab for 25 Oct shows 25 columns (00 … 24). Spring 2027 (28 Mar) is the 23-hour day: repeat this check then
 - First day with more than 20 units (now 16): check the Arbitrage chart switches to sites and reads well (K14)
 
 ## Later
