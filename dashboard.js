@@ -785,15 +785,20 @@ function computeSurplusHourSplit(selectedMonth) {
     (rawData.pumpHourly || []).forEach(r => { pumpByDate[dateOf(r)] = hourlyRowToArray(r, 25); });
     (rawData.surplusHourly || []).forEach(r => { surpByDate[dateOf(r)] = hourlyRowToArray(r, 25); });
 
+    // Ώρες της κάθε ημέρας: 24 κανονικά, 25 στην αλλαγή ώρας του φθινοπώρου (D55). Πριν, η 25η ώρα ταξινομούνταν πάντα «εκτός πλεονάσματος».
+    const hoursOf = {};
+    (rawData.surplusHourly || []).forEach(r => { hoursOf[dateOf(r)] = (r['25:00'] !== undefined && r['25:00'] !== null) ? 25 : 24; });
+
     const out = {};
     Object.keys(surpByDate).filter(d => d.startsWith(selectedMonth)).forEach(date => {
         const prevSurp = surpByDate[prevDateString(date)];
+        const nL = hoursOf[date] || 24;
         const inS = [];
-        for (let L = 0; L < 24; L++) inS.push(localHourValue(surpByDate[date], prevSurp, L, marketShift) >= SURPLUS_HOUR_MIN_MWH);
+        for (let L = 0; L < nL; L++) inS.push(localHourValue(surpByDate[date], prevSurp, L, marketShift) >= SURPLUS_HOUR_MIN_MWH);
         const split = arr => {
             const total = arr.reduce((a, b) => a + b, 0);
             let inside = 0;
-            for (let L = 0; L < 24; L++) if (inS[L]) inside += arr[L];   // SCADA: ώρα h -> L = h-1
+            for (let L = 0; L < nL; L++) if (inS[L]) inside += arr[L];   // SCADA: ώρα h -> L = h-1
             return { inside, outside: total - inside };
         };
         const r = { bessIn: 0, bessOut: 0, pumpIn: 0, pumpOut: 0, hasBess: false, hasPump: false };
