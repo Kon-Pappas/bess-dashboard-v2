@@ -54,7 +54,7 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/historical.json data/meta.json
+          git add data/historical.json data/meta.json data/capacity.json
 
           if git diff --staged --quiet; then
             echo "Δεν βρέθηκαν νέα δεδομένα (ή δεν υπάρχει αλλαγή). Παράβλεψη commit."
