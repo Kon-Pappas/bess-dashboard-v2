@@ -17,7 +17,10 @@
   • Αναβάθμιση: η εξασφαλισμένη τιμή ανεβαίνει ≥ 12% πάνω από το προηγούμενο επίπεδο. Αν μόνο 1–2 ημέρες των τελευταίων 14 είναι ≥ 12% πάνω:
     «προς επιβεβαίωση (1 ή 2 από 3 ημέρες)».
   • Κατηγορία: 2ωρη, 3ωρη, 4ωρη… = ακέραιο μέρος της διάρκειας (μέγιστη ενέργεια κύκλου ÷ μέγιστη ισχύς), με ανοχή 0,1 ώρας.
-  • Παύση (7+ ημέρες χωρίς δραστηριότητα) και ύποπτες ημέρες δεδομένων είναι πληροφορίες, όχι μειώσεις.
+  • Παύση (7+ ημέρες χωρίς δραστηριότητα) είναι πληροφορία, όχι μείωση.
+  • Κολλημένη μέτρηση: ≥ 6 συνεχόμενες ώρες με ακριβώς την ίδια τιμή (τουλάχιστον 20% της μέγιστης ισχύος της μονάδας). Οι ημέρες αυτές, και οι ημέρες με
+    πάνω από 2,2 κύκλους ή ώρα πολύ πάνω από το συνηθισμένο, είναι «ύποπτες»: ΑΓΝΟΟΥΝΤΑΙ στις εκτιμήσεις και σημαίνονται στη σελίδα.
+  • Όριο αδράνειας ανά μονάδα: max(2,5, 1,5% της μέγιστης ισχύος της), ώστε η ιδιοκατανάλωση μεγάλων μονάδων (π.χ. −3 MWh/ώρα) να μη μετράει ως φόρτιση.
 """
 import json
 import re
@@ -43,7 +46,9 @@ PAUSE_DAYS = 7                  # ημέρες χωρίς καμία ώρα δρ
 PAUSE_MIN_ACTIVE = 5            # η μονάδα πρέπει να είχε ≥ 5 ενεργές ημέρες στις 14 πριν
 SPIKE_RATIO = 1.25              # ώρα πάνω από 1,25× το 99ο εκατοστημόριο της μονάδας → ύποπτο δεδομένο
 SPIKE_MIN_HOURS = 50
-SUSPECT_DAYS = 90               # πόσες ημέρες πίσω φυλάσσονται οι ύποπτες ημέρες
+FROZEN_HOURS = 6                # ≥ 6 συνεχόμενες ώρες με ακριβώς την ίδια τιμή → κολλημένη μέτρηση
+FROZEN_SHARE = 0.20             # ... αν η τιμή είναι ≥ 20% της μέγιστης ισχύος της μονάδας (όχι η ιδιοκατανάλωση)
+TAU_SHARE = 0.015               # όριο αδράνειας ανά μονάδα = max(TAU, 1,5% της μέγιστης ισχύος της)
 SHARED_MIN_UNITS = 3            # ίδια αναβάθμιση σε τόσες μονάδες μέσα σε SHARED_DAYS ημέρες → πιθανό σφάλμα αρχείου
 SHARED_DAYS = 2
 
@@ -71,7 +76,7 @@ def load_units(hist):
     return by
 
 
-def phases_of(by_day):
+def phases_of(by_day, tau=TAU):
     """Φάσεις φόρτισης (−1) / εκφόρτισης (+1) μιας μονάδας. Η σειρά σπάει όπου λείπει ημέρα."""
     out, cur, idle, prev = [], None, 0, None
 
@@ -86,7 +91,7 @@ def phases_of(by_day):
             close()
         prev = day
         for x in by_day[day]:
-            s = 1 if x > TAU else (-1 if x < -TAU else 0)
+            s = 1 if x > tau else (-1 if x < -tau else 0)
             if s == 0:
                 if cur:
                     idle += 1
@@ -152,16 +157,16 @@ def merge_upgrades(raw):
     return out
 
 
-def scan_unit(days, as_of):
+def scan_unit(days, as_of, tau=TAU):
     """Όλα τα στοιχεία μιας μονάδας από τις ωριαίες τιμές της. Επιστρέφει None αν η μονάδα δεν έχει δραστηριότητα."""
     ks = sorted(days)
-    active = [k for k in ks if any(abs(x) >= TAU for x in days[k])]
+    active = [k for k in ks if any(abs(x) >= tau for x in days[k])]
     if not active:
         return None
     first = _d(active[0]); cutoff = first + timedelta(days=COMMISSIONING_DAYS)
     peaks = {k: max(abs(x) for x in days[k]) for k in ks if days[k]}
     cyc = defaultdict(list)
-    for c in cycles_of(phases_of(days)):
+    for c in cycles_of(phases_of(days, tau)):
         if c["valid"]:
             cyc[c["date"]].append(c["ed"])
     n_dates = (as_of - first).days + 1
@@ -171,7 +176,7 @@ def scan_unit(days, as_of):
     baseline_ok = False
     for i in range(n_dates):
         t = first + timedelta(days=i); k = t.isoformat(); post = t >= cutoff
-        if k in peaks and peaks[k] >= TAU:
+        if k in peaks and peaks[k] >= tau:
             pv_all.append((peaks[k], k))
             if post:
                 pv_post.append((peaks[k], k))
@@ -228,43 +233,87 @@ def scan_unit(days, as_of):
     }
 
 
-def suspect_days_of(days, as_of):
-    """Ημέρες με ΥΠΟΠΤΑ δεδομένα (πιθανό σφάλμα SCADA), μόνο για φυσικά αδύνατες ή πολύ ασυνήθιστες τιμές:
-    (α) μέσα σε μία ημέρα εκφόρτιση ή φόρτιση πάνω από 2,2 κύκλους της μονάδας (90ό εκατοστημόριο των έγκυρων κύκλων της)·
-    (β) ώρα πάνω από 1,25× το 99ο εκατοστημόριο της ίδιας της μονάδας. Δεν αλλάζουν τα μέγιστα και φαίνονται στην καρτέλα."""
-    valid = [c for c in cycles_of(phases_of(days)) if c["valid"]]
-    if len(valid) < 8:
-        return []
-    pct90 = lambda vals: sorted(vals)[int((len(vals) - 1) * 0.9)]
-    e90, c90 = pct90([c["ed"] for c in valid]), pct90([c["ec"] for c in valid])
+def tau_of(days):
+    """Όριο αδράνειας της μονάδας: max(2,5 MWh, 1,5% της μέγιστης ισχύος της)· η μέγιστη ισχύς εδώ είναι το 99ο εκατοστημόριο των ενεργών ωρών."""
     allabs = sorted(abs(x) for v in days.values() for x in v if abs(x) >= TAU)
-    p99 = allabs[int(len(allabs) * 0.99)] if len(allabs) >= SPIKE_MIN_HOURS else None
-    out = []
+    if not allabs:
+        return TAU
+    ref = allabs[int(len(allabs) * 0.99)] if len(allabs) >= SPIKE_MIN_HOURS else allabs[-1]
+    return max(TAU, TAU_SHARE * ref)
+
+
+def frozen_runs_of(days, tau):
+    """Κολλημένη μέτρηση: ≥ FROZEN_HOURS συνεχόμενες ώρες (και μέσα από τα μεσάνυχτα) με ΑΚΡΙΒΩΣ την ίδια τιμή, τουλάχιστον FROZEN_SHARE της μέγιστης ισχύος
+    της μονάδας. Σε μια πραγματική λειτουργία οι τιμές αλλάζουν· η ιδιοκατανάλωση (μικρή σταθερή τιμή) δεν μετράει."""
+    allabs = sorted(abs(x) for v in days.values() for x in v if abs(x) >= tau)
+    if len(allabs) < SPIKE_MIN_HOURS:
+        return []
+    floor = max(tau, FROZEN_SHARE * allabs[int(len(allabs) * 0.99)])
+    runs, cur, prev = [], None, None
+
+    def close():
+        nonlocal cur
+        if cur and cur["n"] >= FROZEN_HOURS:
+            runs.append(cur)
+        cur = None
+
     for k in sorted(days):
-        if (as_of - _d(k)).days >= SUSPECT_DAYS or not days[k]:
-            continue
-        v = days[k]
-        dch = sum(x for x in v if x > TAU); ch = sum(-x for x in v if x < -TAU)
-        if dch > 2.2 * e90 or ch > 2.2 * c90:
-            out.append({"date": k, "reason": "cycles", "value": round(max(dch / e90, ch / c90), 1)})
-        elif p99 and max(abs(x) for x in v) > SPIKE_RATIO * p99:
-            out.append({"date": k, "reason": "spike", "value": round(max(abs(x) for x in v))})
-    return out
+        if prev is not None and (_d(k) - _d(prev)).days != 1:
+            close()
+        prev = k
+        for x in days[k]:
+            if abs(x) >= floor and cur and x == cur["v"]:
+                cur["n"] += 1; cur["to"] = k; cur["per_day"][k] = cur["per_day"].get(k, 0) + 1
+            elif abs(x) >= floor:
+                close(); cur = {"v": x, "n": 1, "from": k, "to": k, "per_day": {k: 1}}
+            else:
+                close()
+    close()
+    return runs
 
 
-def idle_days_now(days, as_of):
+def suspect_days_of(days, tau=TAU):
+    """Ημέρες με ΥΠΟΠΤΑ δεδομένα (πιθανό σφάλμα SCADA, όχι βλάβη), για όλο το ιστορικό:
+    (α) κολλημένη μέτρηση (frozen)· (β) μέσα σε μία ημέρα εκφόρτιση ή φόρτιση πάνω από 2,2 κύκλους της μονάδας (90ό εκατοστημόριο των έγκυρων κύκλων της)·
+    (γ) ώρα πάνω από 1,25× το 99ο εκατοστημόριο της ίδιας της μονάδας. Αγνοούνται στις εκτιμήσεις και σημαίνονται στη σελίδα (διακόπτης «χωρίς ύποπτες μετρήσεις»)."""
+    out, seen = [], set()
+    for r in frozen_runs_of(days, tau):
+        for k, hrs in r["per_day"].items():
+            if hrs >= FROZEN_HOURS and k not in seen:   # ημέρα με ≥ 6 ώρες της κολλημένης περιόδου (οι ημέρες-σύνορα με λίγες ώρες δεν αγνοούνται ολόκληρες)
+                seen.add(k)
+                out.append({"date": k, "reason": "frozen", "value": round(abs(r["v"]), 1), "hours": r["n"], "run_from": r["from"], "run_to": r["to"]})
+    rest = {k: v for k, v in days.items() if k not in seen}
+    valid = [c for c in cycles_of(phases_of(rest, tau)) if c["valid"]]
+    if len(valid) >= 8:
+        pct90 = lambda vals: sorted(vals)[int((len(vals) - 1) * 0.9)]
+        e90, c90 = pct90([c["ed"] for c in valid]), pct90([c["ec"] for c in valid])
+        allabs = sorted(abs(x) for v in rest.values() for x in v if abs(x) >= tau)
+        p99 = allabs[int(len(allabs) * 0.99)] if len(allabs) >= SPIKE_MIN_HOURS else None
+        for k in sorted(rest):
+            if not rest[k]:
+                continue
+            v = rest[k]
+            dch = sum(x for x in v if x > tau); ch = sum(-x for x in v if x < -tau)
+            if dch > 2.2 * e90 or ch > 2.2 * c90:
+                out.append({"date": k, "reason": "cycles", "value": round(max(dch / e90, ch / c90), 1)})
+            elif p99 and max(abs(x) for x in v) > SPIKE_RATIO * p99:
+                out.append({"date": k, "reason": "spike", "value": round(max(abs(x) for x in v))})
+    return sorted(out, key=lambda x: x["date"])
+
+
+def idle_days_now(days, as_of, tau=TAU):
     """Πόσες συνεχόμενες ημέρες (που υπάρχουν στα δεδομένα) η μονάδα δεν έχει καμία ώρα δραστηριότητας μέχρι σήμερα, αν δούλευε πριν (≥ PAUSE_MIN_ACTIVE ενεργές
     ημέρες στις 14 πριν). Ουδέτερη πληροφορία: δεν ξεχωρίζει βλάβη από αδράνεια της αγοράς και δεν είναι μείωση."""
     ks = sorted(days)
     if not ks or _d(ks[-1]) < as_of:
         return 0
     n, i = 0, len(ks) - 1
-    while i >= 0 and not any(abs(x) >= TAU for x in days[ks[i]]) and (i == len(ks) - 1 or (_d(ks[i + 1]) - _d(ks[i])).days == 1):
+    while i >= 0 and not any(abs(x) >= tau for x in days[ks[i]]) and (i == len(ks) - 1 or (_d(ks[i + 1]) - _d(ks[i])).days == 1):
         n += 1; i -= 1
     if n < PAUSE_DAYS:
         return 0
     lo = _d(ks[i + 1]) - timedelta(days=14)
-    before = sum(1 for k in ks if lo <= _d(k) < _d(ks[i + 1]) and any(abs(x) >= TAU for x in days[k]))
+    before = sum(1 for k in ks if lo <= _d(k) < _d(ks[i + 1]) and any(abs(x) >= tau for x in days[k]))
     return n if before >= PAUSE_MIN_ACTIVE else 0
 
 
@@ -291,14 +340,17 @@ def build(hist, now=None):
     as_of = max(_d(k) for v in by.values() for k in v)
     units, scans = [], {}
     for u in sorted(by):
-        days = by[u]
-        sc = scan_unit(days, as_of)
+        raw_days = by[u]
+        tau = tau_of(raw_days)
+        suspects = suspect_days_of(raw_days, tau)
+        bad = {x["date"] for x in suspects}
+        days = {k: v for k, v in raw_days.items() if k not in bad}   # οι ύποπτες ημέρες αγνοούνται (θεωρούνται ότι λείπουν)
+        sc = scan_unit(days, as_of, tau)
         if not sc:
             continue
         scans[u] = sc
-        suspects = suspect_days_of(days, as_of)
         age = (as_of - sc["first"]).days + 1
-        idle = idle_days_now(days, as_of)
+        idle = idle_days_now(days, as_of, tau)
         units.append({
             "unit": u, "site": u.split("_")[0], "first_seen": sc["first"].isoformat(), "age_days": age,
             "commissioning_end": sc["cutoff"].isoformat(), "commissioning_day": min(age, COMMISSIONING_DAYS),
@@ -306,7 +358,7 @@ def build(hist, now=None):
             "duration_h": round(sc["duration"], 2) if sc["duration"] else None, "class_h": sc["class_h"],
             "provisional": sc["status"] != "stable", "power_since": sc["power_since"], "energy_since": sc["energy_since"],
             "valid_cycles": sc["n_post_cycles"], "status": sc["status"], "idle_days": idle, "pending": sc["pending"],
-            "suspect_days": suspects, "suspect_30": sum(1 for x in suspects if (as_of - _d(x["date"])).days < 30),
+            "tau_mwh": round(tau, 1), "suspect_days": suspects, "suspect_30": sum(1 for x in suspects if (as_of - _d(x["date"])).days < 30),
             "changes": sc["changes"], "series": sc["series"]})
     # στόλος: εβδομαδιαία άθροιση των μεγίστων που φάνηκαν ως τότε (κάθε μονάδα, από την πρώτη της δραστηριότητα· περιλαμβάνει και το commissioning)
     fleet, w = [], week_start(min(sc["first"] for sc in scans.values()))

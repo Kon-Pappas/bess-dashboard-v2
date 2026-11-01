@@ -438,8 +438,8 @@ function updatePicker() {
 }
 
 // Αλλαγή επιλογής: ξαναζωγραφίζεται μόνο το tab που φαίνεται (τα άλλα ζωγραφίζονται όταν τα ανοίξεις)
-function onDateChange() { if (currentTab === 'arbitrage') renderArbitrageTab(); else updateDashboard(); }
-function onMonthChange() { if (currentTab === 'surplus') updateSurplusDashboard(); else updateMonthlyDashboard(); }
+function onDateChange() { if (currentTab === 'arbitrage') renderArbitrageTab(); else updateDashboard(); dqUpdateBar(); }
+function onMonthChange() { if (currentTab === 'surplus') updateSurplusDashboard(); else updateMonthlyDashboard(); dqUpdateBar(); }
 
 function updateStatusBadge() {
     const badge = document.getElementById('dataStatusBadge');
@@ -477,7 +477,7 @@ function updateStatusBadge() {
 // Tabs όπως στο Flows και στο live (D25): ένα accent για όλα. Ενεργό = γεμάτο accent με σκούρα γράμματα (κινητό)
 // ή χρώμα accent με γραμμή από κάτω (υπολογιστής).
 var currentTab = 'daily';
-const TAB_BASE = 'tab-btn flex items-center justify-center text-xs md:text-sm font-bold rounded-lg md:rounded-none h-12 w-full transition whitespace-normal leading-tight text-center px-2 border md:border-0 md:border-b-2 cursor-pointer ';
+const TAB_BASE = 'tab-btn flex items-center justify-center text-xs max-[340px]:text-[11px] md:text-sm font-bold rounded-lg md:rounded-none h-12 w-full transition whitespace-normal leading-tight text-center px-2 max-[340px]:px-0.5 border md:border-0 md:border-b-2 cursor-pointer ';
 const TAB_ON = 'bg-acc-400 text-slate-900 border-acc-400 md:bg-transparent md:text-acc-400 md:border-b-acc-400';
 const TAB_OFF = 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white md:bg-transparent md:border-transparent md:hover:text-acc-200';
 const TABS = { daily: ['tabBtnDaily', 'viewDaily'], monthly: ['tabBtnMonthly', 'viewMonthly'], surplus: ['tabBtnSurplus', 'viewSurplus'], arbitrage: ['tabBtnArbitrage', 'viewArbitrage'], capacity: ['tabBtnCapacity', 'viewCapacity'], changes: ['tabBtnChanges', 'viewChanges'] };
@@ -507,6 +507,7 @@ function switchTab(tabName) {
     else if (tabName === 'changes') renderChangesTab();
 
     updateStatusBadge();
+    dqUpdateBar();
 }
 
 // ==========================================
@@ -1054,12 +1055,15 @@ function renderSurplusHourlyProfile() {
     let days = Object.keys(bessByDate).filter(d => d.startsWith(month) && pumpByDate[d] && surpByDate[d] && mcpByDate[d]).sort();
 
     const resetChart = () => { if (surplusHourlyChartInst) { surplusHourlyChartInst.destroy(); surplusHourlyChartInst = null; } };
+    const chartWrap = canvas.parentElement;   // χωρίς δεδομένα ο κενός καμβάς (300 px) δεν πρέπει να μένει: στα 320 px ξεπερνούσε την οθόνη
     if (days.length === 0) {
         resetChart();
+        if (chartWrap) chartWrap.classList.add('hidden');
         if (kpiBox) kpiBox.innerHTML = '';
         if (noteEl) noteEl.textContent = t.surplusHourlyEmpty || 'Not enough hourly data for the selected month.';
         return;
     }
+    if (chartWrap) chartWrap.classList.remove('hidden');
 
     const dayTotal = d => surpByDate[d].reduce((a, b) => a + b, 0);
     let usedDays = days;
@@ -1637,6 +1641,69 @@ function populateSelectors() {
 }
 
 // ==========================================
+// ΥΠΟΠΤΕΣ ΜΕΤΡΗΣΕΙΣ SCADA (D87–D90): ένδειξη ⚠ και διακόπτης «χωρίς ύποπτες μετρήσεις»
+// Οι ύποπτες μονάδες-ημέρες προέρχονται από το capacity.json (suspect_days). Ο διακόπτης (προεπιλογή: κλειστός = τα επίσημα νούμερα του ΑΔΜΗΕ)
+// βγάζει αυτές τις μονάδες-ημέρες από τα SCADA (ημερήσια αθροίσματα, ΣΥΝΟΛΟ, ωριαία) και ξαναζωγραφίζει το tab. Δεν σβήνονται δεδομένα.
+// ==========================================
+let dqOn = false, dqOriginal = null, dqFiltered = null;
+function dqIndex() {
+    const m = new Map();
+    if (capacityData) capacityData.units.forEach(u => (u.suspect_days || []).forEach(x => m.set(u.unit + '|' + x.date, Object.assign({ unit: u.unit }, x))));
+    return m;
+}
+function dqBuild() {
+    const idx = dqIndex(), orig = dqOriginal, sub = {};
+    orig.scada.forEach(r => { if (r.unit !== 'TOTAL BESS' && idx.has(r.unit + '|' + r.date)) { const q = sub[r.date] || (sub[r.date] = { c: 0, d: 0 }); q.c += r.charge; q.d += r.discharge; } });
+    const scada = [];
+    orig.scada.forEach(r => {
+        if (r.unit !== 'TOTAL BESS' && idx.has(r.unit + '|' + r.date)) return;
+        if (r.unit === 'TOTAL BESS' && sub[r.date]) {
+            const c = Math.max(0, r.charge - sub[r.date].c), dd = Math.max(0, r.discharge - sub[r.date].d);
+            scada.push(Object.assign({}, r, { charge: c, discharge: dd, rte: c > 0 ? (dd / c * 100).toFixed(2) + '%' : '0.00%' }));
+            return;
+        }
+        scada.push(r);
+    });
+    const bessHourly = orig.bessHourly.filter(r => !idx.has(String(r['Μονάδα BESS']).trim() + '|' + r['Ημερομηνία']));
+    dqFiltered = { scada, bessHourly };
+}
+function dqSet(on) {
+    if (!dqOriginal) dqOriginal = { scada: rawData.scada, bessHourly: rawData.bessHourly };
+    dqOn = !!on;
+    if (dqOn) { dqBuild(); rawData.scada = dqFiltered.scada; rawData.bessHourly = dqFiltered.bessHourly; }
+    else { rawData.scada = dqOriginal.scada; rawData.bessHourly = dqOriginal.bessHourly; }
+    switchTab(currentTab);
+}
+function dqReasonText(x) {
+    const T = TT();
+    return x.reason === 'frozen' ? fillTpl(T.dqFrozen, { v: fmtN(x.value), h: x.hours })
+        : x.reason === 'cycles' ? fillTpl(T.capSuspectCycles, { x: fmtN(x.value, 1) }) : fillTpl(T.capSuspectSpike, { v: fmtN(x.value) });
+}
+function dqReasonShort(x) { const T = TT(); return x.reason === 'frozen' ? T.dqFrozenShort : x.reason === 'cycles' ? T.dqCyclesShort : T.dqSpikeShort; }
+function dqUpdateBar() {
+    const bar = document.getElementById('dqBar');
+    if (!bar) return;
+    const T = TT(), perDay = (currentTab === 'daily' || currentTab === 'arbitrage');
+    const selEl = document.getElementById(perDay ? 'dateSelect' : 'monthSelect'), sel = selEl ? selEl.value : null;
+    const tabOk = ['daily', 'monthly', 'surplus', 'arbitrage'].includes(currentTab);
+    const hits = (tabOk && sel && capacityData) ? [...dqIndex().values()].filter(x => perDay ? x.date === sel : x.date.startsWith(sel)) : [];
+    if (!hits.length) { bar.classList.add('hidden'); bar.classList.remove('flex'); return; }
+    bar.classList.remove('hidden'); bar.classList.add('flex');
+    const units = [...new Set(hits.map(x => x.unit))];
+    const lines = hits.map(x => `${x.unit} · ${capDay(x.date)} · ${dqReasonText(x)}`);
+    const text = perDay
+        ? fillTpl(T.dqDay, { u: units.slice(0, 2).join(', ') + (units.length > 2 ? ' +' + (units.length - 2) : ''), r: dqReasonShort(hits[0]) })
+        : fillTpl(T.dqMonth, { n: hits.length, u: units.length });
+    const tx = document.getElementById('dqText');
+    tx.textContent = text + (dqOn ? ' ' + T.dqOnNote : ''); tx.title = lines.join('\n');
+    document.getElementById('dqSwitchLabel').textContent = T.dqSwitch;
+    const sw = document.getElementById('dqSwitch');
+    sw.setAttribute('aria-checked', dqOn ? 'true' : 'false'); sw.title = T.dqSwitchTip; sw.setAttribute('aria-label', T.dqSwitchTip);
+    document.getElementById('dqTrack').classList.toggle('bg-acc-500', dqOn); document.getElementById('dqTrack').classList.toggle('bg-slate-600', !dqOn);
+    document.getElementById('dqKnob').classList.toggle('translate-x-4', dqOn);
+}
+
+// ==========================================
 // 5–6. CAPACITY & DURATION · CHANGES & MONITORING (D76–D80)
 // Οι τιμές υπολογίζονται κάθε μέρα από το capacity.py (data/capacity.json)· η σελίδα μόνο τις δείχνει.
 // Μέγιστη ισχύς και μέγιστη ενέργεια κύκλου: ιστορικά μέγιστα που ΔΕΝ ΜΕΙΩΝΟΝΤΑΙ ΠΟΤΕ (λιγότερη χρήση = επιλογή). Πρώτες 40 ημέρες = commissioning, δεν μετράνε (D82–D86).
@@ -1719,9 +1786,16 @@ function capDetailHtml(u, canvasId, withTitle) {
     const ch = (u.changes || []).filter(c => c.confirmed).slice().reverse();
     const changes = `<div class="text-xs font-semibold text-slate-300 mt-4 mb-1">${escapeHtml(T.capUnitChangesTitle)}</div>`
         + (ch.length ? `<ul class="divide-y divide-slate-700/40">${ch.map(c => changeHtml(c, false)).join('')}</ul>` : `<p class="text-xs text-slate-500">${escapeHtml(T.capUnitNoChanges)}</p>`);
-    const sd = u.suspect_days || [];
+    const sd = u.suspect_days || [], runSeen = new Set(), items = [];
+    sd.slice().reverse().forEach(x => {
+        if (x.reason === 'frozen') {
+            const key = x.run_from + '|' + x.run_to; if (runSeen.has(key)) return; runSeen.add(key);
+            const when = x.run_from === x.run_to ? capDay(x.run_from) : `${capDay(x.run_from)} – ${capDay(x.run_to)}`;
+            items.push(`<li><span class="text-slate-400 tabular-nums">${escapeHtml(when)}</span> · ${escapeHtml(dqReasonText(x))}</li>`);
+        } else items.push(`<li><span class="text-slate-400 tabular-nums">${escapeHtml(capDay(x.date))}</span> · ${escapeHtml(dqReasonText(x))}</li>`);
+    });
     const sus = `<div class="text-xs font-semibold text-slate-300 mt-4 mb-1">${escapeHtml(T.capSuspectTitle)}</div>`
-        + (sd.length ? `<ul class="text-xs text-slate-300 space-y-0.5">${sd.slice().reverse().map(x => `<li><span class="text-slate-400 tabular-nums">${escapeHtml(capDay(x.date))}</span> · ${escapeHtml(x.reason === 'cycles' ? fillTpl(T.capSuspectCycles, { x: fmtN(x.value, 1) }) : fillTpl(T.capSuspectSpike, { v: fmtN(x.value) }))}</li>`).join('')}</ul><p class="text-[11px] text-slate-500 mt-1">${escapeHtml(T.capSuspectNote)}</p>`
+        + (items.length ? `<ul class="text-xs text-slate-300 space-y-0.5">${items.join('')}</ul><p class="text-[11px] text-slate-500 mt-1">${escapeHtml(T.capSuspectNote)}</p>`
             : `<p class="text-xs text-slate-500">${escapeHtml(T.capSuspectNone)}</p>`);
     return `${head}<div class="text-xs">${facts}${notes.join('')}</div>`
         + `<div class="text-xs font-semibold text-slate-300 mt-4 mb-0.5">${escapeHtml(T.capUnitChartTitle)}</div><p class="text-[11px] text-slate-500 mb-2">${escapeHtml(T.capUnitChartSub)}</p><div class="relative h-52" id="${canvasId}Wrap"><canvas id="${canvasId}"></canvas></div>`
@@ -1791,7 +1865,7 @@ function renderCapacityTable() {
     capSortedUnits().forEach(u => {
         const prov = u.provisional, open = !wide && capOpenUnit === u.unit, selected = wide && capSelectedUnit === u.unit;
         const badge = u.class_h
-            ? `<span class="inline-block rounded-full border ${prov ? 'border-dashed border-slate-500 text-slate-300' : 'border-acc-400/60 text-acc-300'} px-2 py-0.5 text-[11px] font-bold"${prov ? ` title="${escapeHtml(T.capProvisional)}"` : ''}>${escapeHtml(classLabel(u.class_h))}${prov ? '*' : ''}</span>`
+            ? `<span class="inline-block rounded-full border ${prov ? 'border-dashed border-slate-500 text-slate-300' : 'border-acc-400/60 text-acc-300'} px-2 py-0.5 text-[11px] font-bold"${prov ? ` title="${escapeHtml(statusTip(u.status))}"` : ''}>${escapeHtml(classLabel(u.class_h))}${prov ? '*' : ''}</span>`
             : '<span class="text-slate-500">–</span>';
         const tag = capTag(u);
         const tr = document.createElement('tr');

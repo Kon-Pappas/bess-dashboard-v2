@@ -26,6 +26,17 @@ def cycle_day(power=50.0, hours_charge=4, hours_dis=4, eff=0.88, start_ch=10, st
     return h
 
 
+
+def wobble(h):
+    """μικρή φυσική διακύμανση ±0,5 MWh ώρα παρά ώρα (στην πράξη οι τιμές δεν είναι ποτέ ακριβώς ίδιες για 6+ ώρες· το άθροισμα μένει ίδιο)"""
+    out, k = [], 0
+    for x in h:
+        if abs(x) >= 2.5:
+            out.append(x + (0.5 if k % 2 == 0 else -0.5)); k += 1
+        else:
+            out.append(x)
+    return out
+
 def hist(unit_days):
     return {"bessHourly": [day_row(u, d, h) for u, days in unit_days.items() for d, h in days.items()]}
 
@@ -122,11 +133,11 @@ check("ημέρα με RTE ≫ 100%: το μέγιστο παραμένει 176"
 # ---- 8. η αρχή των τριών ημερών: δύο ημέρες μεγαλύτερου κύκλου δεν αλλάζουν το μέγιστο· τρεις ημέρες το αλλάζουν και δίνουν αναβάθμιση
 base = lambda: steady(100)
 days = base()
-for i in (70, 71): days[ds(i)] = cycle_day(50, 8, 8, start_ch=1, start_dis=12)
+for i in (70, 71): days[ds(i)] = wobble(cycle_day(50, 8, 8, start_ch=1, start_dis=12))
 u = run({"L_01SB": days})["L_01SB"]
 check("δύο ημέρες μεγαλύτερου κύκλου: το μέγιστο μένει 176, ούτε αναβάθμιση", u["energy_mwh"] == 176 and not [c for c in u["changes"] if c["confirmed"]], (u["energy_mwh"], u["changes"]))
 days = base()
-for i in (60, 61, 62): days[ds(i)] = cycle_day(50, 8, 8, start_ch=1, start_dis=12)
+for i in (60, 61, 62): days[ds(i)] = wobble(cycle_day(50, 8, 8, start_ch=1, start_dis=12))
 u = run({"M_01SB": days})["M_01SB"]
 check("τρεις ημέρες μεγαλύτερου κύκλου: μέγιστο 352 και μία επιβεβαιωμένη αναβάθμιση", u["energy_mwh"] == 352 and len([c for c in u["changes"] if c["confirmed"]]) == 1, (u["energy_mwh"], u["changes"]))
 
@@ -189,6 +200,41 @@ days[ds(192)] = [x * 3.0 if x > 0 else x for x in days[ds(192)]]
 res = run({"V_01SB": days})["V_01SB"]
 dates = {x["date"] for x in res["suspect_days"]}
 check("ύποπτες ημέρες: εντοπίζονται οι δύο λανθασμένες ημέρες, όχι οι υπόλοιπες", dates == {ds(190), ds(192)}, sorted(dates))
+
+
+# ---- 18. κολλημένη μέτρηση: ≥ 6 συνεχόμενες ώρες με την ίδια τιμή (και μέσα από τα μεσάνυχτα), ≥ 20% της μέγιστης ισχύος της μονάδας
+days = steady(120)
+for i in (80, 81, 82): days[ds(i)] = [100.0] * 24      # 72 ώρες στα +100 MWh (διπλάσιο της ισχύος της μονάδας)
+u = run({"FZ_01SB": days})["FZ_01SB"]
+fr = [x for x in u["suspect_days"] if x["reason"] == "frozen"]
+check("κολλημένη μέτρηση 72 ωρών: 3 ύποπτες ημέρες (frozen) με 72 ώρες", {x["date"] for x in fr} == {ds(80), ds(81), ds(82)} and fr[0]["hours"] == 72 and fr[0]["value"] == 100.0, fr)
+check("οι ύποπτες ημέρες ΑΓΝΟΟΥΝΤΑΙ: τα μέγιστα μένουν 50 / 176 και δεν υπάρχει αναβάθμιση (αλλιώς 3 ημέρες στα 100 MW θα ήταν «αναβάθμιση»)", u["power_mw"] == 50 and u["energy_mwh"] == 176 and u["changes"] == [], (u["power_mw"], u["energy_mwh"], u["changes"]))
+days = steady(120); days[ds(60)] = [-50.0] * 5 + [-1.0] * 19
+u = run({"FZ_02SB": days})["FZ_02SB"]
+check("5 ώρες με την ίδια τιμή δεν είναι κόλλημα (κανονική φόρτιση)", not [x for x in u["suspect_days"] if x["reason"] == "frozen"], u["suspect_days"])
+days = steady(120)
+for i in range(70, 73): days[ds(i)] = [-50.0] * 12 + [0.0] * 12      # 12 ώρες/ημέρα με την ίδια τιμή, χωρίς να συνεχίζονται: μένουν 12 ώρες κολλημένες την ημέρα
+u = run({"FZ_03SB": days})["FZ_03SB"]
+check("12 ώρες με την ίδια τιμή μέσα σε μία ημέρα: ύποπτη ημέρα", {x["date"] for x in u["suspect_days"] if x["reason"] == "frozen"} == {ds(70), ds(71), ds(72)}, u["suspect_days"])
+# ημέρα-σύνορο: μόνο 3 ώρες της κολλημένης περιόδου στην προηγούμενη ημέρα
+days = steady(120)
+days[ds(50)][-3:] = [100.0, 100.0, 100.0]
+for i in (51, 52): days[ds(i)] = [100.0] * 24
+days[ds(53)][:2] = [100.0, 100.0]
+u = run({"FZ_04SB": days})["FZ_04SB"]
+check("ημέρες-σύνορο της κολλημένης περιόδου (3 και 2 ώρες) δεν αγνοούνται ολόκληρες", {x["date"] for x in u["suspect_days"] if x["reason"] == "frozen"} == {ds(51), ds(52)}, u["suspect_days"])
+
+# ---- 19. όριο αδράνειας ανά μονάδα: μεγάλη μονάδα (300 MW) με ιδιοκατανάλωση −3 MWh/ώρα δεν μετράει ως φόρτιση ούτε ως κόλλημα
+def big_day():
+    h = [-3.0] * 24
+    for i in range(10, 14): h[i] = -300.0
+    for i in range(18, 22): h[i] = 264.0
+    return h
+u = run({"BG_01SB": {ds(i): big_day() for i in range(120)}})["BG_01SB"]
+check("μονάδα 300 MW: όριο αδράνειας 4,5 MWh (1,5% της ισχύος), η ιδιοκατανάλωση −3 δεν είναι δραστηριότητα ούτε κόλλημα", u["tau_mwh"] == 4.5 and u["suspect_days"] == [], (u["tau_mwh"], u["suspect_days"]))
+check("μονάδα 300 MW: μέγιστα 300 MW και 1056 MWh, κατηγορία 3", u["power_mw"] == 300 and u["energy_mwh"] == 1056 and u["class_h"] == 3, (u["power_mw"], u["energy_mwh"], u["class_h"]))
+u = run({"SM_01SB": steady(120)})["SM_01SB"]
+check("μονάδα 50 MW: το όριο αδράνειας μένει 2,5", u["tau_mwh"] == 2.5, u["tau_mwh"])
 
 # ---- 15. χωρίς δραστηριότητα: ουδέτερη πληροφορία, όχι μείωση, όχι γεγονός
 days = steady(100); days.update({ds(i): [0.0] * 24 for i in range(100, 109)})

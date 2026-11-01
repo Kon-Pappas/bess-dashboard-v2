@@ -80,6 +80,7 @@ const i18n = {
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="daily" style="scroll-margin-top:8px">Ημερήσια ανάλυση</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
                 <li><strong class="text-slate-200">Σύνολα &amp; RTE:</strong> το «TOTAL BESS» είναι το άθροισμα των μονάδων. Το ημερήσιο RTE παραμορφώνεται όταν η φόρτιση μεταφέρεται στην επόμενη μέρα, οπότε διάβασέ το σε μεγαλύτερα διαστήματα.</li>
+                <li><strong class="text-slate-200">Ύποπτες μετρήσεις:</strong> όταν η ημέρα ή ο μήνας έχει ύποπτη μέτρηση SCADA (κολλημένη τιμή κ.ά.) εμφανίζεται ⚠ και ένας διακόπτης «χωρίς ύποπτες μετρήσεις». Κλειστός δείχνει τα επίσημα νούμερα του ΑΔΜΗΕ, ανοιχτός βγάζει τις μονάδες-ημέρες που σημαίνονται από τα αθροίσματα, το ΣΥΝΟΛΟ και τα ωριαία. Δεν διαγράφονται δεδομένα.</li>
             </ul>
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="monthly" style="scroll-margin-top:8px">Μηνιαίος αντίκτυπος</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
@@ -121,6 +122,7 @@ const i18n = {
                 <li><strong class="text-slate-200">ISP και SCADA:</strong> το ISP δείχνει τι προγραμματίστηκε και το SCADA τι πραγματοποιήθηκε. Διαφορές ανάμεσά τους είναι αναμενόμενες.</li>
                 <li><strong class="text-slate-200">Σύνολα:</strong> η ημερήσια φόρτιση και αποφόρτιση κάθε μονάδας είναι το άθροισμα των ωριαίων τιμών (στο ISP, των τετάρτων). Το «TOTAL BESS» είναι το άθροισμα των μονάδων, δηλαδή η πραγματική φυσική φόρτιση και αποφόρτιση. Δεν είναι η γραμμή TOTAL του ΑΔΜΗΕ, που σε κάθε ώρα αφαιρεί τη φόρτιση μιας μονάδας από την αποφόρτιση μιας άλλης και δίνει έτσι χαμηλότερες τιμές.</li>
                 <li><strong class="text-slate-200">Απόδοση κύκλου (RTE):</strong> ημερήσιο AC-to-AC, δηλαδή αποφόρτιση ÷ φόρτιση. Ακραίες τιμές (πάνω από ~92% ή κάτω από ~83%, και μερικές φορές πάνω από 100% σε μία μονάδα) οφείλονται συχνά στο φαινόμενο <em>Inter-day SoC Carryover</em>, όπου η μπαταρία κρατά ενέργεια για την επόμενη μέρα. Το RTE είναι πιο αξιόπιστο σε μεγαλύτερα διαστήματα ή στο σύνολο του στόλου.</li>
+                <li><strong class="text-slate-200">Ύποπτες μετρήσεις:</strong> όταν η ημέρα ή ο μήνας έχει ύποπτη μέτρηση SCADA (κολλημένη τιμή κ.ά.) εμφανίζεται ⚠ και ένας διακόπτης «χωρίς ύποπτες μετρήσεις». Κλειστός δείχνει τα επίσημα νούμερα του ΑΔΜΗΕ, ανοιχτός βγάζει τις μονάδες-ημέρες που σημαίνονται από τα αθροίσματα, το ΣΥΝΟΛΟ και τα ωριαία. Δεν διαγράφονται δεδομένα.</li>
             </ul>
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="monthly" style="scroll-margin-top:8px">Μηνιαίος αντίκτυπος</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
@@ -154,7 +156,8 @@ const i18n = {
                 <li><strong class="text-slate-200">Commissioning:</strong> οι πρώτες 40 ημέρες κάθε μονάδας δεν μετράνε, γιατί τότε ανεβάζει ισχύ και χωρητικότητα και τα νούμερα του SCADA μπορεί να είναι ψευδή. Η περίοδος φαίνεται ως «όσα φάνηκαν ως τώρα», χωρίς κατηγορία. Μονάδα που δούλευε ήδη όταν ξεκίνησε το SCADA μας (18/6/2026) μετράει από αυτή την ημέρα. Μετά τις 40 ημέρες χρειάζεται βάση 14 ημερών και 8 έγκυρων κύκλων, αλλιώς «λίγα δεδομένα» με προσωρινή κατηγορία.</li>
                 <li><strong class="text-slate-200">Ισχύς και ενέργεια:</strong> η ισχύς είναι ο μέσος όρος κάθε ώρας (MWh ανά ώρα = MW)· η στιγμιαία κορυφή μπορεί να είναι λίγο υψηλότερη. Η ενέργεια είναι η εκφόρτιση στον μετρητή (AC) ανά κύκλο και είναι περίπου 10% χαμηλότερη από την ονομαστική, λόγω απωλειών.</li>
                 <li><strong class="text-slate-200">Κατηγορία:</strong> το ακέραιο μέρος της διάρκειας (μέγιστη ενέργεια κύκλου ÷ μέγιστη ισχύς), με ανοχή 0,1 ώρας: 2,4 → 2ωρη, 3,1 → 3ωρη, 4,0 → 4ωρη, 2,6 → 2ωρη. Μια μονάδα που δεν έχει φτάσει ποτέ πλήρη κύκλο φαίνεται μικρότερη από ό,τι είναι: η εκτίμηση είναι κάτω όριο.</li>
-                <li><strong class="text-slate-200">Ύποπτες ημέρες δεδομένων:</strong> ημέρες με φυσικά αδύνατες ή πολύ ασυνήθιστες τιμές: πάνω από 2,2 κύκλους της μονάδας μέσα σε μία ημέρα, ή ώρα πάνω από 1,25 φορές το 99ο εκατοστημόριο της ίδιας της μονάδας. Πιθανό σφάλμα SCADA· δεν αλλάζουν τα μέγιστα και φαίνονται στην καρτέλα της μονάδας.</li>
+                <li><strong class="text-slate-200">Όριο αδράνειας:</strong> κάθε μονάδα έχει δικό της όριο, το μεγαλύτερο από 2,5 MWh και το 1,5% της μέγιστης ισχύος της, ώστε η ιδιοκατανάλωση μιας μεγάλης μονάδας (π.χ. −3 MWh την ώρα) να μη μετράει ως φόρτιση.</li>
+                <li><strong class="text-slate-200">Ύποπτες ημέρες δεδομένων:</strong> ημέρες με κολλημένη μέτρηση (≥ 6 συνεχόμενες ώρες με ακριβώς την ίδια τιμή, τουλάχιστον 20% της μέγιστης ισχύος της μονάδας), με πάνω από 2,2 κύκλους μέσα σε μία ημέρα, ή με ώρα πάνω από 1,25 φορές το 99ο εκατοστημόριο της ίδιας της μονάδας. Πιθανό σφάλμα SCADA, όχι βλάβη. Αγνοούνται στις εκτιμήσεις (θεωρούνται ότι λείπουν) και φαίνονται στην καρτέλα της μονάδας.</li>
             </ul>
 
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="changes" style="scroll-margin-top:8px">Αλλαγές και παρακολούθηση</h3>
@@ -245,6 +248,15 @@ const i18n = {
         tabChanges: "Αλλαγές & παρακολούθηση",
         capUnitsTitle: "Μονάδες",
         capStatusLabel: "Κατάσταση",
+        dqFrozen: "κολλημένη τιμή {v} MWh για {h} ώρες",
+        dqFrozenShort: "κολλημένη τιμή",
+        dqCyclesShort: "υπερβολικοί κύκλοι",
+        dqSpikeShort: "ώρα πολύ πάνω από το συνηθισμένο",
+        dqDay: "Ύποπτη μέτρηση SCADA: {u} ({r})",
+        dqMonth: "{n} ύποπτες μετρήσεις SCADA σε {u} μονάδες του μήνα",
+        dqSwitch: "Χωρίς αυτές",
+        dqOnNote: "Εμφανίζονται χωρίς αυτές.",
+        dqSwitchTip: "Χωρίς ύποπτες μετρήσεις. Κλειστός: τα επίσημα νούμερα του ΑΔΜΗΕ. Ανοιχτός: χωρίς τις μονάδες-ημέρες με ύποπτη μέτρηση.",
         capStatusCommissioning: "Commissioning",
         capStatusTipCommissioning: "Οι πρώτες 40 ημέρες δεν μετράνε για το μέγιστο: η μονάδα ανεβάζει ισχύ και χωρητικότητα. Τα νούμερα είναι όσα φάνηκαν ως τώρα και δεν έχουν κατηγορία.",
         capTagCommissioning: "commissioning, ημέρα {n} από {t}",
@@ -269,9 +281,9 @@ const i18n = {
         capUnitChartSub: "Τα μέγιστα που φάνηκαν μέχρι κάθε ημέρα. Διακεκομμένη γραμμή: commissioning. Τα τρίγωνα σημαδεύουν αναβαθμίσεις.",
         capUnitChangesTitle: "Αναβαθμίσεις αυτής της μονάδας",
         capUnitNoChanges: "Καμία αναβάθμιση μετά το commissioning.",
-        capSuspectTitle: "Ύποπτες ημέρες δεδομένων (90 ημέρες)",
+        capSuspectTitle: "Ύποπτες ημέρες δεδομένων",
         capSuspectNone: "Καμία ύποπτη ημέρα.",
-        capSuspectNote: "Πιθανό σφάλμα SCADA, όχι βλάβη. Δεν αλλάζουν τις εκτιμήσεις.",
+        capSuspectNote: "Πιθανό σφάλμα SCADA, όχι βλάβη. Αγνοούνται στις εκτιμήσεις και σημαίνονται με ⚠ στις άλλες καρτέλες.",
         capSuspectCycles: "{x} κύκλοι σε μία ημέρα",
         capSuspectSpike: "ώρα {v} MW, πολύ πάνω από το συνηθισμένο",
         capChangeShared: "πιθανό σφάλμα αρχείου: ίδια αλλαγή σε πολλές μονάδες",
@@ -285,7 +297,7 @@ const i18n = {
         chgListNone: "Δεν έχει ανιχνευτεί καμία αναβάθμιση.",
         chgMore: "Εμφανίζονται τα τελευταία {n} από {t}.",
         chgHowTitle: "Πώς διαβάζεται",
-        chgHow1: "Ύποπτο δεδομένο: 1–2 ημέρες με φυσικά αδύνατες ή πολύ ασυνήθιστες τιμές. Αγνοείται και φαίνεται μόνο στην καρτέλα της μονάδας.",
+        chgHow1: "Ύποπτο δεδομένο: κολλημένη μέτρηση, ή 1–2 ημέρες με φυσικά αδύνατες ή πολύ ασυνήθιστες τιμές. Αγνοείται και φαίνεται στην καρτέλα της μονάδας.",
         chgHow2: "Προς επιβεβαίωση: 1 ή 2 από τις τελευταίες 14 ημέρες δείχνουν νέο μέγιστο πάνω από 12%. Επιβεβαιώνεται όταν το ίδιο φανεί σε 3 διαφορετικές ημέρες.",
         chgHow3: "Επιβεβαιωμένη αναβάθμιση: το μέγιστο ανέβηκε πάνω από 12% και φάνηκε σε 3 διαφορετικές ημέρες. Η ημερομηνία είναι η πρώτη από αυτές.",
         chgHow4: "Commissioning: οι πρώτες 40 ημέρες κάθε μονάδας δεν μετράνε για το μέγιστο. Μετά χρειάζεται βάση 14 ημερών και 8 έγκυρων κύκλων.",
@@ -385,6 +397,7 @@ const i18n = {
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="daily" style="scroll-margin-top:8px">Daily Analytics</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
                 <li><strong class="text-slate-200">Totals &amp; RTE:</strong> “TOTAL BESS” is the sum of the units. Daily RTE is distorted by energy carried over to the next day, so read it over longer periods.</li>
+                <li><strong class="text-slate-200">Suspect readings:</strong> when the day or the month has a suspect SCADA reading (a frozen value and so on) a ⚠ and a switch "without suspect readings" appear. Off shows the official IPTO figures; on removes the flagged unit-days from the totals, the TOTAL and the hourly values. No data are deleted.</li>
             </ul>
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="monthly" style="scroll-margin-top:8px">Monthly Impact</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
@@ -426,6 +439,7 @@ const i18n = {
                 <li><strong class="text-slate-200">ISP and SCADA:</strong> the ISP shows what was scheduled and SCADA what actually happened. Differences between them are expected.</li>
                 <li><strong class="text-slate-200">Totals:</strong> a unit’s daily charge and discharge is the sum of its hourly values (quarter-hourly in the ISP). “TOTAL BESS” is the sum of the units, i.e. the actual physical charge and discharge. It is not IPTO’s TOTAL row, which nets the units hour by hour and gives lower values.</li>
                 <li><strong class="text-slate-200">Round-trip efficiency (RTE):</strong> daily AC-to-AC, i.e. discharge ÷ charge. Extreme values (above ~92% or below ~83%, and sometimes above 100% for a single unit) are often caused by <em>Inter-day SoC Carryover</em>, where the battery holds energy for the next day. RTE is more reliable over longer periods or for the whole fleet.</li>
+                <li><strong class="text-slate-200">Suspect readings:</strong> when the day or the month has a suspect SCADA reading (a frozen value and so on) a ⚠ and a switch "without suspect readings" appear. Off shows the official IPTO figures; on removes the flagged unit-days from the totals, the TOTAL and the hourly values. No data are deleted.</li>
             </ul>
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="monthly" style="scroll-margin-top:8px">Monthly Impact</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
@@ -459,7 +473,8 @@ const i18n = {
                 <li><strong class="text-slate-200">Commissioning:</strong> the first 40 days of each unit do not count, because then it is raising power and capacity and the SCADA figures may be false. The period shows as "what has shown so far", without a class. A unit that was already working when our SCADA began (18 Jun 2026) counts from that day. After the 40 days it needs a base of 14 days and 8 valid cycles, otherwise "little data" with a provisional class.</li>
                 <li><strong class="text-slate-200">Power and energy:</strong> power is the average of each hour (MWh per hour = MW); the instantaneous peak can be a little higher. Energy is the discharge at the meter (AC) per cycle and is about 10% below the nameplate because of losses.</li>
                 <li><strong class="text-slate-200">Class:</strong> the whole-hour part of the duration (maximum energy of a cycle ÷ maximum power), with a tolerance of 0.1 hour: 2.4 → 2h, 3.1 → 3h, 4.0 → 4h, 2.6 → 2h. A unit that has never run a full cycle looks smaller than it is: the estimate is a lower bound.</li>
-                <li><strong class="text-slate-200">Suspect data days:</strong> days with physically impossible or very unusual values: more than 2.2 cycles of the unit in one day, or an hour above 1.25 times the 99th percentile of the unit itself. A likely SCADA error; they do not change the maxima and are shown on the card of the unit.</li>
+                <li><strong class="text-slate-200">Idle threshold:</strong> each unit has its own, the larger of 2.5 MWh and 1.5% of its maximum power, so that the self-consumption of a large unit (e.g. −3 MWh per hour) is not counted as charging.</li>
+                <li><strong class="text-slate-200">Suspect data days:</strong> days with a frozen reading (6 or more hours in a row with exactly the same value, at least 20% of the maximum power of the unit), with more than 2.2 cycles in one day, or with an hour above 1.25 times the 99th percentile of the unit itself. A likely SCADA error, not a failure. They are ignored in the estimates (treated as missing) and are shown on the card of the unit.</li>
             </ul>
 
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="changes" style="scroll-margin-top:8px">Changes and monitoring</h3>
@@ -550,6 +565,15 @@ const i18n = {
         tabChanges: "Changes & monitoring",
         capUnitsTitle: "Units",
         capStatusLabel: "Status",
+        dqFrozen: "frozen value {v} MWh for {h} hours",
+        dqFrozenShort: "frozen value",
+        dqCyclesShort: "too many cycles",
+        dqSpikeShort: "hour far above the usual",
+        dqDay: "Suspect SCADA reading: {u} ({r})",
+        dqMonth: "{n} suspect SCADA readings on {u} units of the month",
+        dqSwitch: "Without them",
+        dqOnNote: "Shown without them.",
+        dqSwitchTip: "Without suspect readings. Off: the official IPTO figures. On: without the unit-days with a suspect reading.",
         capStatusCommissioning: "Commissioning",
         capStatusTipCommissioning: "The first 40 days do not count for the maximum: the unit is raising power and capacity. The figures are what has shown so far and have no class.",
         capTagCommissioning: "commissioning, day {n} of {t}",
@@ -574,9 +598,9 @@ const i18n = {
         capUnitChartSub: "The maxima shown up to each day. Dashed line: commissioning. Triangles mark upgrades.",
         capUnitChangesTitle: "Upgrades of this unit",
         capUnitNoChanges: "No upgrade after commissioning.",
-        capSuspectTitle: "Suspect data days (90 days)",
+        capSuspectTitle: "Suspect data days",
         capSuspectNone: "No suspect day.",
-        capSuspectNote: "A likely SCADA error, not a failure. They do not change the estimates.",
+        capSuspectNote: "A likely SCADA error, not a failure. They are ignored in the estimates and marked with ⚠ in the other tabs.",
         capSuspectCycles: "{x} cycles in one day",
         capSuspectSpike: "hour {v} MW, far above the usual",
         capChangeShared: "likely file error: same change on several units",
@@ -590,7 +614,7 @@ const i18n = {
         chgListNone: "No upgrade has been detected.",
         chgMore: "Showing the latest {n} of {t}.",
         chgHowTitle: "How to read it",
-        chgHow1: "Suspect data: 1–2 days with physically impossible or very unusual values. Ignored, and shown only on the card of the unit.",
+        chgHow1: "Suspect data: a frozen reading, or 1–2 days with physically impossible or very unusual values. Ignored, and shown on the card of the unit.",
         chgHow2: "To be confirmed: 1 or 2 of the last 14 days show a new maximum more than 12% higher. It is confirmed when the same shows on 3 different days.",
         chgHow3: "Confirmed upgrade: the maximum rose by more than 12% and showed on 3 different days. The date is the first of them.",
         chgHow4: "Commissioning: the first 40 days of each unit do not count for the maximum. After that it needs a base of 14 days and 8 valid cycles.",
@@ -697,6 +721,7 @@ function setLang(lang) {
     setT('tabBtnArbitrage', t.tabArbitrage);
     setT('tabBtnCapacity', t.tabCapacity);
     setT('tabBtnChanges', t.tabChanges);
+    setT('dqSwitchLabel', t.dqSwitch);
     ['capTitle', 'capThUnit', 'capThPower', 'capThEnergy', 'capThDuration', 'capFleetTitle', 'capFleetSub', 'capUnitsTitle', 'capUnitsSub', 'chgTitle', 'chgSub', 'chgListTitle', 'chgHowTitle'].forEach(id => setT(id, t[id]));
     [1, 2, 3, 4, 5, 6].forEach(n => { const li = document.getElementById('chgHow' + n); if (li) li.textContent = t['chgHow' + n]; });
     const toTopBtn = document.getElementById('toTopBtn');
@@ -768,6 +793,7 @@ function setLang(lang) {
     if (typeof renderArbitrageTab === "function") renderArbitrageTab(); 
     if (typeof renderCapacityTab === "function") renderCapacityTab();
     if (typeof renderChangesTab === "function") renderChangesTab();
+    if (typeof dqUpdateBar === "function") dqUpdateBar();
 }
 
 function parseNum(val) {

@@ -13,12 +13,14 @@ Public dashboard of battery energy storage (BESS) in the Greek electricity marke
 | Monthly Impact | Cumulative month: thermal displacement as an upper bound (all discharge) and a net estimate (only energy charged from RES surplus, times the efficiency of the month), and potential avoided RES curtailment in two layers: core (charging at a price ≤ €5/MWh) and an additional layer with reservation (ISP residual surplus but price > €5). |
 | Surplus & Flexibility | Hourly profile of the ISP residual surplus against BESS and pumped-hydro charging; daily and cumulative absorption, with charging outside the surplus hours shown apart as arbitrage. |
 | Arbitrage P&L | Hourly day-ahead result per unit (volume × price), with an optional one-hour alignment between SCADA and market clocks. |
-| Capacity & duration | The maximum power (MW) and the maximum energy of one cycle (MWh) of every ADMIE unit code from the hourly SCADA, **never decreasing** (using less is a choice), without the first 40 days of each unit (commissioning), and the class 2h / 3h / 4h: five KPIs, the fleet progression, and one card per unit (maxima with the date since, its own chart, its upgrades, its suspect data days); an accordion on a phone, a list with a side panel from 1024 px. |
+| Capacity & duration | The maximum power (MW) and the maximum energy of one cycle (MWh) of every ADMIE unit code from the hourly SCADA, **never decreasing** (using less is a choice), without the first 40 days of each unit (commissioning), and the class 2h / 3h / 4h: five KPIs, the fleet progression, and one card per unit (maxima with the date since, its own chart, its upgrades, its suspect data days, which are ignored); an accordion on a phone, a list with a side panel from 1024 px. |
 | Changes & monitoring | The timeline of the upgrades of the units (a new maximum on 3 different days, or to be confirmed after 1–2 days), the counters and a short guide to the categories and the time margins. There are no decreases. |
 
 The *Methodology & Assumptions* button opens a short and a detailed version of the assumptions behind every tab.
 
 **Mobile layout (below 768 px).** One secondary box (date or month with the completeness badge; methodology and language) with a darker background, above the main tabs, which are lighter and sit in a 3 + 2 grid; no horizontal scroll; an up-arrow button returns to the top. The desktop layout is separate and unchanged. Rules and measurements: `docs/DECISIONS.md` D71–D74.
+
+**Suspect readings.** When a day or a month has a flagged SCADA reading (for example a frozen value) a ⚠ bar appears with the switch "Without them" (off by default: the official figures). Rules: `docs/DECISIONS.md` D86–D91.
 
 ## Data sources
 
