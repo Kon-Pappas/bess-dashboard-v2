@@ -85,14 +85,13 @@ Next, when there is a reason:
 - **Hub standard (H06):** if this pattern works in daily use, propose it for the other dashboards of the hub: one dark secondary box, light main tabs, no horizontal scroll on the tabs, an up-arrow, a text of two lines allowed
 - Look again at a bottom navigation bar only if the owner finds it hard to switch tabs on a long page
 
-## Data quality (batch 24, 1 Nov 2026)
+## Data quality (batches 24 and 25, 1 Nov 2026)
 
-Done: frozen-measurement detector, suspect days ignored in the Capacity tab, idle threshold per unit, the ⚠ bar and the switch "Without them" (D86–D91).
+Done: frozen-measurement detector, suspect days ignored in the Capacity tab, idle threshold per unit, the ⚠ bar and the switch "Without them" (D86–D91); the dates of the manual run ignore spaces and the package versions are pinned (D92). The re-run of 9–10 Aug gave identical data (D90).
 
 Next, when there is a reason:
-- Run the workflow again for **2026-08-09 → 2026-08-10** (without a trailing space) and compare with the data in the repo
 - Watch how `FROZEN_HOURS = 6` behaves for a few weeks (the owner finds it "many"); lower it only if the data show shorter freezes
-- **Small, waiting for the owner:** let the workflow ignore spaces in the dates, and pin the versions of the Python packages (pandas, numpy, openpyxl, xlrd), because the log warns that the `xlrd` engine will be removed in a future pandas
+- When a package version is raised: test it first, change `requirements.txt`, and decide then whether to leave the `xlrd` engine (deprecated in pandas 3.1) for `calamine`
 
 ## Checks with a date
 

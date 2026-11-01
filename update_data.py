@@ -529,8 +529,9 @@ def write_meta(now_utc):
 def main():
     db = load_existing_data()
 
-    start_date_env = os.environ.get("START_DATE")
-    end_date_env = os.environ.get("END_DATE")
+    # Τα κενά στην αρχή/στο τέλος αγνοούνται (το πρώτο χειροκίνητο backfill απέτυχε επειδή το start_date ήταν «2026-08-09 »)
+    start_date_env = (os.environ.get("START_DATE") or "").strip()
+    end_date_env = (os.environ.get("END_DATE") or "").strip()
 
     target_dates = []
 

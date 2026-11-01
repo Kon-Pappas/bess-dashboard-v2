@@ -22,6 +22,8 @@ The *Methodology & Assumptions* button opens a short and a detailed version of t
 
 **Suspect readings.** When a day or a month has a flagged SCADA reading (for example a frozen value) a ⚠ bar appears with the switch "Without them" (off by default: the official figures). Rules: `docs/DECISIONS.md` D86–D91.
 
+**Pipeline.** `update_data.py` runs from the workflow (started only from cron-job.org at 07:04); the Python packages are pinned in `requirements.txt` (D92). Checks: `python3 scripts/test_capacity.py` and `python3 scripts/test_update_dates.py`.
+
 ## Data sources
 
 - **IPTO / ADMIE**: ISP results (scheduled) and System Realization SCADA (actual operation, files marked by IPTO as uncertified), daily files. Only BESS units on the Transmission System; units on the Distribution Network (HEDNO) are not included.
