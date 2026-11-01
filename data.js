@@ -96,8 +96,13 @@ const i18n = {
 
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="capacity" style="scroll-margin-top:8px">Χωρητικότητα και διάρκεια</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
-                <li><strong class="text-slate-200">Εκτίμηση από SCADA:</strong> η ισχύς (MW) και η ενέργεια ανά κύκλο (MWh) κάθε μονάδας εκτιμώνται από τις ωριαίες τιμές των τελευταίων 30 ημερών και ξαναϋπολογίζονται κάθε μέρα. Δεν είναι η ονομαστική χωρητικότητα.</li>
-                <li><strong class="text-slate-200">Κατηγορία:</strong> 2ωρη, 3ωρη, 4ωρη από την εξασφαλισμένη εκφόρτιση (ενέργεια ÷ ισχύς), δηλαδή μια τιμή που επιτεύχθηκε τουλάχιστον 3 φορές. Οι νέες μονάδες, που μόλις εντάσσονται σε λειτουργία, σημειώνονται «λίγα δεδομένα» ή «σε αλλαγή».</li>
+                <li><strong class="text-slate-200">Μέγιστα από SCADA:</strong> η μέγιστη ισχύς (MW) και η μέγιστη ενέργεια ενός κύκλου (MWh) κάθε μονάδας υπολογίζονται από τις ωριαίες τιμές του ιστορικού της, χωρίς τις πρώτες 40 ημέρες λειτουργίας (commissioning), και ξαναϋπολογίζονται κάθε μέρα. <em>Δεν μειώνονται ποτέ</em>: λιγότερη χρήση είναι επιλογή. Δεν είναι η ονομαστική χωρητικότητα.</li>
+                <li><strong class="text-slate-200">Κατηγορία:</strong> 2ωρη, 3ωρη, 4ωρη από τη μέγιστη ενέργεια κύκλου ÷ τη μέγιστη ισχύ. Οι μονάδες στο commissioning δεν έχουν κατηγορία.</li>
+            </ul>
+
+            <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="changes" style="scroll-margin-top:8px">Αλλαγές και παρακολούθηση</h3>
+            <ul class="list-disc pl-5 space-y-2 text-slate-400">
+                <li><strong class="text-slate-200">Αναβαθμίσεις:</strong> όταν το μέγιστο ανεβεί πάνω από 12% και φανεί σε 3 διαφορετικές ημέρες, καταγράφεται αναβάθμιση (π.χ. από 2ωρη σε 3ωρη). Αν φανεί σε 1–2 ημέρες των τελευταίων 14 είναι «προς επιβεβαίωση». Δεν υπάρχουν μειώσεις.</li>
             </ul>
 `,
         modalBodyFull: `
@@ -143,15 +148,25 @@ const i18n = {
                         <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="capacity" style="scroll-margin-top:8px">Χωρητικότητα και διάρκεια</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
                 <li><strong class="text-slate-200">Πηγή:</strong> μόνο τα ωριαία SCADA. Το ISP δεν χρησιμοποιείται: είναι πρόγραμμα και δεν δείχνει τι έγινε πραγματικά.</li>
-                <li><strong class="text-slate-200">Κύκλοι:</strong> οι ώρες χωρίζονται σε φάσεις φόρτισης και εκφόρτισης, ώστε οι διπλοί κύκλοι μέσα στη μέρα, ή ένας κύκλος που περνά τα μεσάνυχτα, να μετρούν σωστά. Έγκυρος είναι ο κύκλος που η εκφόρτισή του έχει απόδοση 70–100% της φόρτισης· οι υπόλοιποι, όπως η 9/9 με RTE 207%, αγνοούνται.</li>
-                <li><strong class="text-slate-200">Εξασφαλισμένη τιμή:</strong> η 3η υψηλότερη τιμή των τελευταίων 30 ημερών, δηλαδή αυτή που επιτεύχθηκε τουλάχιστον τρεις φορές. Έτσι μία ανώμαλη ή δοκιμαστική τιμή δεν αλλάζει την εκτίμηση.</li>
-                <li><strong class="text-slate-200">Ισχύς και ενέργεια:</strong> η ισχύς είναι ο μέσος όρος κάθε ώρας (MWh ανά ώρα = MW)· η στιγμιαία κορυφή μπορεί να είναι λίγο υψηλότερη. Η ενέργεια είναι η εκφόρτιση στον μετρητή (AC) ανά κύκλο και είναι περίπου 10% χαμηλότερη από την ονομαστική, λόγω απωλειών. Δείχνεται και η ενέργεια φόρτισης του κύκλου.</li>
-                <li><strong class="text-slate-200">Κατηγορία:</strong> το ακέραιο μέρος της διάρκειας (ενέργεια ÷ ισχύς), με ανοχή 0,1 ώρας: 2,4 → 2ωρη, 3,1 → 3ωρη, 4,0 → 4ωρη, 2,6 → 2ωρη. Μια μονάδα που δεν έχει φτάσει ποτέ πλήρη κύκλο φαίνεται μικρότερη από ό,τι είναι: η εκτίμηση είναι κάτω όριο.</li>
-                <li><strong class="text-slate-200">Κατάσταση:</strong> «λίγα δεδομένα» (λιγότεροι από 8 έγκυροι κύκλοι ή πρώτη λειτουργία πριν από λιγότερο από 21 ημέρες), «σε αλλαγή» (η ισχύς ή η ενέργεια διαφέρει πάνω από 10% από τις προηγούμενες 30 ημέρες, π.χ. ένταξη σε λειτουργία) ή «σταθερή». Η κατηγορία των δύο πρώτων είναι προσωρινή.</li>
-                <li><strong class="text-slate-200">Αλλαγές και αναβαθμίσεις:</strong> κάθε ημέρα υπολογίζεται η ίδια εκτίμηση για τις τελευταίες 14 ημέρες. Όταν ξεφεύγει πάνω από 12% από το προηγούμενο επίπεδο για 5 συνεχόμενες ημέρες, καταγράφεται αλλαγή (π.χ. από 2ωρη σε 3ωρη, διπλασιασμός ισχύος, δοκιμή που επιστρέφει). Αν κρατά 2–4 ημέρες φαίνεται «προς επιβεβαίωση». Μια πτώση που ανακάμπτει καταγράφεται ως επεισόδιο. Δεν χρησιμοποιούνται ονόματα εταιρειών: μόνο οι κωδικοί του ΑΔΜΗΕ.</li>
-                <li><strong class="text-slate-200">Ρεκόρ:</strong> ταυτόχρονη ισχύς και ημερήσια ενέργεια του στόλου από την αρχή της καταγραφής (18/6/2026). Ημέρες μονάδας με εκφόρτιση πάνω από 1,3 φορές τη φόρτιση δεν μετράνε.</li>
+                <li><strong class="text-slate-200">Κύκλοι:</strong> οι ώρες χωρίζονται σε φάσεις φόρτισης και εκφόρτισης, ώστε οι διπλοί κύκλοι μέσα στη μέρα, ή ένας κύκλος που περνά τα μεσάνυχτα, να μετρούν σωστά. Έγκυρος είναι ο κύκλος που η εκφόρτισή του έχει απόδοση 70–100% της φόρτισης.</li>
+                <li><strong class="text-slate-200">Μέγιστα:</strong> η μέγιστη ισχύς είναι η 3η υψηλότερη από τα μέγιστα τριών <em>διαφορετικών ημερών</em>, και η μέγιστη ενέργεια ενός κύκλου η 3η υψηλότερη από τους έγκυρους κύκλους, από όλο το ιστορικό μετά το commissioning. Έτσι ένα λάθος SCADA μίας ή δύο ημερών δεν γίνεται «μέγιστο» για πάντα, και το μέγιστο δεν μπορεί να μειωθεί όταν προστίθενται ημέρες.</li>
+                <li><strong class="text-slate-200">Δεν μειώνονται ποτέ:</strong> αν μια μονάδα φορτίζει ή εκφορτίζει με λιγότερη ισχύ, ή δεν δουλεύει για ημέρες, δεν σημαίνει ότι μίκρυνε η ισχύς ή η χωρητικότητά της· είναι επιλογή χρήσης. Το μέγιστο ανεβαίνει μόνο όταν φανεί νέο, μεγαλύτερο.</li>
+                <li><strong class="text-slate-200">Commissioning:</strong> οι πρώτες 40 ημέρες κάθε μονάδας δεν μετράνε, γιατί τότε ανεβάζει ισχύ και χωρητικότητα και τα νούμερα του SCADA μπορεί να είναι ψευδή. Η περίοδος φαίνεται ως «όσα φάνηκαν ως τώρα», χωρίς κατηγορία. Μονάδα που δούλευε ήδη όταν ξεκίνησε το SCADA μας (18/6/2026) μετράει από αυτή την ημέρα. Μετά τις 40 ημέρες χρειάζεται βάση 14 ημερών και 8 έγκυρων κύκλων, αλλιώς «λίγα δεδομένα» με προσωρινή κατηγορία.</li>
+                <li><strong class="text-slate-200">Ισχύς και ενέργεια:</strong> η ισχύς είναι ο μέσος όρος κάθε ώρας (MWh ανά ώρα = MW)· η στιγμιαία κορυφή μπορεί να είναι λίγο υψηλότερη. Η ενέργεια είναι η εκφόρτιση στον μετρητή (AC) ανά κύκλο και είναι περίπου 10% χαμηλότερη από την ονομαστική, λόγω απωλειών.</li>
+                <li><strong class="text-slate-200">Κατηγορία:</strong> το ακέραιο μέρος της διάρκειας (μέγιστη ενέργεια κύκλου ÷ μέγιστη ισχύς), με ανοχή 0,1 ώρας: 2,4 → 2ωρη, 3,1 → 3ωρη, 4,0 → 4ωρη, 2,6 → 2ωρη. Μια μονάδα που δεν έχει φτάσει ποτέ πλήρη κύκλο φαίνεται μικρότερη από ό,τι είναι: η εκτίμηση είναι κάτω όριο.</li>
+                <li><strong class="text-slate-200">Ύποπτες ημέρες δεδομένων:</strong> ημέρες με φυσικά αδύνατες ή πολύ ασυνήθιστες τιμές: πάνω από 2,2 κύκλους της μονάδας μέσα σε μία ημέρα, ή ώρα πάνω από 1,25 φορές το 99ο εκατοστημόριο της ίδιας της μονάδας. Πιθανό σφάλμα SCADA· δεν αλλάζουν τα μέγιστα και φαίνονται στην καρτέλα της μονάδας.</li>
             </ul>
-<h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="limits" style="scroll-margin-top:8px">Περιορισμοί</h3>
+
+            <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="changes" style="scroll-margin-top:8px">Αλλαγές και παρακολούθηση</h3>
+            <ul class="list-disc pl-5 space-y-2 text-slate-400">
+                <li><strong class="text-slate-200">Αναβαθμίσεις:</strong> όταν το μέγιστο ανεβεί πάνω από 12% από το προηγούμενο επίπεδο και φανεί σε 3 διαφορετικές ημέρες, καταγράφεται αναβάθμιση (π.χ. από 2ωρη σε 3ωρη, διπλασιασμός ισχύος). Η ημερομηνία είναι η πρώτη από τις τρεις ημέρες. Αλλαγές ισχύος και ενέργειας μέσα σε 10 ημέρες είναι ένα γεγονός. Ξεκινούν μετά το commissioning και τη βάση 14 ημερών.</li>
+                <li><strong class="text-slate-200">Προς επιβεβαίωση:</strong> 1 ή 2 από τις τελευταίες 14 ημέρες δείχνουν νέο μέγιστο πάνω από 12%. Επιβεβαιώνεται όταν το ίδιο φανεί σε 3 διαφορετικές ημέρες· αλλιώς δεν αλλάζει τίποτα.</li>
+                <li><strong class="text-slate-200">Πιθανό σφάλμα αρχείου:</strong> η ίδια αναβάθμιση σε 3 ή περισσότερες μονάδες μέσα σε 2 ημέρες σημαίνεται, γιατί πιο πιθανά είναι λάθος στο αρχείο παρά αναβαθμίσεις πολλών μονάδων.</li>
+                <li><strong class="text-slate-200">Βλάβη ή σφάλμα SCADA:</strong> λάθος 1–2 ημερών δεν γίνεται μέγιστο· φαίνεται το πολύ ως «προς επιβεβαίωση» για 14 ημέρες. Από την 3η διαφορετική ημέρα γίνεται μέγιστο, επειδή δεν ξεχωρίζει από πραγματική αναβάθμιση. Τα δεδομένα δεν ξεχωρίζουν βλάβη από απόφαση του ιδιοκτήτη, και για αυτό δεν υπάρχουν μειώσεις: μετράμε την ισχύ που αποδείχθηκε.</li>
+                <li><strong class="text-slate-200">Αναβάθμιση ή ανάκαμψη χρήσης:</strong> αν μια μονάδα δούλευε με χαμηλή χρήση στη βάση της και μετά δείξει την κανονική της ισχύ, η αύξηση φαίνεται ως αναβάθμιση, γιατί από τα δεδομένα δεν ξεχωρίζει.</li>
+            </ul>
+
+            <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="limits" style="scroll-margin-top:8px">Περιορισμοί</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
                 <li><strong class="text-slate-200">Δεδομένα:</strong> τα στοιχεία SCADA είναι μη πιστοποιημένα και μπορεί να αναθεωρηθούν. Το ISP είναι προγραμματισμός.</li>
                 <li><strong class="text-slate-200">Αλλαγή ώρας:</strong> οι ημέρες αλλαγής ώρας (25 ώρες στις 25/10, 23 ώρες τον Μάρτιο) χειρίζονται ειδικά, αλλά δεν έχουν ακόμα δοκιμαστεί με πραγματικά δεδομένα.</li>
@@ -222,57 +237,87 @@ const i18n = {
         tipHint: "Κλικ σε μονάδα στον πίνακα για να τη δεις μόνη της.",
         tipShowAll: "Εμφάνιση όλων των μονάδων",
         tabCapacity: "Χωρητικότητα & διάρκεια",
-        capTitle: "Ισχύς, ενέργεια και διάρκεια ανά μονάδα",
-        capSub: "Εκτίμηση από τα ωριαία SCADA των τελευταίων 30 ημερών (έως {d}). Ξαναϋπολογίζεται κάθε μέρα. Δεν είναι η ονομαστική χωρητικότητα.",
+        capTitle: "Μέγιστη ισχύς, ενέργεια και διάρκεια ανά μονάδα",
+        capSub: "Μέγιστη ισχύς και μέγιστη ενέργεια ενός κύκλου από τα ωριαία SCADA (έως {d}), χωρίς τις πρώτες 40 ημέρες κάθε μονάδας. Ξαναϋπολογίζεται κάθε μέρα. Δεν είναι η ονομαστική χωρητικότητα.",
         capEmpty: "Δεν υπάρχουν ακόμα εκτιμήσεις χωρητικότητας.",
         capKpiPower: "Ισχύς μονάδων ΑΔΜΗΕ",
-        capKpiPowerSub: "άθροισμα {n} μονάδων με εκτίμηση",
+        capKpiPowerSub: "{n} μονάδες{c}",
+        tabChanges: "Αλλαγές & παρακολούθηση",
+        capUnitsTitle: "Μονάδες",
+        capStatusLabel: "Κατάσταση",
+        capStatusCommissioning: "Commissioning",
+        capStatusTipCommissioning: "Οι πρώτες 40 ημέρες δεν μετράνε για το μέγιστο: η μονάδα ανεβάζει ισχύ και χωρητικότητα. Τα νούμερα είναι όσα φάνηκαν ως τώρα και δεν έχουν κατηγορία.",
+        capTagCommissioning: "commissioning, ημέρα {n} από {t}",
+        capTagPendingMax: "νέο μέγιστο προς επιβεβαίωση ({n} από 3 ημέρες)",
+        capTagUpgrade: "αναβάθμιση {d}",
+        capTagIdle: "χωρίς δραστηριότητα {n} ημέρες",
+        capMaxPower: "Μέγιστη ισχύς",
+        capMaxEnergy: "Μέγιστη ενέργεια κύκλου",
+        capSince: "από {d}",
+        capCommInfo: "Commissioning: ημέρα {n} από {t}. Τα νούμερα είναι όσα φάνηκαν ως τώρα και δεν μετράνε για το μέγιστο.",
+        capPendingLine: "Νέο μέγιστο προς επιβεβαίωση: {v} {u}, {n} από 3 ημέρες",
+        capIdleLine: "Χωρίς δραστηριότητα {n} ημέρες: αδράνεια ή βλάβη, δεν ξεχωρίζει. Το μέγιστο δεν αλλάζει.",
+        capSeriesObsEnergy: "Ενέργεια, commissioning (MWh)",
+        capSeriesObsPower: "Ισχύς, commissioning (MW)",
+        capKpiCommSuffix: " · +{x} σε commissioning",
+        chgKpiComm: "Μονάδες σε commissioning",
+        chgHow6: "Δεν υπάρχουν μειώσεις. Αν μια μονάδα δουλεύει με λιγότερη ισχύ ή χωρίς δραστηριότητα, είναι επιλογή χρήσης και δεν αλλάζει το μέγιστο.",
+        capUnitsSub: "Πάτησε μια μονάδα για τα στοιχεία της και την πορεία της στον χρόνο.",
+        capKpiChanges: "Αναβαθμίσεις 30 ημερών",
+        capKpiChangesSub: "{p} προς επιβεβαίωση · {s} ύποπτες ημέρες δεδομένων · πάτησε για το χρονολόγιο",
+        capUnitChartTitle: "Πορεία των μεγίστων",
+        capUnitChartSub: "Τα μέγιστα που φάνηκαν μέχρι κάθε ημέρα. Διακεκομμένη γραμμή: commissioning. Τα τρίγωνα σημαδεύουν αναβαθμίσεις.",
+        capUnitChangesTitle: "Αναβαθμίσεις αυτής της μονάδας",
+        capUnitNoChanges: "Καμία αναβάθμιση μετά το commissioning.",
+        capSuspectTitle: "Ύποπτες ημέρες δεδομένων (90 ημέρες)",
+        capSuspectNone: "Καμία ύποπτη ημέρα.",
+        capSuspectNote: "Πιθανό σφάλμα SCADA, όχι βλάβη. Δεν αλλάζουν τις εκτιμήσεις.",
+        capSuspectCycles: "{x} κύκλοι σε μία ημέρα",
+        capSuspectSpike: "ώρα {v} MW, πολύ πάνω από το συνηθισμένο",
+        capChangeShared: "πιθανό σφάλμα αρχείου: ίδια αλλαγή σε πολλές μονάδες",
+        chgTitle: "Αλλαγές και παρακολούθηση",
+        chgSub: "Όλες οι αναβαθμίσεις των μονάδων ΑΔΜΗΕ, νεότερες πρώτα. Η ισχύς και η χωρητικότητα δεν μειώνονται ποτέ: λιγότερη χρήση είναι επιλογή.",
+        chgEmpty: "Δεν υπάρχουν ακόμα δεδομένα για αλλαγές.",
+        chgKpiTotal: "Αναβαθμίσεις",
+        chgKpiPending: "Προς επιβεβαίωση",
+        chgKpiShared: "Πιθανά σφάλματα αρχείου",
+        chgListTitle: "Χρονολόγιο",
+        chgListNone: "Δεν έχει ανιχνευτεί καμία αναβάθμιση.",
+        chgMore: "Εμφανίζονται τα τελευταία {n} από {t}.",
+        chgHowTitle: "Πώς διαβάζεται",
+        chgHow1: "Ύποπτο δεδομένο: 1–2 ημέρες με φυσικά αδύνατες ή πολύ ασυνήθιστες τιμές. Αγνοείται και φαίνεται μόνο στην καρτέλα της μονάδας.",
+        chgHow2: "Προς επιβεβαίωση: 1 ή 2 από τις τελευταίες 14 ημέρες δείχνουν νέο μέγιστο πάνω από 12%. Επιβεβαιώνεται όταν το ίδιο φανεί σε 3 διαφορετικές ημέρες.",
+        chgHow3: "Επιβεβαιωμένη αναβάθμιση: το μέγιστο ανέβηκε πάνω από 12% και φάνηκε σε 3 διαφορετικές ημέρες. Η ημερομηνία είναι η πρώτη από αυτές.",
+        chgHow4: "Commissioning: οι πρώτες 40 ημέρες κάθε μονάδας δεν μετράνε για το μέγιστο. Μετά χρειάζεται βάση 14 ημερών και 8 έγκυρων κύκλων.",
+        chgHow5: "Πιθανό σφάλμα αρχείου: η ίδια αναβάθμιση σε 3 ή περισσότερες μονάδες μέσα σε 2 ημέρες.",
         capKpiEnergy: "Ενέργεια μονάδων ΑΔΜΗΕ",
-        capKpiEnergySub: "ανά κύκλο, εξασφαλισμένη",
+        capKpiEnergySub: "ανά κύκλο",
         capKpiDuration: "Μέση διάρκεια",
         capKpiDurationSub: "ενέργεια ÷ ισχύς",
         capKpiUnits: "Μονάδες",
-        capKpiUnitsSub: "σταθερές {s} · σε αλλαγή {c} · λίγα δεδομένα {f}",
+        capKpiUnitsSub: "σταθερές {s} · λίγα δεδομένα {f} · commissioning {c}",
         capThUnit: "Μονάδα",
         capThPower: "Ισχύς (MW)",
         capThEnergy: "Ενέργεια (MWh)",
         capThDuration: "Διάρκεια",
-        capThStatus: "Κατάσταση",
         capStatusStable: "Σταθερή",
-        capStatusChanging: "Σε αλλαγή",
         capStatusFew: "Λίγα δεδομένα",
-        capStatusTipStable: "Η εκτίμηση δεν άλλαξε πάνω από 10% σε σχέση με τις προηγούμενες 30 ημέρες.",
-        capStatusTipChanging: "Η ισχύς ή η ενέργεια άλλαξε πάνω από 10% σε σχέση με τις προηγούμενες 30 ημέρες (π.χ. ένταξη σε λειτουργία). Η κατηγορία είναι προσωρινή.",
-        capStatusTipFew: "Λιγότεροι από 8 έγκυροι κύκλοι ή πρώτη λειτουργία πριν από λιγότερο από 21 ημέρες. Η κατηγορία είναι προσωρινή.",
-        capProvisional: "προσωρινή",
-        capFootnote: "Ενέργεια εκφόρτισης στον μετρητή (AC) ανά κύκλο, η τιμή που επιτεύχθηκε τουλάχιστον 3 φορές στις τελευταίες 30 ημέρες. Η κατηγορία είναι το ακέραιο μέρος της διάρκειας. Είναι κάτω όριο: μια μονάδα που δεν έχει εκφορτιστεί πλήρως φαίνεται μικρότερη.",
+        capStatusTipStable: "Έχει ολοκληρώσει το commissioning και έχει βάση 14 ημερών και 8 κύκλων.",
+        capStatusTipFew: "Έχει περάσει το commissioning αλλά δεν έχει ακόμα βάση 14 ημερών και 8 έγκυρων κύκλων. Η κατηγορία είναι προσωρινή.",
+        capFootnote: "Μέγιστα από τρεις διαφορετικές ημέρες, μετά τις πρώτες 40 ημέρες λειτουργίας. Δεν μειώνονται ποτέ: λιγότερη χρήση είναι επιλογή. Η κατηγορία είναι το ακέραιο μέρος της διάρκειας (ενέργεια ÷ ισχύς). Είναι κάτω όριο: μια μονάδα που δεν έχει εκφορτιστεί πλήρως φαίνεται μικρότερη.",
         capMeasured: "Από τα δεδομένα",
         capFirstSeen: "Πρώτη λειτουργία",
-        capCycles: "Έγκυροι κύκλοι (30 ημ.)",
-        capTrend: "Μεταβολή έναντι των προηγούμενων 30 ημερών",
-        capAnomalies: "Ανώμαλες ημέρες (30 ημ.)",
-        capChargeEnergy: "Ενέργεια φόρτισης του κύκλου",
+        capCycles: "Έγκυροι κύκλοι (μετά το commissioning)",
         capFleetTitle: "Μονάδες ΑΔΜΗΕ: παρατηρούμενη ισχύς και ενέργεια",
-        capFleetSub: "Άθροισμα των εκτιμήσεων κάθε μονάδας ανά εβδομάδα, μόνο για μονάδες με αρκετούς κύκλους. Η μέση διάρκεια δείχνει αν ο στόλος μεγαλώνει περισσότερο σε ενέργεια ή σε ισχύ.",
+        capFleetSub: "Άθροισμα των μεγίστων κάθε μονάδας που φάνηκαν μέχρι κάθε εβδομάδα (περιλαμβάνει και το commissioning). Δεν μειώνεται ποτέ. Η μέση διάρκεια δείχνει αν ο στόλος μεγαλώνει περισσότερο σε ενέργεια ή σε ισχύ.",
         capSeriesEnergy: "Ενέργεια (MWh)",
         capSeriesPower: "Ισχύς (MW)",
         capSeriesDuration: "Μέση διάρκεια (h)",
         capWeek: "Εβδομάδα",
         capUnitsWord: "μονάδες",
-        capUnitTitle: "Πορεία μονάδας: {u}",
-        capUnitSub: "Η εκτίμηση των τελευταίων 14 ημερών, κάθε ημέρα. Τα τρίγωνα σημαδεύουν αλλαγές επιπέδου. Πάτησε μια γραμμή του πίνακα για να αλλάξεις μονάδα.",
-        capSeriesUnitPower: "Ισχύς (MW)",
-        capSeriesUnitEnergy: "Ενέργεια ανά κύκλο (MWh)",
+        capSeriesUnitPower: "Μέγιστη ισχύς (MW)",
+        capSeriesUnitEnergy: "Μέγιστη ενέργεια κύκλου (MWh)",
         capCyclesWord: "έγκυροι κύκλοι",
-        capRecTitle: "Ρεκόρ των μονάδων ΑΔΜΗΕ",
-        capRecSub: "Από την έναρξη της καταγραφής ({d}). Δεν μετράνε ημέρες μονάδας με εκφόρτιση πάνω από 1,3 φορές τη φόρτιση. Τα περισσότερα ρεκόρ προέρχονται από την ένταξη νέων μονάδων.",
-        capRecEventsTitle: "Τελευταία ρεκόρ",
-        capNew: "Νέο",
-        capRecFleetDisMw: "Μέγιστη ταυτόχρονη εκφόρτιση",
-        capRecFleetChgMw: "Μέγιστη ταυτόχρονη φόρτιση",
-        capRecFleetDisMwh: "Μέγιστη ημερήσια εκφόρτιση",
-        capRecFleetChgMwh: "Μέγιστη ημερήσια φόρτιση",
-        capRecPrev: "προηγούμενο {v} στις {d}",
         lblGross: "Ανώτατο (όλη η εκφόρτιση)",
         lblNet: "Καθαρό (εκτίμηση)",
         layerCore: "Πυρήνας: τιμή ≤ 5 €/MWh",
@@ -284,20 +329,10 @@ const i18n = {
         toTop: "Επιστροφή επάνω: ημερομηνία, μεθοδολογία και καρτέλες",
         kpiNetSub: "καθαρή εκτίμηση: {v} MWh",
         kpiUpToSub: "έως {v} MWh με το πρόσθετο στρώμα",
-        capChangesTitle: "Αλλαγές και αναβαθμίσεις",
-        capChangesSub: "Πότε μια μονάδα άλλαξε επίπεδο ισχύος ή ενέργειας (αναβάθμιση, δοκιμή, υποβάθμιση): η εκτίμηση των τελευταίων 14 ημερών ξεφεύγει πάνω από 12% για 5 ημέρες. Οι πιο πρόσφατες φαίνονται «προς επιβεβαίωση».",
-        capChangesNone: "Δεν έχει ανιχνευτεί καμία αλλαγή επιπέδου.",
-        capChangeUp: "Άνοδος",
-        capChangeDown: "Πτώση",
-        capChangeMixed: "Μεικτή αλλαγή",
-        capChangeDip: "Επεισόδιο μειωμένης λειτουργίας",
-        capChangeSurge: "Επεισόδιο αυξημένης λειτουργίας",
+        capChangeUp: "Αναβάθμιση",
         capPending: "Προς επιβεβαίωση",
         capChangePower: "Ισχύς",
         capChangeEnergy: "Ενέργεια",
-        capChangeLowest: "χαμηλότερο σημείο: {p} MW, {e} MWh",
-        capUnitChangesTitle: "Αλλαγές αυτής της μονάδας",
-        capUnitNoChanges: "Καμία αλλαγή επιπέδου από την πρώτη λειτουργία.",
         capUnitNoSeries: "Η μονάδα λειτουργεί λιγότερο από 14 ημέρες: δεν υπάρχει ακόμα πορεία.",
         capSeriesMarker: "Αλλαγή",
         tipMcpLabel: "Τιμή MCP",
@@ -366,8 +401,13 @@ const i18n = {
 
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="capacity" style="scroll-margin-top:8px">Capacity and duration</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
-                <li><strong class="text-slate-200">Estimated from SCADA:</strong> the power (MW) and the energy per cycle (MWh) of each unit are estimated from the hourly values of the last 30 days and recalculated every day. They are not the nameplate capacity.</li>
-                <li><strong class="text-slate-200">Class:</strong> 2h, 3h, 4h from the assured discharge (energy ÷ power), meaning a value reached at least 3 times. New units in commissioning are marked "little data" or "changing".</li>
+                <li><strong class="text-slate-200">Maxima from SCADA:</strong> the maximum power (MW) and the maximum energy of one cycle (MWh) of each unit are calculated from the hourly values of its history, without the first 40 days of operation (commissioning), and recalculated every day. <em>They never decrease</em>: using less is a choice. They are not the nameplate capacity.</li>
+                <li><strong class="text-slate-200">Class:</strong> 2h, 3h, 4h from the maximum energy of a cycle ÷ the maximum power. Units in commissioning have no class.</li>
+            </ul>
+
+            <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="changes" style="scroll-margin-top:8px">Changes and monitoring</h3>
+            <ul class="list-disc pl-5 space-y-2 text-slate-400">
+                <li><strong class="text-slate-200">Upgrades:</strong> when the maximum rises by more than 12% and shows on 3 different days, an upgrade is recorded (e.g. from 2h to 3h). If it shows on 1–2 of the last 14 days it is "to be confirmed". There are no decreases.</li>
             </ul>
 `,
         modalBodyFull: `
@@ -413,15 +453,25 @@ const i18n = {
                         <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="capacity" style="scroll-margin-top:8px">Capacity and duration</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
                 <li><strong class="text-slate-200">Source:</strong> the hourly SCADA only. The ISP is not used: it is a schedule and does not show what actually happened.</li>
-                <li><strong class="text-slate-200">Cycles:</strong> the hours are split into charging and discharging phases, so that double cycles in a day, or a cycle that crosses midnight, are counted correctly. A cycle is valid when its discharge is 70–100% of its charge; the others, like 9 Sep with an RTE of 207%, are ignored.</li>
-                <li><strong class="text-slate-200">Assured value:</strong> the 3rd highest value of the last 30 days, that is a value reached at least three times. A single anomalous or test value does not change the estimate.</li>
-                <li><strong class="text-slate-200">Power and energy:</strong> power is the average of each hour (MWh per hour = MW); the instantaneous peak can be a little higher. Energy is the discharge at the meter (AC) per cycle and is about 10% below the nameplate because of losses. The charging energy of the cycle is shown too.</li>
-                <li><strong class="text-slate-200">Class:</strong> the whole-hour part of the duration (energy ÷ power), with a tolerance of 0.1 hour: 2.4 → 2h, 3.1 → 3h, 4.0 → 4h, 2.6 → 2h. A unit that has never run a full cycle looks smaller than it is: the estimate is a lower bound.</li>
-                <li><strong class="text-slate-200">Status:</strong> "little data" (fewer than 8 valid cycles, or first operation less than 21 days ago), "changing" (power or energy differs by more than 10% from the previous 30 days, e.g. commissioning) or "stable". The class of the first two is provisional.</li>
-                <li><strong class="text-slate-200">Changes and upgrades:</strong> every day the same estimate is made for the last 14 days. When it moves by more than 12% from the previous level for 5 days in a row, a change is recorded (e.g. from 2h to 3h, a doubling of power, a test that returns). If it holds for 2–4 days it shows as "to be confirmed". A dip that recovers is recorded as an episode. No company names are used: only the ADMIE unit codes.</li>
-                <li><strong class="text-slate-200">Records:</strong> simultaneous power and daily energy of the fleet since recording began (18 Jun 2026). Unit-days with discharge above 1.3 times the charge are not counted.</li>
+                <li><strong class="text-slate-200">Cycles:</strong> the hours are split into charging and discharging phases, so that double cycles in a day, or a cycle that crosses midnight, are counted correctly. A cycle is valid when its discharge is 70–100% of its charge.</li>
+                <li><strong class="text-slate-200">Maxima:</strong> the maximum power is the 3rd highest of the peaks of three <em>different days</em>, and the maximum energy of a cycle the 3rd highest of the valid cycles, from the whole history after commissioning. So a SCADA error of one or two days does not become the "maximum" for ever, and the maximum cannot decrease when days are added.</li>
+                <li><strong class="text-slate-200">They never decrease:</strong> if a unit charges or discharges with less power, or does not work for days, it does not mean its power or capacity became smaller; it is a choice of use. The maximum only rises when a new, larger one shows.</li>
+                <li><strong class="text-slate-200">Commissioning:</strong> the first 40 days of each unit do not count, because then it is raising power and capacity and the SCADA figures may be false. The period shows as "what has shown so far", without a class. A unit that was already working when our SCADA began (18 Jun 2026) counts from that day. After the 40 days it needs a base of 14 days and 8 valid cycles, otherwise "little data" with a provisional class.</li>
+                <li><strong class="text-slate-200">Power and energy:</strong> power is the average of each hour (MWh per hour = MW); the instantaneous peak can be a little higher. Energy is the discharge at the meter (AC) per cycle and is about 10% below the nameplate because of losses.</li>
+                <li><strong class="text-slate-200">Class:</strong> the whole-hour part of the duration (maximum energy of a cycle ÷ maximum power), with a tolerance of 0.1 hour: 2.4 → 2h, 3.1 → 3h, 4.0 → 4h, 2.6 → 2h. A unit that has never run a full cycle looks smaller than it is: the estimate is a lower bound.</li>
+                <li><strong class="text-slate-200">Suspect data days:</strong> days with physically impossible or very unusual values: more than 2.2 cycles of the unit in one day, or an hour above 1.25 times the 99th percentile of the unit itself. A likely SCADA error; they do not change the maxima and are shown on the card of the unit.</li>
             </ul>
-<h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="limits" style="scroll-margin-top:8px">Limitations</h3>
+
+            <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="changes" style="scroll-margin-top:8px">Changes and monitoring</h3>
+            <ul class="list-disc pl-5 space-y-2 text-slate-400">
+                <li><strong class="text-slate-200">Upgrades:</strong> when the maximum rises by more than 12% from the previous level and shows on 3 different days, an upgrade is recorded (e.g. from 2h to 3h, a doubling of power). The date is the first of the three days. Changes of power and of energy within 10 days are one event. They start after commissioning and the base of 14 days.</li>
+                <li><strong class="text-slate-200">To be confirmed:</strong> 1 or 2 of the last 14 days show a new maximum more than 12% higher. It is confirmed when the same shows on 3 different days; otherwise nothing changes.</li>
+                <li><strong class="text-slate-200">Likely file error:</strong> the same upgrade on 3 or more units within 2 days is flagged, because an error in the file is more likely than upgrades of several units.</li>
+                <li><strong class="text-slate-200">Failure or SCADA error:</strong> an error of 1–2 days does not become the maximum; it shows at most as "to be confirmed" for 14 days. From the 3rd different day it becomes the maximum, because it cannot be told from a real upgrade. The data cannot tell a failure from a decision of the owner, which is why there are no decreases: we measure the power that was shown.</li>
+                <li><strong class="text-slate-200">Upgrade or recovery of use:</strong> if a unit worked at a low use in its base and then shows its normal power, the rise shows as an upgrade, because the data cannot tell them apart.</li>
+            </ul>
+
+            <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="limits" style="scroll-margin-top:8px">Limitations</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
                 <li><strong class="text-slate-200">Data:</strong> SCADA data is uncertified and may be revised. The ISP is a schedule.</li>
                 <li><strong class="text-slate-200">Clock changes:</strong> clock-change days (25 hours on 25/10, 23 hours in March) are handled specifically but have not yet been tested with real data.</li>
@@ -492,57 +542,87 @@ const i18n = {
         tipHint: "Click a unit in the table to see it alone.",
         tipShowAll: "Show all units",
         tabCapacity: "Capacity & duration",
-        capTitle: "Power, energy and duration per unit",
-        capSub: "Estimated from the hourly SCADA of the last 30 days (to {d}). Recalculated every day. It is not the nameplate capacity.",
+        capTitle: "Maximum power, energy and duration per unit",
+        capSub: "Maximum power and maximum energy of one cycle from the hourly SCADA (to {d}), without the first 40 days of each unit. Recalculated every day. It is not the nameplate capacity.",
         capEmpty: "There are no capacity estimates yet.",
         capKpiPower: "Power of IPTO units",
-        capKpiPowerSub: "sum of {n} units with an estimate",
+        capKpiPowerSub: "{n} units{c}",
+        tabChanges: "Changes & monitoring",
+        capUnitsTitle: "Units",
+        capStatusLabel: "Status",
+        capStatusCommissioning: "Commissioning",
+        capStatusTipCommissioning: "The first 40 days do not count for the maximum: the unit is raising power and capacity. The figures are what has shown so far and have no class.",
+        capTagCommissioning: "commissioning, day {n} of {t}",
+        capTagPendingMax: "new maximum to be confirmed ({n} of 3 days)",
+        capTagUpgrade: "upgrade {d}",
+        capTagIdle: "no activity for {n} days",
+        capMaxPower: "Maximum power",
+        capMaxEnergy: "Maximum energy of a cycle",
+        capSince: "since {d}",
+        capCommInfo: "Commissioning: day {n} of {t}. The figures are what has shown so far and do not count for the maximum.",
+        capPendingLine: "New maximum to be confirmed: {v} {u}, {n} of 3 days",
+        capIdleLine: "No activity for {n} days: idleness or a failure, it cannot tell. The maximum does not change.",
+        capSeriesObsEnergy: "Energy, commissioning (MWh)",
+        capSeriesObsPower: "Power, commissioning (MW)",
+        capKpiCommSuffix: " · +{x} in commissioning",
+        chgKpiComm: "Units in commissioning",
+        chgHow6: "There are no decreases. If a unit works with less power, or is idle, it is a choice of use and does not change the maximum.",
+        capUnitsSub: "Tap a unit for its figures and its progression over time.",
+        capKpiChanges: "Upgrades, 30 days",
+        capKpiChangesSub: "{p} to be confirmed · {s} suspect data days · tap for the timeline",
+        capUnitChartTitle: "Progression of the maxima",
+        capUnitChartSub: "The maxima shown up to each day. Dashed line: commissioning. Triangles mark upgrades.",
+        capUnitChangesTitle: "Upgrades of this unit",
+        capUnitNoChanges: "No upgrade after commissioning.",
+        capSuspectTitle: "Suspect data days (90 days)",
+        capSuspectNone: "No suspect day.",
+        capSuspectNote: "A likely SCADA error, not a failure. They do not change the estimates.",
+        capSuspectCycles: "{x} cycles in one day",
+        capSuspectSpike: "hour {v} MW, far above the usual",
+        capChangeShared: "likely file error: same change on several units",
+        chgTitle: "Changes and monitoring",
+        chgSub: "All upgrades of the IPTO units, newest first. Power and capacity never decrease: using less is a choice.",
+        chgEmpty: "There are no data on changes yet.",
+        chgKpiTotal: "Upgrades",
+        chgKpiPending: "To be confirmed",
+        chgKpiShared: "Likely file errors",
+        chgListTitle: "Timeline",
+        chgListNone: "No upgrade has been detected.",
+        chgMore: "Showing the latest {n} of {t}.",
+        chgHowTitle: "How to read it",
+        chgHow1: "Suspect data: 1–2 days with physically impossible or very unusual values. Ignored, and shown only on the card of the unit.",
+        chgHow2: "To be confirmed: 1 or 2 of the last 14 days show a new maximum more than 12% higher. It is confirmed when the same shows on 3 different days.",
+        chgHow3: "Confirmed upgrade: the maximum rose by more than 12% and showed on 3 different days. The date is the first of them.",
+        chgHow4: "Commissioning: the first 40 days of each unit do not count for the maximum. After that it needs a base of 14 days and 8 valid cycles.",
+        chgHow5: "Likely file error: the same upgrade on 3 or more units within 2 days.",
         capKpiEnergy: "Energy of IPTO units",
-        capKpiEnergySub: "per cycle, assured",
+        capKpiEnergySub: "per cycle",
         capKpiDuration: "Average duration",
         capKpiDurationSub: "energy ÷ power",
         capKpiUnits: "Units",
-        capKpiUnitsSub: "stable {s} · changing {c} · little data {f}",
+        capKpiUnitsSub: "stable {s} · little data {f} · commissioning {c}",
         capThUnit: "Unit",
         capThPower: "Power (MW)",
         capThEnergy: "Energy (MWh)",
         capThDuration: "Duration",
-        capThStatus: "Status",
         capStatusStable: "Stable",
-        capStatusChanging: "Changing",
         capStatusFew: "Little data",
-        capStatusTipStable: "The estimate did not change by more than 10% against the previous 30 days.",
-        capStatusTipChanging: "Power or energy changed by more than 10% against the previous 30 days (e.g. commissioning). The class is provisional.",
-        capStatusTipFew: "Fewer than 8 valid cycles, or first operation less than 21 days ago. The class is provisional.",
-        capProvisional: "provisional",
-        capFootnote: "Discharged energy at the meter (AC) per cycle, the value reached at least 3 times in the last 30 days. The class is the whole-hour part of the duration. It is a lower bound: a unit that has not discharged fully looks smaller.",
+        capStatusTipStable: "Commissioning is over and it has a base of 14 days and 8 cycles.",
+        capStatusTipFew: "Commissioning is over but it does not yet have a base of 14 days and 8 valid cycles. The class is provisional.",
+        capFootnote: "Maxima from three different days, after the first 40 days of operation. They never decrease: using less is a choice. The class is the whole-hour part of the duration (energy ÷ power). It is a lower bound: a unit that has not discharged fully looks smaller.",
         capMeasured: "From the data",
         capFirstSeen: "First operation",
-        capCycles: "Valid cycles (30 days)",
-        capTrend: "Change against the previous 30 days",
-        capAnomalies: "Anomalous days (30 days)",
-        capChargeEnergy: "Charging energy of the cycle",
+        capCycles: "Valid cycles (after commissioning)",
         capFleetTitle: "IPTO units: observed power and energy",
-        capFleetSub: "Sum of the estimates of each unit per week, only for units with enough cycles. The average duration shows whether the fleet grows more in energy or in power.",
+        capFleetSub: "Sum of the maxima of each unit shown up to each week (commissioning included). It never decreases. The average duration shows whether the fleet grows more in energy or in power.",
         capSeriesEnergy: "Energy (MWh)",
         capSeriesPower: "Power (MW)",
         capSeriesDuration: "Average duration (h)",
         capWeek: "Week",
         capUnitsWord: "units",
-        capUnitTitle: "Unit progression: {u}",
-        capUnitSub: "The estimate of the last 14 days, each day. Triangles mark changes of level. Tap a row of the table to change unit.",
-        capSeriesUnitPower: "Power (MW)",
-        capSeriesUnitEnergy: "Energy per cycle (MWh)",
+        capSeriesUnitPower: "Maximum power (MW)",
+        capSeriesUnitEnergy: "Maximum energy of a cycle (MWh)",
         capCyclesWord: "valid cycles",
-        capRecTitle: "Records of the IPTO units",
-        capRecSub: "Since recording began ({d}). Unit-days with discharge above 1.3 times the charge are not counted. Most records come from new units joining.",
-        capRecEventsTitle: "Latest records",
-        capNew: "New",
-        capRecFleetDisMw: "Highest simultaneous discharge",
-        capRecFleetChgMw: "Highest simultaneous charge",
-        capRecFleetDisMwh: "Highest daily discharge",
-        capRecFleetChgMwh: "Highest daily charge",
-        capRecPrev: "previous {v} on {d}",
         lblGross: "Upper bound (all discharge)",
         lblNet: "Net (estimate)",
         layerCore: "Core: price ≤ €5/MWh",
@@ -554,20 +634,10 @@ const i18n = {
         toTop: "Back to top: date, methodology and tabs",
         kpiNetSub: "net estimate: {v} MWh",
         kpiUpToSub: "up to {v} MWh with the additional layer",
-        capChangesTitle: "Changes and upgrades",
-        capChangesSub: "When a unit changed its power or energy level (upgrade, test, downgrade): the estimate of the last 14 days moves by more than 12% for 5 days. The most recent ones show as \"to be confirmed\".",
-        capChangesNone: "No change of level has been detected.",
-        capChangeUp: "Increase",
-        capChangeDown: "Decrease",
-        capChangeMixed: "Mixed change",
-        capChangeDip: "Episode of reduced operation",
-        capChangeSurge: "Episode of increased operation",
+        capChangeUp: "Upgrade",
         capPending: "To be confirmed",
         capChangePower: "Power",
         capChangeEnergy: "Energy",
-        capChangeLowest: "lowest point: {p} MW, {e} MWh",
-        capUnitChangesTitle: "Changes of this unit",
-        capUnitNoChanges: "No change of level since the first operation.",
         capUnitNoSeries: "The unit has run for less than 14 days: there is no progression yet.",
         capSeriesMarker: "Change",
         tipMcpLabel: "MCP price",
@@ -596,7 +666,7 @@ function setLang(lang) {
 
     // Οθόνη φόρτωσης: τα βήματα 2…5 παίρνουν τα ονόματα των tabs, με τη σειρά τους
     const L = t.load;
-    const stepText = { 1: L.s1, 2: t.tabDaily, 3: t.tabMonthly, 4: t.tabSurplus, 5: t.tabArbitrage, 6: t.tabCapacity };
+    const stepText = { 1: L.s1, 2: t.tabDaily, 3: t.tabMonthly, 4: t.tabSurplus, 5: t.tabArbitrage, 6: t.tabCapacity, 7: t.tabChanges };
     const loadIds = { loadTitle: L.title, loadGroup1: L.g1, loadGroup2: L.g2, loadReady: L.ready };
     Object.entries(loadIds).forEach(([id, txt]) => { const el = document.getElementById(id); if (el) el.textContent = txt; });
     document.querySelectorAll('.load-row').forEach(r => { const lb = r.querySelector('[data-load-label]'); if (lb) lb.textContent = stepText[r.dataset.step] || ''; });
@@ -626,12 +696,11 @@ function setLang(lang) {
     setT('tabBtnSurplus', t.tabSurplus);
     setT('tabBtnArbitrage', t.tabArbitrage);
     setT('tabBtnCapacity', t.tabCapacity);
-    ['capTitle', 'capThUnit', 'capThPower', 'capThEnergy', 'capThDuration', 'capThStatus', 'capFleetTitle', 'capFleetSub', 'capRecEventsTitle', 'capRecTitle'].forEach(id => setT(id, t[id]));
-    setT('capUnitTitle', t.capUnitTitle.replace('{u}', '–'));   // η καρτέλα το ξαναγράφει με το όνομα της επιλεγμένης μονάδας
-    setT('capUnitSub', t.capUnitSub);
+    setT('tabBtnChanges', t.tabChanges);
+    ['capTitle', 'capThUnit', 'capThPower', 'capThEnergy', 'capThDuration', 'capFleetTitle', 'capFleetSub', 'capUnitsTitle', 'capUnitsSub', 'chgTitle', 'chgSub', 'chgListTitle', 'chgHowTitle'].forEach(id => setT(id, t[id]));
+    [1, 2, 3, 4, 5, 6].forEach(n => { const li = document.getElementById('chgHow' + n); if (li) li.textContent = t['chgHow' + n]; });
     const toTopBtn = document.getElementById('toTopBtn');
     if (toTopBtn) { toTopBtn.setAttribute('aria-label', t.toTop); toTopBtn.title = t.toTop; }
-    setT('capChangesTitle', t.capChangesTitle); setT('capChangesSub', t.capChangesSub);
     
     setT('dischargeTitle', t.dischargeTitle);
     setT('dischargeTitle', t.dischargeTitle);
@@ -698,6 +767,7 @@ function setLang(lang) {
     if (typeof updateSurplusDashboard === "function") updateSurplusDashboard();
     if (typeof renderArbitrageTab === "function") renderArbitrageTab(); 
     if (typeof renderCapacityTab === "function") renderCapacityTab();
+    if (typeof renderChangesTab === "function") renderChangesTab();
 }
 
 function parseNum(val) {

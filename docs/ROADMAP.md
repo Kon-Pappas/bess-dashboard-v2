@@ -60,14 +60,14 @@ The four tabs were opened in a real Chromium at 360 px (Greek and English) and m
 4. The one-hour alignment needs the last hour of the previous day: each month file also carries that one day from the month before.
 5. Old files never change, so the browser caches them for good; only the current month is revalidated.
 
-## Capacity & duration tab (batches 16 and 18, 25 Oct 2026)
+## Capacity & duration tab (batches 16, 18 and 22)
 
-Done: `capacity.py` (SCADA only, phases, assured value, status), `data/capacity.json`, the fifth tab with unit table, changes and upgrades, fleet chart, unit progression and records (D56–D65). ADMIE codes only (D63).
+Done: `capacity.py` (SCADA only), `data/capacity.json`, the fifth tab and, from batch 22, the redesign: KPIs, fleet chart, unit cards with their own chart (accordion / master-detail), no records (D76), the sixth tab "Changes & monitoring" (D77), maxima that never decrease (D78), commissioning of 40 days and a base of 14 days (D79), three different days, "to be confirmed" and the date "since" (D80), categories, time margins and likely file errors (D81), suspect data days (D82). ADMIE codes only (D63).
 
 Next, when there is a reason:
-- Watch the first real upgrades the detector reports (D64) and tune the 12% / 5-day thresholds if it is late or noisy
-- Look at STO_02SP (K15)
-- A small chart of the cycles of one unit on one day (state of charge), if the owner wants to *see* why a unit is classed 2h; not built because it was not asked
+- Look again at the 40 days of commissioning after a few more units pass it (ENW, PPC, OPT_03SB): if they ramp for longer, change `COMMISSIONING_DAYS`
+- Look at STO_02SP (K15) and at the recoveries of use shown as upgrades (K19)
+- If the number of units grows to 40–50, add a filter or sort to the unit list (by site, by status)
 
 ## Monthly tab review (batch 19, 26 Oct 2026)
 

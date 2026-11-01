@@ -1,19 +1,23 @@
 #!/usr/bin/env python3
 """
-Εκτίμηση ισχύος (MW), ενέργειας ανά κύκλο (MWh) και διάρκειας (ώρες) κάθε μονάδας BESS, μόνο από τα ωριαία SCADA.
+Μέγιστη ισχύς (MW), μέγιστη ενέργεια ενός κύκλου (MWh) και διάρκεια (ώρες) κάθε μονάδας BESS, μόνο από τα ωριαία SCADA.
 
 Τρέχει μετά από κάθε ενημέρωση (update_data.py) και ξαναϋπολογίζει όλα από την αρχή:
     python3 capacity.py            → διαβάζει data/historical.json, γράφει data/capacity.json
 
-Κανόνες (docs/DECISIONS.md, D56–D60):
+Κανόνες (docs/DECISIONS.md, D76–D86):
   • Μόνο SCADA (bessHourly). Το ISP είναι πρόγραμμα και δεν χρησιμοποιείται.
-  • Η ημέρα ΔΕΝ είναι μονάδα μέτρησης: οι ώρες χωρίζονται σε φάσεις φόρτισης και εκφόρτισης (σε διπλούς κύκλους, ή κύκλους που περνούν τα μεσάνυχτα).
-  • Έγκυρος κύκλος: φόρτιση που ακολουθείται από εκφόρτιση με απόδοση 70–100%.
-  • «Εξασφαλισμένη» τιμή = η τιμή που επιτεύχθηκε τουλάχιστον 3 φορές στις τελευταίες 30 ημέρες (η 3η υψηλότερη).
-    Έτσι μία ανώμαλη μέρα (π.χ. 9/9, RTE 207%) ή μία δοκιμή commissioning δεν αλλάζει την εκτίμηση.
-  • Κατηγορία: 2ωρη, 3ωρη, 4ωρη… = ακέραιο μέρος της διάρκειας (εκφόρτιση ÷ ισχύς), με ανοχή 0,1 ώρας.
-  • Αλλαγές (αναβαθμίσεις, δοκιμές, υποβαθμίσεις): η εκτίμηση των τελευταίων 14 ημερών ξεφεύγει πάνω από 12% από το προηγούμενο επίπεδο
-    για 5 συνεχόμενες ημέρες → επιβεβαιωμένη αλλαγή· για 2–4 ημέρες στο τέλος του ιστορικού → «προς επιβεβαίωση».
+  • Η ισχύς και η ενέργεια κύκλου είναι ΙΣΤΟΡΙΚΑ ΜΕΓΙΣΤΑ που ΔΕΝ ΜΕΙΩΝΟΝΤΑΙ ΠΟΤΕ. Μικρότερη ισχύς ή φόρτιση σε μια ημέρα είναι επιλογή
+    χρήσης, όχι μείωση. Άρα δεν υπάρχουν γεγονότα «πτώσης», μόνο αναβαθμίσεις.
+  • Οι πρώτες 40 ημέρες λειτουργίας κάθε μονάδας (commissioning) δεν μετράνε για το μέγιστο· τα νούμερα εκείνης της περιόδου φαίνονται
+    ως «όσα φάνηκαν ως τώρα», χωρίς κατηγορία. Μονάδα που δούλευε ήδη όταν ξεκίνησε το SCADA μας μετράει από την πρώτη ημέρα του SCADA.
+  • Μετά τις 40 ημέρες χρειάζεται βάση 14 ημερών και 8 έγκυρων κύκλων, αλλιώς «λίγα δεδομένα» (προσωρινή κατηγορία).
+  • Εξασφαλισμένη τιμή = η 3η υψηλότερη από ΤΡΕΙΣ ΔΙΑΦΟΡΕΤΙΚΕΣ ΗΜΕΡΕΣ (για την ισχύ: μέγιστο κάθε ημέρας· για την ενέργεια: έγκυρος κύκλος
+    με απόδοση 70–100%). Έτσι ένα λάθος SCADA 1–2 ημερών δεν γίνεται «μέγιστο» για πάντα, και το μέγιστο δεν μειώνεται όταν προστίθενται ημέρες.
+  • Αναβάθμιση: η εξασφαλισμένη τιμή ανεβαίνει ≥ 12% πάνω από το προηγούμενο επίπεδο. Αν μόνο 1–2 ημέρες των τελευταίων 14 είναι ≥ 12% πάνω:
+    «προς επιβεβαίωση (1 ή 2 από 3 ημέρες)».
+  • Κατηγορία: 2ωρη, 3ωρη, 4ωρη… = ακέραιο μέρος της διάρκειας (μέγιστη ενέργεια κύκλου ÷ μέγιστη ισχύς), με ανοχή 0,1 ώρας.
+  • Παύση (7+ ημέρες χωρίς δραστηριότητα) και ύποπτες ημέρες δεδομένων είναι πληροφορίες, όχι μειώσεις.
 """
 import json
 import re
@@ -23,26 +27,25 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 DAY, UNIT = "Ημερομηνία", "Μονάδα BESS"
-TAU = 2.5          # MWh/h: κάτω από αυτό η ώρα θεωρείται αδράνεια/ιδιοκατανάλωση (≈ −1 MWh τη νύχτα)
-GAP = 2            # ώρες αδράνειας που γεφυρώνονται μέσα σε μία φάση
-WINDOW = 30        # ημέρες για την τρέχουσα εκτίμηση (και 30 πριν για τη σύγκριση)
-ASSURED_N = 3      # «εξασφαλισμένο» = επιτεύχθηκε τουλάχιστον 3 φορές
+TAU = 2.5               # MWh/h: κάτω από αυτό η ώρα είναι αδράνεια/ιδιοκατανάλωση (≈ −1 MWh τη νύχτα)
+GAP = 2                 # ώρες αδράνειας που γεφυρώνονται μέσα σε μία φάση
+ASSURED_N = 3           # «εξασφαλισμένο» = επιτεύχθηκε σε τουλάχιστον 3 διαφορετικές ημέρες
 RTE_MIN, RTE_MAX = 0.70, 1.00   # έγκυρος κύκλος
-MIN_VALID = 8      # λιγότεροι έγκυροι κύκλοι → «λίγα δεδομένα»
-MIN_AGE_DAYS = 21  # νεότερη μονάδα → «λίγα δεδομένα»
-CHANGE = 0.10      # μεταβολή πάνω από 10% σε σχέση με τις προηγούμενες 30 ημέρες → «σε αλλαγή»
-CLASS_TOL = 0.1    # ώρες ανοχής στην κατηγορία (1,95 → 2ωρη)
+COMMISSIONING_DAYS = 40         # ημέρες εξαίρεσης από την πρώτη δραστηριότητα
+BASELINE_DAYS = 14              # ημέρες μετά την εξαίρεση πριν συγκρίνουμε για αναβαθμίσεις
+BASELINE_CYCLES = 8             # έγκυροι κύκλοι μετά την εξαίρεση πριν συγκρίνουμε
+UPGRADE = 0.12                  # αύξηση ≥ 12% του μεγίστου = αναβάθμιση
+RECENT_DAYS = 14                # «προς επιβεβαίωση»: ημέρες πάνω από το όριο μέσα στις τελευταίες 14
+MERGE_DAYS = 10                 # αλλαγές ισχύος και ενέργειας μέσα σε 10 ημέρες είναι ένα γεγονός
+CLASS_TOL = 0.1                 # ώρες ανοχής στην κατηγορία (1,95 → 2ωρη)
 MIN_CLASS_H = 1.9
-ANOMALY_RATIO = 1.3  # ημέρα μονάδας με εκφόρτιση/φόρτιση πάνω από αυτό δεν μετράει στα ρεκόρ ενέργειας στόλου
-RECORD_GAIN = 0.01   # ένα ρεκόρ πρέπει να ξεπερνά το προηγούμενο κατά 1%
-CHG_WINDOW = 14      # ημέρες της «γρήγορης» εκτίμησης για την ανίχνευση αλλαγών
-CHG_THR = 0.12       # μεταβολή πάνω από 12% σε σχέση με το προηγούμενο επίπεδο
-CHG_RUN = 5          # συνεχόμενες ημέρες πάνω από το όριο → επιβεβαιωμένη αλλαγή
-CHG_CAND = 2         # ημέρες στο τέλος του ιστορικού → «προς επιβεβαίωση»
-CHG_MERGE_DAYS = 10  # αλλαγές ισχύος και ενέργειας μέσα σε 10 ημέρες είναι ένα γεγονός
-MIN_LEVEL_CYCLES = 3
-
-HOUR_KEY = re.compile(r"^(\d{2}):00$")
+PAUSE_DAYS = 7                  # ημέρες χωρίς καμία ώρα δραστηριότητας → «χωρίς δραστηριότητα»
+PAUSE_MIN_ACTIVE = 5            # η μονάδα πρέπει να είχε ≥ 5 ενεργές ημέρες στις 14 πριν
+SPIKE_RATIO = 1.25              # ώρα πάνω από 1,25× το 99ο εκατοστημόριο της μονάδας → ύποπτο δεδομένο
+SPIKE_MIN_HOURS = 50
+SUSPECT_DAYS = 90               # πόσες ημέρες πίσω φυλάσσονται οι ύποπτες ημέρες
+SHARED_MIN_UNITS = 3            # ίδια αναβάθμιση σε τόσες μονάδες μέσα σε SHARED_DAYS ημέρες → πιθανό σφάλμα αρχείου
+SHARED_DAYS = 2
 
 
 def _d(s):
@@ -69,8 +72,7 @@ def load_units(hist):
 
 
 def phases_of(by_day):
-    """Φάσεις φόρτισης (−1) / εκφόρτισης (+1) μιας μονάδας. Η σειρά σπάει όπου λείπει ημέρα.
-    Κάθε φάση: {s, e (MWh), pk (μέγιστη ώρα), start, end (ημερομηνίες)}."""
+    """Φάσεις φόρτισης (−1) / εκφόρτισης (+1) μιας μονάδας. Η σειρά σπάει όπου λείπει ημέρα."""
     out, cur, idle, prev = [], None, 0, None
 
     def close():
@@ -110,23 +112,10 @@ def cycles_of(phases):
     return out
 
 
-def assured(values, n=ASSURED_N):
-    """Η n-οστή υψηλότερη τιμή (δηλαδή επιτεύχθηκε τουλάχιστον n φορές). None αν υπάρχουν λιγότερες από n."""
-    v = sorted(values, reverse=True)
-    return v[n - 1] if len(v) >= n else None
-
-
-def estimate(by_day, cycles, end, window=WINDOW):
-    """Εκτίμηση για το παράθυρο [end−window+1, end]."""
-    lo = end - timedelta(days=window - 1)
-    hrs = [abs(x) for k, v in by_day.items() if lo <= _d(k) <= end for x in v if abs(x) >= TAU]
-    cyc = [c for c in cycles if lo <= _d(c["date"]) <= end]
-    valid = [c for c in cyc if c["valid"]]
-    p = assured(hrs)
-    e = assured([c["ed"] for c in valid])
-    ec = assured([c["ec"] for c in valid])
-    return {"power": p, "energy": e, "energy_charge": ec, "n_cycles": len(cyc), "n_valid": len(valid),
-            "duration": (e / p) if (e and p) else None}
+def third(items):
+    """Η 3η υψηλότερη τιμή μιας λίστας (τιμή, ημερομηνία) από τρεις διαφορετικές ημέρες, και οι τρεις ημερομηνίες· (None, []) αν είναι λιγότερες."""
+    top = sorted(items, key=lambda x: -x[0])[:ASSURED_N]
+    return (top[ASSURED_N - 1][0], [x[1] for x in top]) if len(top) >= ASSURED_N else (None, [])
 
 
 def class_of(duration):
@@ -135,233 +124,212 @@ def class_of(duration):
     return int(duration + CLASS_TOL)
 
 
-def pct(new, old):
-    return round((new / old - 1) * 100, 1) if (new and old) else None
+def week_start(d):
+    return d - timedelta(days=d.weekday())
 
 
-def level_series(days, cyc, first, as_of):
-    """Καθημερινή «γρήγορη» εκτίμηση (τελευταίες 14 ημέρες): [(ημερομηνία, ισχύς, ενέργεια, έγκυροι κύκλοι)]."""
-    out, t = [], _d(first) + timedelta(days=CHG_WINDOW)
-    while t <= as_of:
-        e = estimate(days, cyc, t, window=CHG_WINDOW)
-        out.append((t, e["power"], e["energy"], e["n_valid"]))
-        t += timedelta(days=1)
-    return out
+def _chg(x, y):
+    return None if (not x or not y or abs(y / x - 1) < 0.01) else {"from": round(x), "to": round(y), "pct": round((y / x - 1) * 100)}
 
 
-def _median(vals):
-    v = sorted(vals)
-    return v[len(v) // 2]
-
-
-def detect_changes(series):
-    """Βήματα στο επίπεδο ισχύος / ενέργειας μιας μονάδας. Ένα νέο επίπεδο γίνεται το «προηγούμενο» και ξεκινά η σύγκριση από την αρχή,
-    οπότε μια δοκιμή που επιστρέφει (π.χ. 9/7 και 22/7 της ENE_01SB) δίνει δύο γεγονότα."""
-    ref = {"power": None, "energy": None}
-    run = {"power": [], "energy": []}
-    raw = []
-    snap = lambda: (ref["power"], ref["energy"])
-    for t, p, e, n in series:
-        if n < MIN_LEVEL_CYCLES:
-            continue
-        if ref["power"] is None and p: ref["power"] = p
-        if ref["energy"] is None and e: ref["energy"] = e
-        if ref["power"] is None or ref["energy"] is None:
-            continue
-        for kind, val in (("power", p), ("energy", e)):
-            if val is None:
-                continue
-            if abs(val / ref[kind] - 1) >= CHG_THR:
-                run[kind].append((t, val))
-            else:
-                run[kind].clear()
-            if len(run[kind]) >= CHG_RUN:
-                before = snap(); new = _median([v for _, v in run[kind]])
-                raw.append({"date": run[kind][0][0], "kind": kind, "confirmed": True, "before": before})
-                ref[kind] = new
-                raw[-1]["after"] = snap(); run[kind].clear()
-    for kind in ("power", "energy"):          # ό,τι τρέχει ακόμα στο τέλος του ιστορικού
-        r = run[kind]
-        if len(r) >= CHG_CAND:
-            before = snap(); new = _median([v for _, v in r])
-            after = (new, ref["energy"]) if kind == "power" else (ref["power"], new)
-            raw.append({"date": r[0][0], "kind": kind, "confirmed": False, "before": before, "after": after})
-    return sorted(raw, key=lambda x: x["date"])
-
-
-def merge_changes(raw):
-    """Αλλαγές ισχύος και ενέργειας μέσα σε CHG_MERGE_DAYS ημέρες γίνονται ένα γεγονός (π.χ. διπλασιασμός μονάδας)."""
+def merge_upgrades(raw):
+    """Αναβαθμίσεις ισχύος και ενέργειας μέσα σε MERGE_DAYS ημέρες γίνονται ένα γεγονός (π.χ. διπλασιασμός μονάδας)."""
+    raw = sorted(raw, key=lambda x: x["date"])
     groups = []
     for ev in raw:
-        if groups and (ev["date"] - groups[-1][-1]["date"]).days <= CHG_MERGE_DAYS:
+        if groups and (_d(ev["date"]) - _d(groups[-1][-1]["date"])).days <= MERGE_DAYS:
             groups[-1].append(ev)
         else:
             groups.append([ev])
     out = []
     for g in groups:
         b, a = g[0]["before"], g[-1]["after"]
-        ch = lambda x, y: None if (not x or not y or abs(y / x - 1) < 0.01) else {"from": round(x), "to": round(y), "pct": round((y / x - 1) * 100)}
-        pw, en = ch(b[0], a[0]), ch(b[1], a[1])
-        signs = [c["pct"] for c in (pw, en) if c]
-        kind = "up" if signs and min(signs) >= 0 else ("down" if signs and max(signs) <= 0 else "mixed")
-        extra = {}
-        if len(g) > 1 and all(abs(x) < CHG_THR * 100 for x in signs):   # πτώση και επιστροφή (ή άνοδος και επιστροφή) μέσα στην ίδια ομάδα
-            states = [g[0]["before"]] + [x["after"] for x in g]
-            ps = [p for p, _ in states if p]; es = [e for _, e in states if e]
-            dev = lambda vals, base: max((abs(v / base - 1), v) for v in vals)
-            (dp, vp), (de, ve) = dev(ps, b[0]), dev(es, b[1])
-            kind = "dip" if (ve < b[1] or vp < b[0]) and (ve / b[1] if de >= dp else vp / b[0]) < 1 else "surge"
-            extra = {"date_to": g[-1]["date"].isoformat(), "extreme_power": round(vp), "extreme_energy": round(ve)}
-            pw = en = None                          # η καθαρή μεταβολή ενός επεισοδίου δεν λέει τίποτα· δείχνουμε το άκρο
         cf = class_of(b[1] / b[0]) if b[0] and b[1] else None
         ct = class_of(a[1] / a[0]) if a[0] and a[1] else None
-        if extra:
-            ct = cf
-        out.append({"date": g[0]["date"].isoformat(), "confirmed": all(x["confirmed"] for x in g), "kind": kind,
-                    "power": pw, "energy": en, "class_from": cf, "class_to": ct,
-                    "duration_from": round(b[1] / b[0], 2) if b[0] and b[1] else None, "duration_to": round(a[1] / a[0], 2) if a[0] and a[1] else None, **extra})
+        out.append({"date": g[0]["date"], "since": min(x["since"] for x in g), "confirmed": all(x["confirmed"] for x in g), "kind": "up",
+                    "power": _chg(b[0], a[0]), "energy": _chg(b[1], a[1]), "class_from": cf, "class_to": ct,
+                    "duration_from": round(b[1] / b[0], 2) if b[0] and b[1] else None, "duration_to": round(a[1] / a[0], 2) if a[0] and a[1] else None})
     return out
 
 
-def since_of(ev, days, cyc):
-    """Πότε ξεκίνησε περίπου η αλλαγή: η πρώτη ώρα ή ο πρώτος έγκυρος κύκλος στο νέο επίπεδο, μέχρι 14 ημέρες πριν ανιχνευθεί.
-    Η ανίχνευση αργεί λίγες ημέρες (χρειάζονται 3 κύκλοι στο νέο επίπεδο)."""
-    d = _d(ev["date"]); lo = d - timedelta(days=CHG_WINDOW)
-    cands = []
-    if ev["kind"] != "down":
-        if ev["power"]:
-            t = ev["power"]["to"] * 0.95
-            cands += [_d(k) for k, v in days.items() if lo <= _d(k) <= d and any(abs(x) >= t for x in v)]
-        if ev["energy"]:
-            t = ev["energy"]["to"] * 0.95
-            cands += [_d(c["date"]) for c in cyc if c["valid"] and lo <= _d(c["date"]) <= d and c["ed"] >= t]
-    return (min(cands) if cands else d).isoformat()
+def scan_unit(days, as_of):
+    """Όλα τα στοιχεία μιας μονάδας από τις ωριαίες τιμές της. Επιστρέφει None αν η μονάδα δεν έχει δραστηριότητα."""
+    ks = sorted(days)
+    active = [k for k in ks if any(abs(x) >= TAU for x in days[k])]
+    if not active:
+        return None
+    first = _d(active[0]); cutoff = first + timedelta(days=COMMISSIONING_DAYS)
+    peaks = {k: max(abs(x) for x in days[k]) for k in ks if days[k]}
+    cyc = defaultdict(list)
+    for c in cycles_of(phases_of(days)):
+        if c["valid"]:
+            cyc[c["date"]].append(c["ed"])
+    n_dates = (as_of - first).days + 1
+    pv_all, ev_all, pv_post, ev_post = [], [], [], []
+    obs_p, obs_e, post_p, post_e = [None] * n_dates, [None] * n_dates, [None] * n_dates, [None] * n_dates
+    n_post_cycles, level, raw, since_p, since_e, prev_p, prev_e = 0, None, [], None, None, None, None
+    baseline_ok = False
+    for i in range(n_dates):
+        t = first + timedelta(days=i); k = t.isoformat(); post = t >= cutoff
+        if k in peaks and peaks[k] >= TAU:
+            pv_all.append((peaks[k], k))
+            if post:
+                pv_post.append((peaks[k], k))
+        for ed in cyc.get(k, []):
+            ev_all.append((ed, k))
+            if post:
+                ev_post.append((ed, k)); n_post_cycles += 1
+        po, _ = third(pv_all); eo, _ = third(ev_all)
+        obs_p[i] = round(po) if po else None; obs_e[i] = round(eo) if eo else None
+        if not post:
+            continue
+        p, p3 = third(pv_post); e, e3 = third(ev_post)
+        post_p[i] = round(p) if p else None; post_e[i] = round(e) if e else None
+        if p != prev_p and p is not None:
+            since_p = k; prev_p = p
+        if e != prev_e and e is not None:
+            since_e = k; prev_e = e
+        baseline_ok = (t - cutoff).days >= BASELINE_DAYS and n_post_cycles >= BASELINE_CYCLES and p is not None and e is not None
+        if not baseline_ok:
+            continue
+        if level is None:
+            level = [p, e]
+            continue
+        if p >= level[0] * (1 + UPGRADE):
+            raw.append({"date": k, "kind": "power", "confirmed": True, "before": (level[0], level[1]), "after": (p, level[1]), "since": min(p3)})
+            level[0] = p
+        if e >= level[1] * (1 + UPGRADE):
+            raw.append({"date": k, "kind": "energy", "confirmed": True, "before": (level[0], level[1]), "after": (level[0], e), "since": min(e3)})
+            level[1] = e
+    # τρέχουσες τιμές
+    in_comm = as_of < cutoff
+    p_now, _ = third(pv_post); e_now, _ = third(ev_post)
+    po, _ = third(pv_all); eo, _ = third(ev_all)
+    P, E = (po, eo) if in_comm else (p_now, e_now)
+    # «προς επιβεβαίωση»: 1–2 ημέρες των τελευταίων 14 είναι ≥ 12% πάνω από το εξασφαλισμένο μέγιστο
+    pending = {"power": None, "energy": None}
+    if baseline_ok:
+        rp = [(v, k) for v, k in pv_post if (as_of - _d(k)).days < RECENT_DAYS and v >= p_now * (1 + UPGRADE)]
+        re_ = [(v, k) for v, k in ev_post if (as_of - _d(k)).days < RECENT_DAYS and v >= e_now * (1 + UPGRADE)]
+        if rp:
+            pending["power"] = {"value": round(max(v for v, _ in rp)), "days": len({k for _, k in rp}), "since": min(k for _, k in rp)}
+            raw.append({"date": pending["power"]["since"], "kind": "power", "confirmed": False, "before": (p_now, e_now), "after": (max(v for v, _ in rp), e_now), "since": pending["power"]["since"]})
+        if re_:
+            pending["energy"] = {"value": round(max(v for v, _ in re_)), "days": len({k for _, k in re_}), "since": min(k for _, k in re_)}
+            raw.append({"date": pending["energy"]["since"], "kind": "energy", "confirmed": False, "before": (p_now, e_now), "after": (p_now, max(v for v, _ in re_)), "since": pending["energy"]["since"]})
+    duration = (E / P) if (E and P) else None
+    status = "commissioning" if in_comm else ("few_data" if not baseline_ok else "stable")
+    return {
+        "first": first, "cutoff": cutoff, "status": status, "baseline_ok": baseline_ok, "pending": pending,
+        "power": P, "energy": E, "duration": duration, "class_h": None if in_comm else class_of(duration),
+        "power_since": since_p if not in_comm else None, "energy_since": since_e if not in_comm else None,
+        "changes": merge_upgrades(raw), "n_post_cycles": n_post_cycles, "all_p": obs_p, "all_e": obs_e,
+        "series": {"start": first.isoformat(), "cutoff": (cutoff - first).days, "p_obs": obs_p, "e_obs": obs_e, "p": post_p, "e": post_e},
+    }
 
 
-def week_start(d):
-    return d - timedelta(days=d.weekday())
+def suspect_days_of(days, as_of):
+    """Ημέρες με ΥΠΟΠΤΑ δεδομένα (πιθανό σφάλμα SCADA), μόνο για φυσικά αδύνατες ή πολύ ασυνήθιστες τιμές:
+    (α) μέσα σε μία ημέρα εκφόρτιση ή φόρτιση πάνω από 2,2 κύκλους της μονάδας (90ό εκατοστημόριο των έγκυρων κύκλων της)·
+    (β) ώρα πάνω από 1,25× το 99ο εκατοστημόριο της ίδιας της μονάδας. Δεν αλλάζουν τα μέγιστα και φαίνονται στην καρτέλα."""
+    valid = [c for c in cycles_of(phases_of(days)) if c["valid"]]
+    if len(valid) < 8:
+        return []
+    pct90 = lambda vals: sorted(vals)[int((len(vals) - 1) * 0.9)]
+    e90, c90 = pct90([c["ed"] for c in valid]), pct90([c["ec"] for c in valid])
+    allabs = sorted(abs(x) for v in days.values() for x in v if abs(x) >= TAU)
+    p99 = allabs[int(len(allabs) * 0.99)] if len(allabs) >= SPIKE_MIN_HOURS else None
+    out = []
+    for k in sorted(days):
+        if (as_of - _d(k)).days >= SUSPECT_DAYS or not days[k]:
+            continue
+        v = days[k]
+        dch = sum(x for x in v if x > TAU); ch = sum(-x for x in v if x < -TAU)
+        if dch > 2.2 * e90 or ch > 2.2 * c90:
+            out.append({"date": k, "reason": "cycles", "value": round(max(dch / e90, ch / c90), 1)})
+        elif p99 and max(abs(x) for x in v) > SPIKE_RATIO * p99:
+            out.append({"date": k, "reason": "spike", "value": round(max(abs(x) for x in v))})
+    return out
+
+
+def idle_days_now(days, as_of):
+    """Πόσες συνεχόμενες ημέρες (που υπάρχουν στα δεδομένα) η μονάδα δεν έχει καμία ώρα δραστηριότητας μέχρι σήμερα, αν δούλευε πριν (≥ PAUSE_MIN_ACTIVE ενεργές
+    ημέρες στις 14 πριν). Ουδέτερη πληροφορία: δεν ξεχωρίζει βλάβη από αδράνεια της αγοράς και δεν είναι μείωση."""
+    ks = sorted(days)
+    if not ks or _d(ks[-1]) < as_of:
+        return 0
+    n, i = 0, len(ks) - 1
+    while i >= 0 and not any(abs(x) >= TAU for x in days[ks[i]]) and (i == len(ks) - 1 or (_d(ks[i + 1]) - _d(ks[i])).days == 1):
+        n += 1; i -= 1
+    if n < PAUSE_DAYS:
+        return 0
+    lo = _d(ks[i + 1]) - timedelta(days=14)
+    before = sum(1 for k in ks if lo <= _d(k) < _d(ks[i + 1]) and any(abs(x) >= TAU for x in days[k]))
+    return n if before >= PAUSE_MIN_ACTIVE else 0
+
+
+def mark_shared(units):
+    """Ίδια αναβάθμιση σε ≥ SHARED_MIN_UNITS μονάδες μέσα σε SHARED_DAYS ημέρες: πιθανό σφάλμα αρχείου, όχι αναβαθμίσεις."""
+    ev = [(c, u["unit"]) for u in units for c in u["changes"]]
+    for c, _ in ev:
+        near = {u2 for c2, u2 in ev if abs((_d(c2["date"]) - _d(c["date"])).days) <= SHARED_DAYS}
+        c["shared"] = len(near) >= SHARED_MIN_UNITS
+
+
+def fleet_changes(units, limit=60):
+    """Όλες οι αναβαθμίσεις όλων των μονάδων, νεότερες πρώτα (για την καρτέλα «Αλλαγές & παρακολούθηση»)."""
+    ev = [dict(c, unit=u["unit"]) for u in units for c in u["changes"]]
+    ev.sort(key=lambda c: (c["date"], c["unit"]), reverse=True)
+    return {"latest": ev[:limit], "total": len(ev), "pending": sum(1 for c in ev if not c["confirmed"]), "shared": sum(1 for c in ev if c.get("shared"))}
 
 
 def build(hist, now=None):
     by = load_units(hist)
+    stamp = (now or datetime.now(timezone.utc)).strftime("%Y-%m-%dT%H:%M:%SZ")
     if not by:
-        return {"generated": (now or datetime.now(timezone.utc)).strftime("%Y-%m-%dT%H:%M:%SZ"), "as_of": None, "units": [], "fleet": {"weekly": []}, "records": {"cards": [], "events": []}}
+        return {"generated": stamp, "as_of": None, "units": [], "fleet": {"weekly": []}, "changes": fleet_changes([])}
     as_of = max(_d(k) for v in by.values() for k in v)
-    units, cyc_by, ph_by = [], {}, {}
+    units, scans = [], {}
     for u in sorted(by):
         days = by[u]
-        ph = phases_of(days); cyc = cycles_of(ph)
-        cyc_by[u], ph_by[u] = cyc, ph
-        active = sorted(k for k, v in days.items() if any(abs(x) >= TAU for x in v))
-        if not active:
+        sc = scan_unit(days, as_of)
+        if not sc:
             continue
-        first, age = active[0], (as_of - _d(active[0])).days + 1
-        now_est = estimate(days, cyc, as_of)
-        prev_est = estimate(days, cyc, as_of - timedelta(days=WINDOW))
-        trend_p, trend_e = pct(now_est["power"], prev_est["power"]), pct(now_est["energy"], prev_est["energy"])
-        if now_est["energy"] is None or now_est["n_valid"] < MIN_VALID or age < MIN_AGE_DAYS:
-            status = "few_data"
-        elif any(t is not None and abs(t) > CHANGE * 100 for t in (trend_p, trend_e)):
-            status = "changing"
-        else:
-            status = "stable"
-        # ημέρες με ανωμαλία (εκφόρτιση πολύ μεγαλύτερη από φόρτιση) στο τρέχον παράθυρο
-        lo = as_of - timedelta(days=WINDOW - 1)
-        anomalies = 0
-        for k, v in days.items():
-            if lo <= _d(k) <= as_of:
-                c = sum(-x for x in v if x < -TAU); dch = sum(x for x in v if x > TAU)
-                if c > 0 and dch / c > ANOMALY_RATIO and dch > 50:
-                    anomalies += 1
-        # καθημερινή «γρήγορη» εκτίμηση (14 ημέρες) και αλλαγές επιπέδου
-        lv = level_series(days, cyc, first, as_of)
-        changes = merge_changes(detect_changes(lv))
-        for c in changes:
-            c["since"] = since_of(c, days, cyc)
-        series = {"start": lv[0][0].isoformat() if lv else None,
-                  "p": [round(x[1]) if x[1] else None for x in lv], "e": [round(x[2]) if x[2] else None for x in lv]}
+        scans[u] = sc
+        suspects = suspect_days_of(days, as_of)
+        age = (as_of - sc["first"]).days + 1
+        idle = idle_days_now(days, as_of)
         units.append({
-            "unit": u, "site": u.split("_")[0], "first_seen": first, "age_days": age,
-            "power_mw": round(now_est["power"]) if now_est["power"] else None,
-            "power_all_mw": round(max((abs(x) for v in days.values() for x in v), default=0)),
-            "energy_mwh": round(now_est["energy"]) if now_est["energy"] else None,
-            "energy_charge_mwh": round(now_est["energy_charge"]) if now_est["energy_charge"] else None,
-            "duration_h": round(now_est["duration"], 2) if now_est["duration"] else None,
-            "class_h": class_of(now_est["duration"]),
-            "cycles_30": now_est["n_cycles"], "valid_30": now_est["n_valid"],
-            "status": status, "trend_power_pct": trend_p, "trend_energy_pct": trend_e,
-            "anomaly_days_30": anomalies, "changes": changes, "series": series})
-
-    # ---- στόλος: εβδομαδιαία εκτίμηση (το άθροισμα των εκτιμήσεων κάθε μονάδας στο παράθυρο που τελειώνει εκείνη την εβδομάδα)
-    first_all = min(_d(u["first_seen"]) for u in units)
-    fleet, w = [], week_start(first_all)
+            "unit": u, "site": u.split("_")[0], "first_seen": sc["first"].isoformat(), "age_days": age,
+            "commissioning_end": sc["cutoff"].isoformat(), "commissioning_day": min(age, COMMISSIONING_DAYS),
+            "power_mw": round(sc["power"]) if sc["power"] else None, "energy_mwh": round(sc["energy"]) if sc["energy"] else None,
+            "duration_h": round(sc["duration"], 2) if sc["duration"] else None, "class_h": sc["class_h"],
+            "provisional": sc["status"] != "stable", "power_since": sc["power_since"], "energy_since": sc["energy_since"],
+            "valid_cycles": sc["n_post_cycles"], "status": sc["status"], "idle_days": idle, "pending": sc["pending"],
+            "suspect_days": suspects, "suspect_30": sum(1 for x in suspects if (as_of - _d(x["date"])).days < 30),
+            "changes": sc["changes"], "series": sc["series"]})
+    # στόλος: εβδομαδιαία άθροιση των μεγίστων που φάνηκαν ως τότε (κάθε μονάδα, από την πρώτη της δραστηριότητα· περιλαμβάνει και το commissioning)
+    fleet, w = [], week_start(min(sc["first"] for sc in scans.values()))
     while w <= as_of:
         end = min(w + timedelta(days=6), as_of)
         mw = mwh = n = 0
-        for u in units:
-            est = estimate(by[u["unit"]], cyc_by[u["unit"]], end)
-            if est["power"] and est["energy"]:
-                mw += est["power"]; mwh += est["energy"]; n += 1
+        for u, sc in scans.items():
+            i = (end - sc["first"]).days
+            if i < 0:
+                continue
+            p, e = sc["all_p"][min(i, len(sc["all_p"]) - 1)], sc["all_e"][min(i, len(sc["all_e"]) - 1)]
+            if p and e:
+                mw += p; mwh += e; n += 1
         if n:
             fleet.append({"w": w.isoformat(), "mw": round(mw), "mwh": round(mwh), "h": round(mwh / mw, 2), "units": n})
         w += timedelta(days=7)
-
+    mark_shared(units)
     return {
-        "generated": (now or datetime.now(timezone.utc)).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "as_of": as_of.isoformat(),
-        "data_from": min(_d(k) for v in by.values() for k in v).isoformat(),   # η πρώτη ημέρα με SCADA
-        "params": {"tau_mwh": TAU, "gap_h": GAP, "window_days": WINDOW, "assured_n": ASSURED_N, "rte_valid": [RTE_MIN, RTE_MAX],
-                   "min_valid_cycles": MIN_VALID, "min_age_days": MIN_AGE_DAYS, "change_pct": CHANGE * 100, "class_tolerance_h": CLASS_TOL},
-        "units": units,
-        "fleet": {"weekly": fleet},
-        "changes": fleet_changes(units),
-        "records": records(by, as_of),
+        "generated": stamp, "as_of": as_of.isoformat(), "data_from": min(_d(k) for v in by.values() for k in v).isoformat(),
+        "params": {"tau_mwh": TAU, "commissioning_days": COMMISSIONING_DAYS, "baseline_days": BASELINE_DAYS, "baseline_cycles": BASELINE_CYCLES,
+                   "assured_n": ASSURED_N, "rte_valid": [RTE_MIN, RTE_MAX], "upgrade_pct": UPGRADE * 100, "class_tolerance_h": CLASS_TOL},
+        "units": units, "fleet": {"weekly": fleet}, "changes": fleet_changes(units),
     }
-
-
-def fleet_changes(units, limit=12):
-    """Οι τελευταίες αλλαγές όλων των μονάδων, νεότερες πρώτα."""
-    ev = [dict(c, unit=u["unit"]) for u in units for c in u["changes"]]
-    ev.sort(key=lambda c: (c["date"], c["unit"]), reverse=True)
-    return {"latest": ev[:limit], "total": len(ev), "pending": sum(1 for c in ev if not c["confirmed"])}
-
-
-def records(by, as_of):
-    """Ρεκόρ στόλου από την αρχή της καταγραφής: ταυτόχρονη ισχύς φόρτισης/εκφόρτισης και ημερήσια ενέργεια.
-    Μια ημέρα μονάδας με εκφόρτιση ≫ φόρτιση (ανωμαλία, π.χ. 9/9) δεν μετράει στα ρεκόρ ενέργειας."""
-    days = sorted({k for v in by.values() for k in v})
-    best = {m: None for m in ("fleet_dis_mw", "fleet_chg_mw", "fleet_dis_mwh", "fleet_chg_mwh")}
-    events, cards = [], {}
-    for k in days:
-        n = max((len(by[u][k]) for u in by if k in by[u]), default=0)
-        dis_h, chg_h = [0.0] * n, [0.0] * n
-        dis_d = chg_d = 0.0
-        for u in by:
-            v = by[u].get(k)
-            if not v:
-                continue
-            for i, x in enumerate(v):
-                if x > TAU: dis_h[i] += x
-                elif x < -TAU: chg_h[i] += -x
-            c = sum(-x for x in v if x < -TAU); d_ = sum(x for x in v if x > TAU)
-            if c > 0 and d_ / c > ANOMALY_RATIO and d_ > 50:
-                continue   # ανώμαλη ημέρα μονάδας
-            dis_d += d_; chg_d += c
-        vals = {"fleet_dis_mw": (max(dis_h, default=0), (dis_h.index(max(dis_h)) + 1) if dis_h else None),
-                "fleet_chg_mw": (max(chg_h, default=0), (chg_h.index(max(chg_h)) + 1) if chg_h else None),
-                "fleet_dis_mwh": (dis_d, None), "fleet_chg_mwh": (chg_d, None)}
-        for m, (v, hour) in vals.items():
-            prev = best[m]
-            if v > 0 and (prev is None or v > prev["value"] * (1 + RECORD_GAIN)):
-                ev = {"metric": m, "date": k, "value": round(v), "hour": hour, "prev": round(prev["value"]) if prev else None, "prev_date": prev["date"] if prev else None}
-                events.append(ev)
-                best[m] = {"value": v, "date": k, "hour": hour}
-    for m, b in best.items():
-        if b:
-            cards[m] = {"metric": m, "value": round(b["value"]), "date": b["date"], "hour": b["hour"]}
-    order = ["fleet_dis_mw", "fleet_chg_mw", "fleet_dis_mwh", "fleet_chg_mwh"]
-    events.sort(key=lambda e: (e["date"], order.index(e["metric"])), reverse=True)
-    return {"cards": [cards[m] for m in order if m in cards], "events": events[:12], "events_total": len(events)}
 
 
 def write(hist_path=None, out_path=None):
@@ -378,4 +346,4 @@ def write(hist_path=None, out_path=None):
 
 if __name__ == "__main__":
     res = write(*(sys.argv[1:3]))
-    print(f"capacity.json: {len(res['units'])} μονάδες, as_of {res['as_of']}, {len(res['fleet']['weekly'])} εβδομάδες στόλου")
+    print(f"capacity.json: {len(res['units'])} μονάδες, as_of {res['as_of']}, {len(res['fleet']['weekly'])} εβδομάδες στόλου, {res['changes']['total']} αναβαθμίσεις")
