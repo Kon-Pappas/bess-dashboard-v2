@@ -1754,10 +1754,10 @@ function capTag(u) {
     const T = TT(), pn = u.pending || {};
     const pend = pn.power || pn.energy;
     if (pend) return { text: fillTpl(T.capTagPendingMax, { n: Math.max((pn.power || {}).days || 0, (pn.energy || {}).days || 0) }), cls: 'text-orange-400' };
+    if (u.idle_days > 0) return { text: fillTpl(T.capTagIdle, { n: u.idle_days }), cls: 'text-amber-300 font-bold' };   // 7+ ημέρες χωρίς δραστηριότητα (D93): τονίζεται και πριν από το commissioning
     const recent = (u.changes || []).filter(c => c.confirmed && daysBefore(c.since || c.date) <= 30).pop();
     if (recent) return { text: fillTpl(T.capTagUpgrade, { d: capDay(recent.since || recent.date) }), cls: 'text-lime-400' };
     if (u.status === 'commissioning') return { text: fillTpl(T.capTagCommissioning, { n: u.commissioning_day, t: 40 }), cls: 'text-slate-400' };
-    if (u.idle_days > 0) return { text: fillTpl(T.capTagIdle, { n: u.idle_days }), cls: 'text-slate-400' };
     if (u.status === 'few_data') return { text: statusText(u.status), cls: 'text-slate-400' };
     return null;
 }
@@ -1782,7 +1782,12 @@ function capDetailHtml(u, canvasId, withTitle) {
     const pn = u.pending || {};
     if (pn.power) notes.push(`<p class="text-[11px] text-orange-300 mt-2">${escapeHtml(fillTpl(T.capPendingLine, { v: fmtN(pn.power.value), u: 'MW', n: pn.power.days }))}</p>`);
     if (pn.energy) notes.push(`<p class="text-[11px] text-orange-300 mt-1">${escapeHtml(fillTpl(T.capPendingLine, { v: fmtN(pn.energy.value), u: 'MWh', n: pn.energy.days }))}</p>`);
-    if (u.idle_days > 0) notes.push(`<p class="text-[11px] text-slate-400 mt-2">${escapeHtml(fillTpl(T.capIdleLine, { n: u.idle_days }))}</p>`);
+    if (u.idle_days > 0) {
+        notes.push(`<p class="text-[11px] text-amber-300 font-semibold mt-2">${escapeHtml(fillTpl(T.capIdleLine, { n: u.idle_days, f: capDay(u.idle_from), l: u.last_active ? capDay(u.last_active) : '–' }))}</p>`);
+        // D95: ποτέ «δεν εκτελέστηκε»: μια ροή εκτός ISP (ενδοημερήσια, aFRR, mFRR) θα φαινόταν στο SCADA. Γράφουμε μόνο ότι το ISP προγραμμάτισε 0 MWh.
+        if (u.idle_isp_all) notes.push(`<p class="text-[11px] text-slate-300 mt-1">${escapeHtml(T.capIdleIspAll)}</p>`);
+        else if (u.idle_isp_zero > 0) notes.push(`<p class="text-[11px] text-slate-300 mt-1">${escapeHtml(fillTpl(T.capIdleIspPart, { n: u.idle_isp_zero }))}</p>`);
+    }
     const ch = (u.changes || []).filter(c => c.confirmed).slice().reverse();
     const changes = `<div class="text-xs font-semibold text-slate-300 mt-4 mb-1">${escapeHtml(T.capUnitChangesTitle)}</div>`
         + (ch.length ? `<ul class="divide-y divide-slate-700/40">${ch.map(c => changeHtml(c, false)).join('')}</ul>` : `<p class="text-xs text-slate-500">${escapeHtml(T.capUnitNoChanges)}</p>`);
@@ -1921,12 +1926,13 @@ function renderCapacityKpis() {
     const ch = (capacityData.changes && capacityData.changes.latest) || [];
     const recent = ch.filter(c => c.confirmed && daysBefore(c.since || c.date) <= 30).length, pending = (capacityData.changes && capacityData.changes.pending) || 0;
     const suspects = units.reduce((a, u) => a + (u.suspect_30 || 0), 0);
-    const tile = (label, value, unit, sub) => `<div class="bg-slate-900/50 border border-slate-700/60 rounded-lg p-3"><div class="text-xs text-slate-400">${escapeHtml(label)}</div><div class="text-xl font-bold text-slate-100 mt-0.5">${value}${unit ? ` <span class="text-xs font-normal text-slate-500">${escapeHtml(unit)}</span>` : ''}</div><div class="text-[11px] text-slate-500 mt-0.5">${escapeHtml(sub)}</div></div>`;
+    const idleN = units.filter(u => u.idle_days > 0).length;
+    const tile = (label, value, unit, sub, warn = '') => `<div class="bg-slate-900/50 border ${warn ? 'border-amber-400/50' : 'border-slate-700/60'} rounded-lg p-3"><div class="text-xs text-slate-400">${escapeHtml(label)}</div><div class="text-xl font-bold text-slate-100 mt-0.5">${value}${unit ? ` <span class="text-xs font-normal text-slate-500">${escapeHtml(unit)}</span>` : ''}</div><div class="text-[11px] text-slate-500 mt-0.5">${escapeHtml(sub)}${warn ? ` <span class="text-amber-300 font-semibold">· ${escapeHtml(warn)}</span>` : ''}</div></div>`;
     const alertTile = `<button type="button" onclick="switchTab('changes')" class="text-left bg-slate-900/50 border ${pending ? 'border-orange-500/50' : 'border-slate-700/60'} hover:border-acc-400/60 rounded-lg p-3 col-span-2 md:col-span-1 transition-colors"><div class="text-xs text-slate-400">${escapeHtml(T.capKpiChanges)}</div><div class="text-xl font-bold ${pending ? 'text-orange-400' : 'text-slate-100'} mt-0.5">${recent}</div><div class="text-[11px] text-slate-500 mt-0.5">${escapeHtml(fillTpl(T.capKpiChangesSub, { p: pending, s: suspects }))}</div></button>`;
     box.innerHTML = tile(T.capKpiPower, fmtN(mw), 'MW', fillTpl(T.capKpiPowerSub, { n: est.length, c: comm ? fillTpl(T.capKpiCommSuffix, { x: comm }) : '' }))
         + tile(T.capKpiEnergy, fmtN(mwh), 'MWh', T.capKpiEnergySub)
         + tile(T.capKpiDuration, mw ? fmtN(mwh / mw, 2) : '–', 'h', T.capKpiDurationSub)
-        + tile(T.capKpiUnits, String(units.length), '', fillTpl(T.capKpiUnitsSub, { s: cnt('stable'), f: cnt('few_data'), c: comm }))
+        + tile(T.capKpiUnits, String(units.length), '', fillTpl(T.capKpiUnitsSub, { s: cnt('stable'), f: cnt('few_data'), c: comm }), idleN ? fillTpl(T.capKpiIdleSuffix, { i: idleN }) : '')
         + alertTile;
 }
 
@@ -1991,9 +1997,20 @@ function renderChangesTab() {
     if (!capacityData) { empty.textContent = T.chgEmpty; empty.classList.remove('hidden'); body.classList.add('hidden'); return; }
     empty.classList.add('hidden'); body.classList.remove('hidden');
     const ch = capacityData.changes || {}, list = ch.latest || [];
-    const tile = (label, value, warn) => `<div class="bg-slate-900/50 border ${warn ? 'border-orange-500/50' : 'border-slate-700/60'} rounded-lg p-3"><div class="text-xs text-slate-400">${escapeHtml(label)}</div><div class="text-xl font-bold ${warn ? 'text-orange-400' : 'text-slate-100'} mt-0.5">${value}</div></div>`;
+    const tile = (label, value, warn) => { const amber = warn === 'amber', hot = warn === true; return `<div class="bg-slate-900/50 border ${amber ? 'border-amber-400/50' : hot ? 'border-orange-500/50' : 'border-slate-700/60'} rounded-lg p-3"><div class="text-xs text-slate-400">${escapeHtml(label)}</div><div class="text-xl font-bold ${amber ? 'text-amber-300' : hot ? 'text-orange-400' : 'text-slate-100'} mt-0.5">${value}</div></div>`; };
+    const idleUnits = capacityData.units.filter(u => u.idle_days > 0).sort((a, b) => b.idle_days - a.idle_days || a.unit.localeCompare(b.unit));
     document.getElementById('chgKpis').innerHTML = tile(T.chgKpiTotal, ch.total || 0, false) + tile(T.chgKpiPending, ch.pending || 0, (ch.pending || 0) > 0)
-        + tile(T.chgKpiComm, capacityData.units.filter(u => u.status === 'commissioning').length, false) + tile(T.chgKpiShared, ch.shared || 0, (ch.shared || 0) > 0);
+        + tile(T.chgKpiIdle, idleUnits.length, idleUnits.length > 0 ? 'amber' : false) + tile(T.chgKpiShared, ch.shared || 0, (ch.shared || 0) > 0);
+    const idleBox = document.getElementById('chgIdleBox');
+    if (idleBox) {
+        idleBox.classList.toggle('hidden', !idleUnits.length);
+        document.getElementById('chgIdleTitle').textContent = T.chgIdleTitle; document.getElementById('chgIdleSub').textContent = T.chgIdleSub;
+        document.getElementById('chgIdleList').innerHTML = idleUnits.map(u => {
+            const isp = u.idle_isp_all ? T.chgIdleIspAll : (u.idle_isp_zero > 0 ? fillTpl(T.chgIdleIspPart, { n: u.idle_isp_zero }) : '');
+            return `<li class="py-1.5"><div class="flex flex-wrap items-baseline gap-x-2"><button type="button" data-cap-unit="${escapeHtml(u.unit)}" class="font-bold text-slate-100 hover:text-amber-200">${escapeHtml(u.unit)}</button><span class="text-xs font-semibold text-amber-300">${escapeHtml(fillTpl(T.chgIdleRow, { n: u.idle_days, f: capDay(u.idle_from), l: u.last_active ? capDay(u.last_active) : '–' }))}</span></div>${isp ? `<div class="text-[11px] text-slate-400 mt-0.5">${escapeHtml(isp)}</div>` : ''}</li>`;
+        }).join('');
+        idleBox.querySelectorAll('[data-cap-unit]').forEach(b => b.addEventListener('click', () => openUnitInCapacity(b.dataset.capUnit)));
+    }
     const ul = document.getElementById('chgList');
     ul.innerHTML = list.length ? list.map(c => changeHtml(c, true)).join('') : `<li class="py-3 text-sm text-slate-500">${escapeHtml(T.chgListNone)}</li>`;
     if ((ch.total || 0) > list.length) ul.insertAdjacentHTML('beforeend', `<li class="py-2 text-xs text-slate-500">${escapeHtml(fillTpl(T.chgMore, { n: list.length, t: ch.total }))}</li>`);

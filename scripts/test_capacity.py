@@ -244,6 +244,35 @@ days = steady(100); days.update({ds(i): [0.0] * 24 for i in range(100, 105)})
 u = run({"Z_01SB": days})["Z_01SB"]
 check("5 ημέρες χωρίς δραστηριότητα: δεν αναφέρεται", u["idle_days"] == 0, u["idle_days"])
 
+
+# ---- 20. ακινησία: ακριβής περίοδος, τελευταία δραστηριότητα, και το πλαίσιο «το ISP προγραμμάτισε 0 MWh» (μόνο όταν το ISP είναι 0 όλη την ημέρα)
+def isp_rows(unit_name, plan):
+    """plan: {ημερομηνία: (φόρτιση, εκφόρτιση)} για μονάδα με όνομα X_01SB → X_BZ1_01_SB"""
+    a, b = unit_name.split("_", 1)
+    nm = f"{a}_BZ1_{b[:2]}_{b[2:]}"
+    return [{C.DAY: d, C.UNIT: nm, "Φόρτιση (MWh)": c, "Αποφόρτιση (MWh)": e} for d, (c, e) in plan.items()]
+
+def idle_unit(n_idle, plan_for):
+    days = steady(100); days.update({ds(i): [0.0] * 24 for i in range(100, 100 + n_idle)})
+    h = hist({"ID_01SB": days}); h["isp"] = isp_rows("ID_01SB", {ds(i): plan_for(i) for i in range(100 + n_idle)})
+    return {u["unit"]: u for u in C.build(h)["units"]}["ID_01SB"]
+
+u = idle_unit(9, lambda i: (0.0, 0.0) if i >= 100 else (200.0, 176.0))
+check("ακινησία 9 ημερών: από την 1η ημέρα, τελευταία δραστηριότητα την προηγούμενη", u["idle_days"] == 9 and u["idle_from"] == ds(100) and u["last_active"] == ds(99), (u["idle_days"], u["idle_from"], u["last_active"]))
+check("ISP 0 όλες τις ημέρες ακινησίας: idle_isp_all και 9 ημέρες", u["idle_isp_zero"] == 9 and u["idle_isp_all"] is True, (u["idle_isp_zero"], u["idle_isp_all"]))
+u = idle_unit(9, lambda i: (200.0, 176.0))
+check("το ISP προγραμμάτιζε κανονικά: ΔΕΝ λέμε τίποτα για το ISP (δεν γράφουμε τι δεν εκτελέστηκε)", u["idle_days"] == 9 and u["idle_isp_zero"] == 0 and u["idle_isp_all"] is False, (u["idle_isp_zero"], u["idle_isp_all"]))
+u = idle_unit(9, lambda i: (0.0, 0.0) if i >= 106 else (200.0, 176.0))
+check("ISP 0 μόνο τις τελευταίες 3 ημέρες: 3 ημέρες, όχι «όλες»", u["idle_isp_zero"] == 3 and u["idle_isp_all"] is False, (u["idle_isp_zero"], u["idle_isp_all"]))
+days = steady(100); days.update({ds(i): [0.0] * 24 for i in range(100, 109)})
+u = run({"NI_01SB": days})["NI_01SB"]
+check("χωρίς γραμμές ISP: άγνωστο, όχι «0»", u["idle_days"] == 9 and u["idle_isp_zero"] == 0 and u["idle_isp_all"] is False, (u["idle_isp_zero"], u["idle_isp_all"]))
+u = idle_unit(6, lambda i: (0.0, 0.0) if i >= 100 else (200.0, 176.0))
+check("6 ημέρες δεν είναι ακινησία (όριο 7)", u["idle_days"] == 0 and u["idle_from"] is None and u["idle_isp_all"] is False, (u["idle_days"], u["idle_from"]))
+u = idle_unit(7, lambda i: (0.0, 0.0) if i >= 100 else (200.0, 176.0))
+check("7 ημέρες είναι ακινησία", u["idle_days"] == 7 and u["idle_isp_all"] is True, (u["idle_days"], u["idle_isp_all"]))
+check("όνομα μονάδας ISP", C.isp_name("ENE_01SB") == "ENE_BZ1_01_SB" and C.isp_name("STO_03SP") == "STO_BZ1_03_SP")
+
 # ---- 16. στόλος: το άθροισμα των μεγίστων δεν μειώνεται ποτέ
 days = steady(100)
 for i in range(80, 100): days[ds(i)] = cycle_day(20, 2, 2)

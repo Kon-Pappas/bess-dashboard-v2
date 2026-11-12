@@ -76,11 +76,11 @@ const i18n = {
                 <li><strong class="text-slate-200">Εύρος:</strong> μόνο οι μονάδες BESS του Συστήματος Μεταφοράς (ΑΔΜΗΕ). Για το Δίκτυο Διανομής (ΔΕΔΔΗΕ) και για συστήματα πίσω από τον μετρητή δεν υπάρχουν δεδομένα.</li>
                 <li><strong class="text-slate-200">Πηγές:</strong> ΑΔΜΗΕ (ISP = πρόγραμμα, SCADA = πραγματική λειτουργία, μη πιστοποιημένο) και ENTSO-E (τιμές MCP). Ενημέρωση καθημερινά. Μετρήσεις SCADA για BESS υπάρχουν από 18/6.</li>
                 <li><strong class="text-slate-200">⏱ Ευθυγράμμιση ωρών:</strong> το SCADA είναι μία ώρα μπροστά από την αγορά. Με τον διακόπτη ενεργό (προεπιλογή), η ώρα SCADA h αντιστοιχεί στην ώρα MCP h−1. Στηρίζεται σε στατιστική συσχέτιση, όχι σε τεκμηρίωση του ΑΔΜΗΕ.</li>
+                <li><strong class="text-slate-200">Ύποπτες μετρήσεις:</strong> όταν υπάρχει ύποπτη μέτρηση SCADA (π.χ. κολλημένη τιμή) στην επιλεγμένη ημέρα ή στον μήνα, εμφανίζεται ⚠ και διακόπτης «Χωρίς αυτές». Κλειστός: τα επίσημα νούμερα. Δεν διαγράφονται δεδομένα.</li>
             </ul>
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="daily" style="scroll-margin-top:8px">Ημερήσια ανάλυση</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
                 <li><strong class="text-slate-200">Σύνολα &amp; RTE:</strong> το «TOTAL BESS» είναι το άθροισμα των μονάδων. Το ημερήσιο RTE παραμορφώνεται όταν η φόρτιση μεταφέρεται στην επόμενη μέρα, οπότε διάβασέ το σε μεγαλύτερα διαστήματα.</li>
-                <li><strong class="text-slate-200">Ύποπτες μετρήσεις:</strong> όταν η ημέρα ή ο μήνας έχει ύποπτη μέτρηση SCADA (κολλημένη τιμή κ.ά.) εμφανίζεται ⚠ και ένας διακόπτης «χωρίς ύποπτες μετρήσεις». Κλειστός δείχνει τα επίσημα νούμερα του ΑΔΜΗΕ, ανοιχτός βγάζει τις μονάδες-ημέρες που σημαίνονται από τα αθροίσματα, το ΣΥΝΟΛΟ και τα ωριαία. Δεν διαγράφονται δεδομένα.</li>
             </ul>
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="monthly" style="scroll-margin-top:8px">Μηνιαίος αντίκτυπος</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
@@ -99,6 +99,7 @@ const i18n = {
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
                 <li><strong class="text-slate-200">Μέγιστα από SCADA:</strong> η μέγιστη ισχύς (MW) και η μέγιστη ενέργεια ενός κύκλου (MWh) κάθε μονάδας υπολογίζονται από τις ωριαίες τιμές του ιστορικού της, χωρίς τις πρώτες 40 ημέρες λειτουργίας (commissioning), και ξαναϋπολογίζονται κάθε μέρα. <em>Δεν μειώνονται ποτέ</em>: λιγότερη χρήση είναι επιλογή. Δεν είναι η ονομαστική χωρητικότητα.</li>
                 <li><strong class="text-slate-200">Κατηγορία:</strong> 2ωρη, 3ωρη, 4ωρη από τη μέγιστη ενέργεια κύκλου ÷ τη μέγιστη ισχύ. Οι μονάδες στο commissioning δεν έχουν κατηγορία.</li>
+                <li><strong class="text-slate-200">Σημάνσεις:</strong> γκρι «commissioning» (οι πρώτες 40 ημέρες)· πορτοκαλί «προς επιβεβαίωση» (νέο μέγιστο σε 1–2 ημέρες)· κεχριμπαρί «χωρίς δραστηριότητα» (7+ ημέρες)· ⚠ ύποπτη μέτρηση.</li>
             </ul>
 
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="changes" style="scroll-margin-top:8px">Αλλαγές και παρακολούθηση</h3>
@@ -116,19 +117,19 @@ const i18n = {
                 <li><strong class="text-slate-200">Διαθεσιμότητα:</strong> ISP και MCP από 1/6/2026. SCADA για τις μονάδες BESS από 18/6/2026 (πριν από αυτή την ημερομηνία δεν υπάρχουν μετρήσεις). SCADA για την άντληση από 1/6/2026.</li>
                 <li><strong class="text-slate-200">Ώρες και τιμές:</strong> η αγορά (MCP, ISP) χρησιμοποιεί την ώρα CET, ενώ το SCADA την ελληνική ώρα (μία ώρα μπροστά). Η αγορά λειτουργεί με 15λεπτα και η τιμή κάθε ώρας είναι ο μέσος όρος των τεσσάρων τετάρτων.</li>
                 <li><strong class="text-slate-200">⏱ Ευθυγράμμιση ωρών:</strong> όταν είναι ενεργή, που είναι και η προεπιλογή, η ώρα SCADA h αντιστοιχεί στην ώρα MCP h−1, και το ISP ακολουθεί το ρολόι της αγοράς. Η παραδοχή στηρίζεται σε στατιστική συσχέτιση: οι ώρες πλεονάσματος του ISP συμπίπτουν με τις ώρες χαμηλής τιμής χωρίς μετατόπιση, ενώ η φόρτιση BESS και η άντληση ταιριάζουν καλύτερα με την τιμή της προηγούμενης ώρας. Δεν έχει επιβεβαιωθεί από τεκμηρίωση του ΑΔΜΗΕ. Επηρεάζει τις καρτέλες Μηνιαίος αντίκτυπος, Πλεόνασμα &amp; ευελιξία και Arbitrage P&amp;L.</li>
+                <li><strong class="text-slate-200">Ύποπτες μετρήσεις:</strong> στις καρτέλες Ημερήσια ανάλυση, Μηνιαίος αντίκτυπος, Πλεόνασμα &amp; ευελιξία και Arbitrage P&amp;L, όταν η επιλεγμένη ημέρα ή ο επιλεγμένος μήνας έχει ύποπτη μέτρηση SCADA (π.χ. κολλημένη τιμή), εμφανίζεται ⚠ και ο διακόπτης «Χωρίς αυτές». Κλειστός (προεπιλογή) δείχνει τα επίσημα νούμερα του ΑΔΜΗΕ· ανοιχτός βγάζει τις μονάδες-ημέρες που σημαίνονται από τα αθροίσματα, το ΣΥΝΟΛΟ και τα ωριαία. Δεν διαγράφονται δεδομένα.</li>
             </ul>
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="daily" style="scroll-margin-top:8px">Ημερήσια ανάλυση</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
                 <li><strong class="text-slate-200">ISP και SCADA:</strong> το ISP δείχνει τι προγραμματίστηκε και το SCADA τι πραγματοποιήθηκε. Διαφορές ανάμεσά τους είναι αναμενόμενες.</li>
                 <li><strong class="text-slate-200">Σύνολα:</strong> η ημερήσια φόρτιση και αποφόρτιση κάθε μονάδας είναι το άθροισμα των ωριαίων τιμών (στο ISP, των τετάρτων). Το «TOTAL BESS» είναι το άθροισμα των μονάδων, δηλαδή η πραγματική φυσική φόρτιση και αποφόρτιση. Δεν είναι η γραμμή TOTAL του ΑΔΜΗΕ, που σε κάθε ώρα αφαιρεί τη φόρτιση μιας μονάδας από την αποφόρτιση μιας άλλης και δίνει έτσι χαμηλότερες τιμές.</li>
-                <li><strong class="text-slate-200">Απόδοση κύκλου (RTE):</strong> ημερήσιο AC-to-AC, δηλαδή αποφόρτιση ÷ φόρτιση. Ακραίες τιμές (πάνω από ~92% ή κάτω από ~83%, και μερικές φορές πάνω από 100% σε μία μονάδα) οφείλονται συχνά στο φαινόμενο <em>Inter-day SoC Carryover</em>, όπου η μπαταρία κρατά ενέργεια για την επόμενη μέρα. Το RTE είναι πιο αξιόπιστο σε μεγαλύτερα διαστήματα ή στο σύνολο του στόλου.</li>
-                <li><strong class="text-slate-200">Ύποπτες μετρήσεις:</strong> όταν η ημέρα ή ο μήνας έχει ύποπτη μέτρηση SCADA (κολλημένη τιμή κ.ά.) εμφανίζεται ⚠ και ένας διακόπτης «χωρίς ύποπτες μετρήσεις». Κλειστός δείχνει τα επίσημα νούμερα του ΑΔΜΗΕ, ανοιχτός βγάζει τις μονάδες-ημέρες που σημαίνονται από τα αθροίσματα, το ΣΥΝΟΛΟ και τα ωριαία. Δεν διαγράφονται δεδομένα.</li>
+                <li><strong class="text-slate-200">Απόδοση κύκλου (RTE):</strong> ημερήσιο AC-to-AC, δηλαδή αποφόρτιση ÷ φόρτιση. Ακραίες τιμές (πάνω από ~92% ή κάτω από ~83%, και μερικές φορές πάνω από 100% σε μία μονάδα) οφείλονται συχνά στο φαινόμενο <em>Inter-day SoC Carryover</em>, όπου η μπαταρία κρατά ενέργεια για την επόμενη μέρα. Πάνω από 100% μπορεί να οφείλεται και σε κολλημένη μέτρηση (βλ. «Ύποπτες μετρήσεις»). Το RTE είναι πιο αξιόπιστο σε μεγαλύτερα διαστήματα ή στο σύνολο του στόλου.</li>
             </ul>
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="monthly" style="scroll-margin-top:8px">Μηνιαίος αντίκτυπος</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
                 <li><strong class="text-slate-200">Υποκατάσταση θερμικών, ανώτατο:</strong> υποθέτει ότι κάθε MWh αποφόρτισης BESS υποκαθιστά ακριβότερη θερμική παραγωγή (φυσικό αέριο ή λιγνίτη). Είναι ανώτατο όριο, γιατί η ενέργεια που φορτίστηκε από ακριβές ώρες απλώς μεταφέρεται σε άλλη ώρα.</li>
                 <li><strong class="text-slate-200">Υποκατάσταση θερμικών, καθαρή εκτίμηση:</strong> μετράει μόνο την ενέργεια που φορτίστηκε από πλεόνασμα ΑΠΕ (και τα δύο στρώματα της αποφυγής περικοπών) επί την απόδοση του μήνα (εκφόρτιση ÷ φόρτιση όλων των μονάδων). Υποθέτει ότι η ενέργεια των μπαταριών εκφορτίζεται αναλογικά με το πώς φορτίστηκε.</li>
-                <li><strong class="text-slate-200">Αποφυγή περικοπών ΑΠΕ, πυρήνας:</strong> φόρτιση σε ώρες με τιμή MCP ≤ 5 €/MWh, δηλαδή όταν η παραγωγή ΑΠΕ ξεπερνά όσα μπορεί να απορροφήσει η αγορά και η τιμή πέφτει περίπου στο μηδέν. Τότε το ISP δείχνει σχεδόν πάντα πλεόνασμα (στα δεδομένα Ιουνίου–Οκτωβρίου 2026, στο 99% αυτών των ωρών). Το όριο των 5 € είναι σταθερό.</li>
+                <li><strong class="text-slate-200">Αποφυγή περικοπών ΑΠΕ, πυρήνας:</strong> φόρτιση σε ώρες με τιμή MCP ≤ 5 €/MWh, δηλαδή όταν η παραγωγή ΑΠΕ ξεπερνά όσα μπορεί να απορροφήσει η αγορά και η τιμή πέφτει περίπου στο μηδέν. Τότε το ISP δείχνει σχεδόν πάντα πλεόνασμα (στα δεδομένα Ιουνίου–Νοεμβρίου 2026, έως 11/11, στο 99% αυτών των ωρών). Το όριο των 5 € είναι σταθερό.</li>
                 <li><strong class="text-slate-200">Αποφυγή περικοπών ΑΠΕ, πρόσθετο στρώμα (με επιφύλαξη):</strong> φόρτιση σε ώρες που το ISP δείχνει υπολειπόμενο πλεόνασμα (τουλάχιστον 1 MWh) αλλά η τιμή είναι πάνω από 5 €. Είναι περίπου οι μισές από τις ώρες πλεονάσματος. Η αιτία δεν φαίνεται στα δεδομένα: μπορεί να είναι ενημερωμένες προβλέψεις μετά την Αγορά Επόμενης Ημέρας ή τοπικοί περιορισμοί του δικτύου. Η φόρτιση σε ώρες χωρίς πλεόνασμα και με υψηλή τιμή (π.χ. νυχτερινό arbitrage) δεν μετράει.</li>
             </ul>
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="surplus" style="scroll-margin-top:8px">Πλεόνασμα &amp; ευελιξία</h3>
@@ -144,12 +145,12 @@ const i18n = {
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="arbitrage" style="scroll-margin-top:8px">Arbitrage P&amp;L</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
                 <li><strong class="text-slate-200">Έσοδα:</strong> αποκλειστικά από την Αγορά Επόμενης Ημέρας (DAM). Ως λήπτης τιμής (price-taker), κάθε μονάδα αγοράζει και πουλά στο MCP: ωριαίο καθαρό ποσό (αποφόρτιση − φόρτιση) × MCP. Δεν περιλαμβάνονται έσοδα από την Αγορά Εξισορρόπησης, τις Επικουρικές Υπηρεσίες (FCR, aFRR) ή μηχανισμούς ισχύος.</li>
-                <li><strong class="text-slate-200">Αντιστοίχιση ωρών:</strong> με ενεργή την ευθυγράμμιση, η ώρα SCADA h αποτιμάται με την τιμή της ώρας h−1 (η ώρα 1 με την ώρα 24 της προηγούμενης ημέρας). Χωρίς αυτήν, με την ίδια ώρα. Η διαφορά στο συνολικό P&amp;L Ιουνίου–Σεπτεμβρίου είναι ενδεικτικά περίπου 10%.</li>
+                <li><strong class="text-slate-200">Αντιστοίχιση ωρών:</strong> με ενεργή την ευθυγράμμιση, η ώρα SCADA h αποτιμάται με την τιμή της ώρας h−1 (η ώρα 1 με την ώρα 24 της προηγούμενης ημέρας). Χωρίς αυτήν, με την ίδια ώρα. Η διαφορά στο P&amp;L ανά μήνα είναι ενδεικτικά 10–17% σε σχέση με τον υπολογισμό χωρίς ευθυγράμμιση (12,5% για Ιούνιο–Σεπτέμβριο· ο Ιούνιος ξεχωρίζει, με λίγες μονάδες).</li>
                 <li><strong class="text-slate-200">Τι δεν περιλαμβάνεται:</strong> χρεώσεις δικτύου, φόροι, κόστος λειτουργίας και φθοράς, χρηματοδοτικό κόστος. Το P&amp;L είναι ακαθάριστη εκτίμηση αξίας ενέργειας, όχι λογιστικό αποτέλεσμα.</li>
             </ul>
                         <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="capacity" style="scroll-margin-top:8px">Χωρητικότητα και διάρκεια</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
-                <li><strong class="text-slate-200">Πηγή:</strong> μόνο τα ωριαία SCADA. Το ISP δεν χρησιμοποιείται: είναι πρόγραμμα και δεν δείχνει τι έγινε πραγματικά.</li>
+                <li><strong class="text-slate-200">Πηγή:</strong> μόνο τα ωριαία SCADA. Το ISP δεν χρησιμοποιείται στις εκτιμήσεις (είναι πρόγραμμα και δεν δείχνει τι έγινε)· χρησιμοποιείται μόνο για να γράψουμε ότι προγραμμάτισε 0 MWh σε μια περίοδο χωρίς δραστηριότητα.</li>
                 <li><strong class="text-slate-200">Κύκλοι:</strong> οι ώρες χωρίζονται σε φάσεις φόρτισης και εκφόρτισης, ώστε οι διπλοί κύκλοι μέσα στη μέρα, ή ένας κύκλος που περνά τα μεσάνυχτα, να μετρούν σωστά. Έγκυρος είναι ο κύκλος που η εκφόρτισή του έχει απόδοση 70–100% της φόρτισης.</li>
                 <li><strong class="text-slate-200">Μέγιστα:</strong> η μέγιστη ισχύς είναι η 3η υψηλότερη από τα μέγιστα τριών <em>διαφορετικών ημερών</em>, και η μέγιστη ενέργεια ενός κύκλου η 3η υψηλότερη από τους έγκυρους κύκλους, από όλο το ιστορικό μετά το commissioning. Έτσι ένα λάθος SCADA μίας ή δύο ημερών δεν γίνεται «μέγιστο» για πάντα, και το μέγιστο δεν μπορεί να μειωθεί όταν προστίθενται ημέρες.</li>
                 <li><strong class="text-slate-200">Δεν μειώνονται ποτέ:</strong> αν μια μονάδα φορτίζει ή εκφορτίζει με λιγότερη ισχύ, ή δεν δουλεύει για ημέρες, δεν σημαίνει ότι μίκρυνε η ισχύς ή η χωρητικότητά της· είναι επιλογή χρήσης. Το μέγιστο ανεβαίνει μόνο όταν φανεί νέο, μεγαλύτερο.</li>
@@ -158,7 +159,10 @@ const i18n = {
                 <li><strong class="text-slate-200">Κατηγορία:</strong> το ακέραιο μέρος της διάρκειας (μέγιστη ενέργεια κύκλου ÷ μέγιστη ισχύς), με ανοχή 0,1 ώρας: 2,4 → 2ωρη, 3,1 → 3ωρη, 4,0 → 4ωρη, 2,6 → 2ωρη. Μια μονάδα που δεν έχει φτάσει ποτέ πλήρη κύκλο φαίνεται μικρότερη από ό,τι είναι: η εκτίμηση είναι κάτω όριο.</li>
                 <li><strong class="text-slate-200">Όριο αδράνειας:</strong> κάθε μονάδα έχει δικό της όριο, το μεγαλύτερο από 2,5 MWh και το 1,5% της μέγιστης ισχύος της, ώστε η ιδιοκατανάλωση μιας μεγάλης μονάδας (π.χ. −3 MWh την ώρα) να μη μετράει ως φόρτιση.</li>
                 <li><strong class="text-slate-200">Ύποπτες ημέρες δεδομένων:</strong> ημέρες με κολλημένη μέτρηση (≥ 6 συνεχόμενες ώρες με ακριβώς την ίδια τιμή, τουλάχιστον 20% της μέγιστης ισχύος της μονάδας), με πάνω από 2,2 κύκλους μέσα σε μία ημέρα, ή με ώρα πάνω από 1,25 φορές το 99ο εκατοστημόριο της ίδιας της μονάδας. Πιθανό σφάλμα SCADA, όχι βλάβη. Αγνοούνται στις εκτιμήσεις (θεωρούνται ότι λείπουν) και φαίνονται στην καρτέλα της μονάδας.</li>
-            </ul>
+                <li><strong class="text-slate-200">Χωρίς δραστηριότητα:</strong> μονάδα που δούλευε (τουλάχιστον 5 ενεργές ημέρες στις 14 πριν) και δεν έχει καμία ώρα πάνω από το όριο αδράνειας για 7 ημέρες ή περισσότερο. Φαίνεται με κεχριμπαρί χρώμα στη λίστα, στα KPI και στο tab «Αλλαγές &amp; παρακολούθηση», και σε μονάδα που είναι σε commissioning. Δεν είναι μείωση: το μέγιστο δεν αλλάζει, και δεν ξεχωρίζουμε αδράνεια από βλάβη. Αν το ISP είχε προγραμματίσει 0 MWh όλη την ημέρα, το γράφουμε· δεν γράφουμε ποτέ τι «δεν εκτελέστηκε», γιατί μια ροή εκτός ISP (ενδοημερήσια αγορά, aFRR, mFRR) θα φαινόταν στο SCADA.</li>
+                    <li><strong class="text-slate-200">KPI και στόλος:</strong> τα KPI αθροίζουν τις μονάδες που έχουν περάσει το commissioning (οι άλλες φαίνονται ως «+N σε commissioning»). Το γράφημα στόλου αθροίζει, για κάθε εβδομάδα, τα μέγιστα που είχε δείξει κάθε μονάδα μέχρι τότε και περιλαμβάνει το commissioning, άρα το τελευταίο σημείο είναι λίγο πάνω από τα KPI. Δεν μειώνεται ποτέ.</li>
+                    <li><strong class="text-slate-200">Καταστάσεις και σειρά:</strong> «Σταθερή»: έχει περάσει το commissioning και έχει βάση 14 ημερών και 8 κύκλων. «Λίγα δεδομένα»: έχει περάσει το commissioning αλλά όχι ακόμα τη βάση (προσωρινή κατηγορία). «Commissioning»: οι πρώτες 40 ημέρες. Η λίστα ταξινομείται κατά μέγιστη ενέργεια, με τις μονάδες χωρίς τιμή στο τέλος.</li>
+                </ul>
 
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="changes" style="scroll-margin-top:8px">Αλλαγές και παρακολούθηση</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
@@ -167,14 +171,17 @@ const i18n = {
                 <li><strong class="text-slate-200">Πιθανό σφάλμα αρχείου:</strong> η ίδια αναβάθμιση σε 3 ή περισσότερες μονάδες μέσα σε 2 ημέρες σημαίνεται, γιατί πιο πιθανά είναι λάθος στο αρχείο παρά αναβαθμίσεις πολλών μονάδων.</li>
                 <li><strong class="text-slate-200">Βλάβη ή σφάλμα SCADA:</strong> λάθος 1–2 ημερών δεν γίνεται μέγιστο· φαίνεται το πολύ ως «προς επιβεβαίωση» για 14 ημέρες. Από την 3η διαφορετική ημέρα γίνεται μέγιστο, επειδή δεν ξεχωρίζει από πραγματική αναβάθμιση. Τα δεδομένα δεν ξεχωρίζουν βλάβη από απόφαση του ιδιοκτήτη, και για αυτό δεν υπάρχουν μειώσεις: μετράμε την ισχύ που αποδείχθηκε.</li>
                 <li><strong class="text-slate-200">Αναβάθμιση ή ανάκαμψη χρήσης:</strong> αν μια μονάδα δούλευε με χαμηλή χρήση στη βάση της και μετά δείξει την κανονική της ισχύ, η αύξηση φαίνεται ως αναβάθμιση, γιατί από τα δεδομένα δεν ξεχωρίζει.</li>
+                <li><strong class="text-slate-200">Χωρίς δραστηριότητα τώρα:</strong> το πλαίσιο αναφέρει τις μονάδες χωρίς καμία φόρτιση ή εκφόρτιση για 7 ημέρες ή περισσότερο, με την ημερομηνία έναρξης και την τελευταία δραστηριότητα. Όταν το ISP είχε προγραμματίσει 0 MWh, το γράφουμε.</li>
             </ul>
 
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="limits" style="scroll-margin-top:8px">Περιορισμοί</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
                 <li><strong class="text-slate-200">Δεδομένα:</strong> τα στοιχεία SCADA είναι μη πιστοποιημένα και μπορεί να αναθεωρηθούν. Το ISP είναι προγραμματισμός.</li>
-                <li><strong class="text-slate-200">Αλλαγή ώρας:</strong> οι ημέρες αλλαγής ώρας (25 ώρες στις 25/10, 23 ώρες τον Μάρτιο) χειρίζονται ειδικά, αλλά δεν έχουν ακόμα δοκιμαστεί με πραγματικά δεδομένα.</li>
+                <li><strong class="text-slate-200">Αλλαγή ώρας:</strong> οι ημέρες αλλαγής ώρας χειρίζονται ειδικά. Η ημέρα των 25 ωρών (25/10/2026) έχει επαληθευτεί με πραγματικά δεδομένα· η ημέρα των 23 ωρών (Μάρτιος 2027) δεν έχει ακόμα δοκιμαστεί.</li>
                 <li><strong class="text-slate-200">Χαρακτήρας:</strong> ανεξάρτητη ανάλυση πάνω σε ανοιχτά δεδομένα. Δεν αποτελεί επίσημη θέση κάποιου φορέα.</li>
-            </ul>
+                <li><strong class="text-slate-200">Κολλημένες μετρήσεις:</strong> στο SCADA υπάρχουν περίοδοι όπου η τιμή μιας μονάδας μένει ίδια για πολλές ώρες (π.χ. STO_02SP, 20–23/10). Ο ΑΔΜΗΕ δεν τις έχει διορθώσει (έλεγχος 1/11/2026). Σημαίνονται και αγνοούνται στις εκτιμήσεις χωρητικότητας, και ο διακόπτης «Χωρίς αυτές» δείχνει τα αθροίσματα χωρίς αυτές.</li>
+                    <li><strong class="text-slate-200">Μονάδες σε commissioning:</strong> το ISP μπορεί να τις προγραμματίζει χωρίς να παράγουν, οπότε τα ημερήσια σύνολα ISP και SCADA διαφέρουν περισσότερο τις ημέρες που υπάρχουν πολλές τέτοιες μονάδες.</li>
+                </ul>
         `,
         methodTabShort: "Σύντομη",
         methodTabFull: "Αναλυτική",
@@ -268,7 +275,16 @@ const i18n = {
         capSince: "από {d}",
         capCommInfo: "Commissioning: ημέρα {n} από {t}. Τα νούμερα είναι όσα φάνηκαν ως τώρα και δεν μετράνε για το μέγιστο.",
         capPendingLine: "Νέο μέγιστο προς επιβεβαίωση: {v} {u}, {n} από 3 ημέρες",
-        capIdleLine: "Χωρίς δραστηριότητα {n} ημέρες: αδράνεια ή βλάβη, δεν ξεχωρίζει. Το μέγιστο δεν αλλάζει.",
+        capIdleLine: "Χωρίς δραστηριότητα {n} ημέρες, από {f} (τελευταία δραστηριότητα: {l}). Το μέγιστο δεν αλλάζει.",
+        capIdleIspAll: "Το ISP προγραμμάτισε 0 MWh όλες αυτές τις ημέρες.",
+        capIdleIspPart: "Το ISP προγραμμάτισε 0 MWh τις τελευταίες {n} ημέρες.",
+        capKpiIdleSuffix: "χωρίς δραστηριότητα {i}",
+        chgKpiIdle: "Χωρίς δραστηριότητα",
+        chgIdleTitle: "Χωρίς δραστηριότητα τώρα",
+        chgIdleSub: "Μονάδες χωρίς καμία φόρτιση ή εκφόρτιση για 7 ημέρες ή περισσότερο. Το μέγιστο τους δεν αλλάζει.",
+        chgIdleRow: "{n} ημέρες · από {f} · τελευταία δραστηριότητα {l}",
+        chgIdleIspAll: "ISP: 0 MWh όλες τις ημέρες",
+        chgIdleIspPart: "ISP: 0 MWh τις τελευταίες {n} ημέρες",
         capSeriesObsEnergy: "Ενέργεια, commissioning (MWh)",
         capSeriesObsPower: "Ισχύς, commissioning (MW)",
         capKpiCommSuffix: " · +{x} σε commissioning",
@@ -393,11 +409,11 @@ const i18n = {
                 <li><strong class="text-slate-200">Scope:</strong> only BESS units on the Transmission System (IPTO/ADMIE). There are no data for the Distribution Network (HEDNO) or for behind-the-meter systems.</li>
                 <li><strong class="text-slate-200">Sources:</strong> IPTO/ADMIE (ISP = schedule, SCADA = actual operation, uncertified) and ENTSO-E (MCP prices). Updated daily. BESS SCADA measurements exist from 18/6.</li>
                 <li><strong class="text-slate-200">⏱ Hour alignment:</strong> SCADA runs one hour ahead of the market. With the checkbox on (default), SCADA hour h is matched with MCP hour h−1. Based on statistical correlation, not on IPTO documentation.</li>
+                <li><strong class="text-slate-200">Suspect readings:</strong> when the selected day or month has a suspect SCADA reading (e.g. a frozen value), a ⚠ and a switch "Without them" appear. Off: the official figures. No data are deleted.</li>
             </ul>
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="daily" style="scroll-margin-top:8px">Daily Analytics</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
                 <li><strong class="text-slate-200">Totals &amp; RTE:</strong> “TOTAL BESS” is the sum of the units. Daily RTE is distorted by energy carried over to the next day, so read it over longer periods.</li>
-                <li><strong class="text-slate-200">Suspect readings:</strong> when the day or the month has a suspect SCADA reading (a frozen value and so on) a ⚠ and a switch "without suspect readings" appear. Off shows the official IPTO figures; on removes the flagged unit-days from the totals, the TOTAL and the hourly values. No data are deleted.</li>
             </ul>
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="monthly" style="scroll-margin-top:8px">Monthly Impact</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
@@ -416,6 +432,7 @@ const i18n = {
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
                 <li><strong class="text-slate-200">Maxima from SCADA:</strong> the maximum power (MW) and the maximum energy of one cycle (MWh) of each unit are calculated from the hourly values of its history, without the first 40 days of operation (commissioning), and recalculated every day. <em>They never decrease</em>: using less is a choice. They are not the nameplate capacity.</li>
                 <li><strong class="text-slate-200">Class:</strong> 2h, 3h, 4h from the maximum energy of a cycle ÷ the maximum power. Units in commissioning have no class.</li>
+                <li><strong class="text-slate-200">Marks:</strong> grey "commissioning" (the first 40 days); orange "to be confirmed" (a new maximum on 1–2 days); amber "no activity" (7+ days); ⚠ suspect reading.</li>
             </ul>
 
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="changes" style="scroll-margin-top:8px">Changes and monitoring</h3>
@@ -433,19 +450,19 @@ const i18n = {
                 <li><strong class="text-slate-200">Availability:</strong> ISP and MCP from 1/6/2026. SCADA for BESS units from 18/6/2026 (no measurements exist before that date). SCADA for pumping (PUMP) from 1/6/2026.</li>
                 <li><strong class="text-slate-200">Hours and prices:</strong> the market (MCP, ISP) uses CET, while SCADA uses Greek local time (one hour ahead). The market runs on 15-minute intervals and each hourly price is the average of its four quarters.</li>
                 <li><strong class="text-slate-200">⏱ Hour alignment:</strong> when on, which is the default, SCADA hour h is matched with MCP hour h−1, and the ISP follows the market clock. The assumption rests on statistical correlation: ISP surplus hours coincide with low-price hours without any shift, while BESS charging and pumping fit the price of the previous hour better. It has not been confirmed by IPTO documentation. It affects the Monthly Impact, Surplus &amp; Flexibility and Arbitrage P&amp;L tabs.</li>
+                <li><strong class="text-slate-200">Suspect readings:</strong> in the tabs Daily analytics, Monthly impact, Surplus &amp; flexibility and Arbitrage P&amp;L, when the selected day or month has a suspect SCADA reading (e.g. a frozen value), a ⚠ and the switch "Without them" appear. Off (the default) shows the official IPTO figures; on removes the flagged unit-days from the totals, the TOTAL and the hourly values. No data are deleted.</li>
             </ul>
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="daily" style="scroll-margin-top:8px">Daily Analytics</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
                 <li><strong class="text-slate-200">ISP and SCADA:</strong> the ISP shows what was scheduled and SCADA what actually happened. Differences between them are expected.</li>
                 <li><strong class="text-slate-200">Totals:</strong> a unit’s daily charge and discharge is the sum of its hourly values (quarter-hourly in the ISP). “TOTAL BESS” is the sum of the units, i.e. the actual physical charge and discharge. It is not IPTO’s TOTAL row, which nets the units hour by hour and gives lower values.</li>
-                <li><strong class="text-slate-200">Round-trip efficiency (RTE):</strong> daily AC-to-AC, i.e. discharge ÷ charge. Extreme values (above ~92% or below ~83%, and sometimes above 100% for a single unit) are often caused by <em>Inter-day SoC Carryover</em>, where the battery holds energy for the next day. RTE is more reliable over longer periods or for the whole fleet.</li>
-                <li><strong class="text-slate-200">Suspect readings:</strong> when the day or the month has a suspect SCADA reading (a frozen value and so on) a ⚠ and a switch "without suspect readings" appear. Off shows the official IPTO figures; on removes the flagged unit-days from the totals, the TOTAL and the hourly values. No data are deleted.</li>
+                <li><strong class="text-slate-200">Round-trip efficiency (RTE):</strong> daily AC-to-AC, i.e. discharge ÷ charge. Extreme values (above ~92% or below ~83%, and sometimes above 100% for a single unit) are often caused by <em>Inter-day SoC Carryover</em>, where the battery holds energy for the next day. Above 100% can also be caused by a frozen reading (see "Suspect readings"). RTE is more reliable over longer periods or for the whole fleet.</li>
             </ul>
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="monthly" style="scroll-margin-top:8px">Monthly Impact</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
                 <li><strong class="text-slate-200">Thermal displacement, upper bound:</strong> assumes every MWh of BESS discharge displaces more expensive thermal generation (gas or lignite). It is an upper bound, because energy charged in expensive hours is only moved to another hour.</li>
                 <li><strong class="text-slate-200">Thermal displacement, net estimate:</strong> counts only the energy charged from RES surplus (both layers of the avoided curtailment) times the efficiency of the month (discharge ÷ charge of all units). It assumes that the energy of the batteries is discharged in proportion to how it was charged.</li>
-                <li><strong class="text-slate-200">Avoided RES curtailment, core:</strong> charging in hours with an MCP price ≤ €5/MWh, i.e. when RES output exceeds what the market can absorb and the price falls to about zero. The ISP then almost always shows a surplus (in the June–October 2026 data, in 99% of those hours). The €5 threshold is fixed.</li>
+                <li><strong class="text-slate-200">Avoided RES curtailment, core:</strong> charging in hours with an MCP price ≤ €5/MWh, i.e. when RES output exceeds what the market can absorb and the price falls to about zero. The ISP then almost always shows a surplus (in the June–November 2026 data, to 11/11, in 99% of those hours). The €5 threshold is fixed.</li>
                 <li><strong class="text-slate-200">Avoided RES curtailment, additional layer (with reservation):</strong> charging in hours when the ISP shows a residual surplus (at least 1 MWh) but the price is above €5. These are about half of all surplus hours. The cause is not visible in the data: it may be updated forecasts after the Day-Ahead Market or local grid constraints. Charging in hours without a surplus and with a high price (e.g. overnight arbitrage) does not count.</li>
             </ul>
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="surplus" style="scroll-margin-top:8px">Surplus &amp; Flexibility</h3>
@@ -461,12 +478,12 @@ const i18n = {
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="arbitrage" style="scroll-margin-top:8px">Arbitrage P&amp;L</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
                 <li><strong class="text-slate-200">Revenue:</strong> exclusively from the Day-Ahead Market (DAM). As a price-taker, each unit buys and sells at the MCP: hourly net amount (discharge − charge) × MCP. Revenue from the Balancing Market, Ancillary Services (FCR, aFRR) or capacity mechanisms is not included.</li>
-                <li><strong class="text-slate-200">Hour matching:</strong> with alignment on, SCADA hour h is valued at the price of hour h−1 (hour 1 uses hour 24 of the previous day). Without it, the same hour is used. The difference in total June–September P&amp;L is roughly 10%, indicatively.</li>
+                <li><strong class="text-slate-200">Hour matching:</strong> with alignment on, SCADA hour h is valued at the price of hour h−1 (hour 1 uses hour 24 of the previous day). Without it, the same hour is used. The difference in monthly P&amp;L is indicatively 10–17% against the calculation without the alignment (12.5% for June–September; June stands out, with few units).</li>
                 <li><strong class="text-slate-200">What is not included:</strong> network charges, taxes, operating and degradation costs, financing costs. P&amp;L is a gross estimate of energy value, not an accounting result.</li>
             </ul>
                         <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="capacity" style="scroll-margin-top:8px">Capacity and duration</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
-                <li><strong class="text-slate-200">Source:</strong> the hourly SCADA only. The ISP is not used: it is a schedule and does not show what actually happened.</li>
+                <li><strong class="text-slate-200">Source:</strong> the hourly SCADA only. The ISP is not used in the estimates (it is a schedule and does not show what happened); it is used only to say that it scheduled 0 MWh in a period without activity.</li>
                 <li><strong class="text-slate-200">Cycles:</strong> the hours are split into charging and discharging phases, so that double cycles in a day, or a cycle that crosses midnight, are counted correctly. A cycle is valid when its discharge is 70–100% of its charge.</li>
                 <li><strong class="text-slate-200">Maxima:</strong> the maximum power is the 3rd highest of the peaks of three <em>different days</em>, and the maximum energy of a cycle the 3rd highest of the valid cycles, from the whole history after commissioning. So a SCADA error of one or two days does not become the "maximum" for ever, and the maximum cannot decrease when days are added.</li>
                 <li><strong class="text-slate-200">They never decrease:</strong> if a unit charges or discharges with less power, or does not work for days, it does not mean its power or capacity became smaller; it is a choice of use. The maximum only rises when a new, larger one shows.</li>
@@ -475,7 +492,10 @@ const i18n = {
                 <li><strong class="text-slate-200">Class:</strong> the whole-hour part of the duration (maximum energy of a cycle ÷ maximum power), with a tolerance of 0.1 hour: 2.4 → 2h, 3.1 → 3h, 4.0 → 4h, 2.6 → 2h. A unit that has never run a full cycle looks smaller than it is: the estimate is a lower bound.</li>
                 <li><strong class="text-slate-200">Idle threshold:</strong> each unit has its own, the larger of 2.5 MWh and 1.5% of its maximum power, so that the self-consumption of a large unit (e.g. −3 MWh per hour) is not counted as charging.</li>
                 <li><strong class="text-slate-200">Suspect data days:</strong> days with a frozen reading (6 or more hours in a row with exactly the same value, at least 20% of the maximum power of the unit), with more than 2.2 cycles in one day, or with an hour above 1.25 times the 99th percentile of the unit itself. A likely SCADA error, not a failure. They are ignored in the estimates (treated as missing) and are shown on the card of the unit.</li>
-            </ul>
+                <li><strong class="text-slate-200">No activity:</strong> a unit that was working (at least 5 active days in the 14 before) and has no hour above the idle threshold for 7 days or more. It shows in amber in the list, in the KPIs and in the tab "Changes &amp; monitoring", also for a unit in commissioning. It is not a decrease: the maximum does not change, and we cannot tell idleness from a failure. If the ISP had scheduled 0 MWh for the whole day we say so; we never write what "was not executed", because a flow outside the ISP (intraday market, aFRR, mFRR) would show in the SCADA.</li>
+                    <li><strong class="text-slate-200">KPIs and fleet:</strong> the KPIs add up the units that are past commissioning (the others show as "+N in commissioning"). The fleet chart adds up, for each week, the maxima each unit had shown by then and includes commissioning, so its last point is a little above the KPIs. It never decreases.</li>
+                    <li><strong class="text-slate-200">Statuses and order:</strong> "Stable": past commissioning, with a base of 14 days and 8 cycles. "Little data": past commissioning but not yet the base (provisional class). "Commissioning": the first 40 days. The list is ordered by maximum energy, with the units without a value at the end.</li>
+                </ul>
 
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="changes" style="scroll-margin-top:8px">Changes and monitoring</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
@@ -484,14 +504,17 @@ const i18n = {
                 <li><strong class="text-slate-200">Likely file error:</strong> the same upgrade on 3 or more units within 2 days is flagged, because an error in the file is more likely than upgrades of several units.</li>
                 <li><strong class="text-slate-200">Failure or SCADA error:</strong> an error of 1–2 days does not become the maximum; it shows at most as "to be confirmed" for 14 days. From the 3rd different day it becomes the maximum, because it cannot be told from a real upgrade. The data cannot tell a failure from a decision of the owner, which is why there are no decreases: we measure the power that was shown.</li>
                 <li><strong class="text-slate-200">Upgrade or recovery of use:</strong> if a unit worked at a low use in its base and then shows its normal power, the rise shows as an upgrade, because the data cannot tell them apart.</li>
+                <li><strong class="text-slate-200">No activity now:</strong> the box lists the units with no charging or discharging for 7 days or more, with the start date and the last activity. When the ISP had scheduled 0 MWh, we say so.</li>
             </ul>
 
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="limits" style="scroll-margin-top:8px">Limitations</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
                 <li><strong class="text-slate-200">Data:</strong> SCADA data is uncertified and may be revised. The ISP is a schedule.</li>
-                <li><strong class="text-slate-200">Clock changes:</strong> clock-change days (25 hours on 25/10, 23 hours in March) are handled specifically but have not yet been tested with real data.</li>
+                <li><strong class="text-slate-200">Clock changes:</strong> clock-change days are handled specifically. The 25-hour day (25/10/2026) has been verified with real data; the 23-hour day (March 2027) has not been tested yet.</li>
                 <li><strong class="text-slate-200">Nature:</strong> independent analysis of open data. It is not the official position of any organisation.</li>
-            </ul>
+                <li><strong class="text-slate-200">Frozen readings:</strong> the SCADA has periods where the value of a unit stays the same for many hours (e.g. STO_02SP, 20–23/10). IPTO has not corrected them (checked 1/11/2026). They are flagged and ignored in the capacity estimates, and the switch "Without them" shows the totals without them.</li>
+                    <li><strong class="text-slate-200">Units in commissioning:</strong> the ISP may schedule them while they do not produce, so the daily ISP and SCADA totals differ more on days with many such units.</li>
+                </ul>
         `,
         methodTabShort: "Short",
         methodTabFull: "Detailed",
@@ -585,7 +608,16 @@ const i18n = {
         capSince: "since {d}",
         capCommInfo: "Commissioning: day {n} of {t}. The figures are what has shown so far and do not count for the maximum.",
         capPendingLine: "New maximum to be confirmed: {v} {u}, {n} of 3 days",
-        capIdleLine: "No activity for {n} days: idleness or a failure, it cannot tell. The maximum does not change.",
+        capIdleLine: "No activity for {n} days, since {f} (last activity: {l}). The maximum does not change.",
+        capIdleIspAll: "The ISP scheduled 0 MWh on all these days.",
+        capIdleIspPart: "The ISP scheduled 0 MWh on the last {n} days.",
+        capKpiIdleSuffix: "no activity {i}",
+        chgKpiIdle: "No activity",
+        chgIdleTitle: "No activity now",
+        chgIdleSub: "Units with no charging or discharging for 7 days or more. Their maximum does not change.",
+        chgIdleRow: "{n} days · since {f} · last activity {l}",
+        chgIdleIspAll: "ISP: 0 MWh on all days",
+        chgIdleIspPart: "ISP: 0 MWh on the last {n} days",
         capSeriesObsEnergy: "Energy, commissioning (MWh)",
         capSeriesObsPower: "Power, commissioning (MW)",
         capKpiCommSuffix: " · +{x} in commissioning",

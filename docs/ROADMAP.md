@@ -93,6 +93,12 @@ Next, when there is a reason:
 - Watch how `FROZEN_HOURS = 6` behaves for a few weeks (the owner finds it "many"); lower it only if the data show shorter freezes
 - When a package version is raised: test it first, change `requirements.txt`, and decide then whether to leave the `xlrd` engine (deprecated in pandas 3.1) for `calamine`
 
+## Open decisions (12 Nov 2026)
+
+- **K21:** the commissioning clock, calendar days or active days (data in the known issues)
+- **K22:** the order of the unit list and of the timeline
+- The sentence of the methodology about the order of the list must change if K22 is decided
+
 ## Checks with a date
 
 - 22 Oct 2026: first 07:04 run after batch 1; check that `data/meta.json` appears (K09), that there is one run per day, and that the previous day's SCADA file was already there (K08)

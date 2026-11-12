@@ -301,20 +301,48 @@ def suspect_days_of(days, tau=TAU):
     return sorted(out, key=lambda x: x["date"])
 
 
-def idle_days_now(days, as_of, tau=TAU):
-    """Πόσες συνεχόμενες ημέρες (που υπάρχουν στα δεδομένα) η μονάδα δεν έχει καμία ώρα δραστηριότητας μέχρι σήμερα, αν δούλευε πριν (≥ PAUSE_MIN_ACTIVE ενεργές
-    ημέρες στις 14 πριν). Ουδέτερη πληροφορία: δεν ξεχωρίζει βλάβη από αδράνεια της αγοράς και δεν είναι μείωση."""
+def idle_streak(days, as_of, tau=TAU):
+    """Συνεχόμενες ημέρες (που υπάρχουν στα δεδομένα) χωρίς ΚΑΜΙΑ ώρα δραστηριότητα (όλες οι ώρες κάτω από το όριο αδράνειας της μονάδας) μέχρι σήμερα, αν η μονάδα
+    δούλευε πριν (≥ PAUSE_MIN_ACTIVE ενεργές ημέρες στις 14 πριν) και η περίοδος είναι ≥ PAUSE_DAYS. Επιστρέφει {days, from, last_active} ή None.
+    Ουδέτερη πληροφορία: δεν ξεχωρίζει βλάβη από απόφαση και δεν είναι μείωση· το μέγιστο δεν αλλάζει."""
     ks = sorted(days)
     if not ks or _d(ks[-1]) < as_of:
-        return 0
+        return None
     n, i = 0, len(ks) - 1
     while i >= 0 and not any(abs(x) >= tau for x in days[ks[i]]) and (i == len(ks) - 1 or (_d(ks[i + 1]) - _d(ks[i])).days == 1):
         n += 1; i -= 1
     if n < PAUSE_DAYS:
-        return 0
+        return None
     lo = _d(ks[i + 1]) - timedelta(days=14)
     before = sum(1 for k in ks if lo <= _d(k) < _d(ks[i + 1]) and any(abs(x) >= tau for x in days[k]))
-    return n if before >= PAUSE_MIN_ACTIVE else 0
+    if before < PAUSE_MIN_ACTIVE:
+        return None
+    return {"days": n, "from": ks[i + 1], "last_active": ks[i] if i >= 0 else None}
+
+
+def idle_days_now(days, as_of, tau=TAU):
+    st = idle_streak(days, as_of, tau)
+    return st["days"] if st else 0
+
+
+def isp_name(unit):
+    """ENE_01SB → ENE_BZ1_01_SB (το όνομα της μονάδας στο ISP)"""
+    a, b = unit.split("_", 1)
+    return f"{a}_BZ1_{b[:2]}_{b[2:]}"
+
+
+def isp_zero_context(isp, unit, streak, as_of):
+    """Πλαίσιο προγράμματος για τις ημέρες ακινησίας: ΜΟΝΟ αν το ISP προγραμμάτισε 0 MWh (φόρτιση και εκφόρτιση) την ημέρα. Δεν λέμε ποτέ τι «δεν εκτελέστηκε»:
+    μια ροή εκτός ISP (ενδοημερήσια, aFRR, mFRR) θα φαινόταν στο SCADA. Επιστρέφει (συνεχόμενες ημέρες με 0 στο ISP μέχρι σήμερα, αν ισχύει για όλες τις ημέρες)."""
+    if not streak:
+        return 0, False
+    name, zero, d = isp_name(unit), 0, as_of
+    while d >= _d(streak["from"]):
+        r = isp.get((name, d.isoformat()))
+        if r is None or r.get("Φόρτιση (MWh)") is None or r.get("Αποφόρτιση (MWh)") is None or r["Φόρτιση (MWh)"] > 0.5 or r["Αποφόρτιση (MWh)"] > 0.5:
+            break
+        zero += 1; d -= timedelta(days=1)
+    return zero, zero == streak["days"]
 
 
 def mark_shared(units):
@@ -334,6 +362,7 @@ def fleet_changes(units, limit=60):
 
 def build(hist, now=None):
     by = load_units(hist)
+    isp = {(r[UNIT], r[DAY]): r for r in hist.get("isp", [])}
     stamp = (now or datetime.now(timezone.utc)).strftime("%Y-%m-%dT%H:%M:%SZ")
     if not by:
         return {"generated": stamp, "as_of": None, "units": [], "fleet": {"weekly": []}, "changes": fleet_changes([])}
@@ -350,14 +379,17 @@ def build(hist, now=None):
             continue
         scans[u] = sc
         age = (as_of - sc["first"]).days + 1
-        idle = idle_days_now(days, as_of, tau)
+        streak = idle_streak(days, as_of, tau)
+        idle = streak["days"] if streak else 0
+        isp_zero, isp_all = isp_zero_context(isp, u, streak, as_of)
         units.append({
             "unit": u, "site": u.split("_")[0], "first_seen": sc["first"].isoformat(), "age_days": age,
             "commissioning_end": sc["cutoff"].isoformat(), "commissioning_day": min(age, COMMISSIONING_DAYS),
             "power_mw": round(sc["power"]) if sc["power"] else None, "energy_mwh": round(sc["energy"]) if sc["energy"] else None,
             "duration_h": round(sc["duration"], 2) if sc["duration"] else None, "class_h": sc["class_h"],
             "provisional": sc["status"] != "stable", "power_since": sc["power_since"], "energy_since": sc["energy_since"],
-            "valid_cycles": sc["n_post_cycles"], "status": sc["status"], "idle_days": idle, "pending": sc["pending"],
+            "valid_cycles": sc["n_post_cycles"], "status": sc["status"], "idle_days": idle, "idle_from": streak["from"] if streak else None,
+            "last_active": streak["last_active"] if streak else None, "idle_isp_zero": isp_zero, "idle_isp_all": isp_all, "pending": sc["pending"],
             "tau_mwh": round(tau, 1), "suspect_days": suspects, "suspect_30": sum(1 for x in suspects if (as_of - _d(x["date"])).days < 30),
             "changes": sc["changes"], "series": sc["series"]})
     # στόλος: εβδομαδιαία άθροιση των μεγίστων που φάνηκαν ως τότε (κάθε μονάδα, από την πρώτη της δραστηριότητα· περιλαμβάνει και το commissioning)
