@@ -93,11 +93,10 @@ Next, when there is a reason:
 - Watch how `FROZEN_HOURS = 6` behaves for a few weeks (the owner finds it "many"); lower it only if the data show shorter freezes
 - When a package version is raised: test it first, change `requirements.txt`, and decide then whether to leave the `xlrd` engine (deprecated in pandas 3.1) for `calamine`
 
-## Open decisions (12 Nov 2026)
+## Decided on 12 Nov 2026
 
-- **K21:** the commissioning clock, calendar days or active days (data in the known issues)
-- **K22:** the order of the unit list and of the timeline
-- The sentence of the methodology about the order of the list must change if K22 is decided
+- The commissioning clock counts active days (D97); the order of the list and of the timeline (D99); the capacity data cannot stop the dashboard any more (D98)
+- **Rule:** a change of the page that reads a new field of `capacity.json` goes up together with a run of the workflow (empty dates), and the page must still work with the old file
 
 ## Checks with a date
 

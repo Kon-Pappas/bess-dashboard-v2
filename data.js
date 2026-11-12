@@ -97,9 +97,9 @@ const i18n = {
 
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="capacity" style="scroll-margin-top:8px">Χωρητικότητα και διάρκεια</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
-                <li><strong class="text-slate-200">Μέγιστα από SCADA:</strong> η μέγιστη ισχύς (MW) και η μέγιστη ενέργεια ενός κύκλου (MWh) κάθε μονάδας υπολογίζονται από τις ωριαίες τιμές του ιστορικού της, χωρίς τις πρώτες 40 ημέρες λειτουργίας (commissioning), και ξαναϋπολογίζονται κάθε μέρα. <em>Δεν μειώνονται ποτέ</em>: λιγότερη χρήση είναι επιλογή. Δεν είναι η ονομαστική χωρητικότητα.</li>
+                <li><strong class="text-slate-200">Μέγιστα από SCADA:</strong> η μέγιστη ισχύς (MW) και η μέγιστη ενέργεια ενός κύκλου (MWh) κάθε μονάδας υπολογίζονται από τις ωριαίες τιμές του ιστορικού της, χωρίς τις πρώτες 40 ενεργές ημέρες λειτουργίας (commissioning), και ξαναϋπολογίζονται κάθε μέρα. <em>Δεν μειώνονται ποτέ</em>: λιγότερη χρήση είναι επιλογή. Δεν είναι η ονομαστική χωρητικότητα.</li>
                 <li><strong class="text-slate-200">Κατηγορία:</strong> 2ωρη, 3ωρη, 4ωρη από τη μέγιστη ενέργεια κύκλου ÷ τη μέγιστη ισχύ. Οι μονάδες στο commissioning δεν έχουν κατηγορία.</li>
-                <li><strong class="text-slate-200">Σημάνσεις:</strong> γκρι «commissioning» (οι πρώτες 40 ημέρες)· πορτοκαλί «προς επιβεβαίωση» (νέο μέγιστο σε 1–2 ημέρες)· κεχριμπαρί «χωρίς δραστηριότητα» (7+ ημέρες)· ⚠ ύποπτη μέτρηση.</li>
+                <li><strong class="text-slate-200">Σημάνσεις:</strong> γκρι «commissioning» (οι πρώτες 40 ενεργές ημέρες)· πορτοκαλί «προς επιβεβαίωση» (νέο μέγιστο σε 1–2 ημέρες)· κεχριμπαρί «χωρίς δραστηριότητα» (7+ ημέρες)· ⚠ ύποπτη μέτρηση.</li>
             </ul>
 
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="changes" style="scroll-margin-top:8px">Αλλαγές και παρακολούθηση</h3>
@@ -154,14 +154,14 @@ const i18n = {
                 <li><strong class="text-slate-200">Κύκλοι:</strong> οι ώρες χωρίζονται σε φάσεις φόρτισης και εκφόρτισης, ώστε οι διπλοί κύκλοι μέσα στη μέρα, ή ένας κύκλος που περνά τα μεσάνυχτα, να μετρούν σωστά. Έγκυρος είναι ο κύκλος που η εκφόρτισή του έχει απόδοση 70–100% της φόρτισης.</li>
                 <li><strong class="text-slate-200">Μέγιστα:</strong> η μέγιστη ισχύς είναι η 3η υψηλότερη από τα μέγιστα τριών <em>διαφορετικών ημερών</em>, και η μέγιστη ενέργεια ενός κύκλου η 3η υψηλότερη από τους έγκυρους κύκλους, από όλο το ιστορικό μετά το commissioning. Έτσι ένα λάθος SCADA μίας ή δύο ημερών δεν γίνεται «μέγιστο» για πάντα, και το μέγιστο δεν μπορεί να μειωθεί όταν προστίθενται ημέρες.</li>
                 <li><strong class="text-slate-200">Δεν μειώνονται ποτέ:</strong> αν μια μονάδα φορτίζει ή εκφορτίζει με λιγότερη ισχύ, ή δεν δουλεύει για ημέρες, δεν σημαίνει ότι μίκρυνε η ισχύς ή η χωρητικότητά της· είναι επιλογή χρήσης. Το μέγιστο ανεβαίνει μόνο όταν φανεί νέο, μεγαλύτερο.</li>
-                <li><strong class="text-slate-200">Commissioning:</strong> οι πρώτες 40 ημέρες κάθε μονάδας δεν μετράνε, γιατί τότε ανεβάζει ισχύ και χωρητικότητα και τα νούμερα του SCADA μπορεί να είναι ψευδή. Η περίοδος φαίνεται ως «όσα φάνηκαν ως τώρα», χωρίς κατηγορία. Μονάδα που δούλευε ήδη όταν ξεκίνησε το SCADA μας (18/6/2026) μετράει από αυτή την ημέρα. Μετά τις 40 ημέρες χρειάζεται βάση 14 ημερών και 8 έγκυρων κύκλων, αλλιώς «λίγα δεδομένα» με προσωρινή κατηγορία.</li>
+                <li><strong class="text-slate-200">Commissioning:</strong> οι πρώτες 40 <em>ενεργές</em> ημέρες κάθε μονάδας (ημέρες με δραστηριότητα, όχι ημερολογιακές: η ακινησία δεν μετράει) δεν μετράνε, γιατί τότε ανεβάζει ισχύ και χωρητικότητα και τα νούμερα του SCADA μπορεί να είναι ψευδή. Η περίοδος φαίνεται ως «όσα φάνηκαν ως τώρα», χωρίς κατηγορία. Μονάδα που δούλευε ήδη όταν ξεκίνησε το SCADA μας (18/6/2026) μετράει από αυτή την ημέρα. Μετά τις 40 ενεργές ημέρες χρειάζεται βάση 14 ημερών και 8 έγκυρων κύκλων, αλλιώς «λίγα δεδομένα» με προσωρινή κατηγορία.</li>
                 <li><strong class="text-slate-200">Ισχύς και ενέργεια:</strong> η ισχύς είναι ο μέσος όρος κάθε ώρας (MWh ανά ώρα = MW)· η στιγμιαία κορυφή μπορεί να είναι λίγο υψηλότερη. Η ενέργεια είναι η εκφόρτιση στον μετρητή (AC) ανά κύκλο και είναι περίπου 10% χαμηλότερη από την ονομαστική, λόγω απωλειών.</li>
                 <li><strong class="text-slate-200">Κατηγορία:</strong> το ακέραιο μέρος της διάρκειας (μέγιστη ενέργεια κύκλου ÷ μέγιστη ισχύς), με ανοχή 0,1 ώρας: 2,4 → 2ωρη, 3,1 → 3ωρη, 4,0 → 4ωρη, 2,6 → 2ωρη. Μια μονάδα που δεν έχει φτάσει ποτέ πλήρη κύκλο φαίνεται μικρότερη από ό,τι είναι: η εκτίμηση είναι κάτω όριο.</li>
                 <li><strong class="text-slate-200">Όριο αδράνειας:</strong> κάθε μονάδα έχει δικό της όριο, το μεγαλύτερο από 2,5 MWh και το 1,5% της μέγιστης ισχύος της, ώστε η ιδιοκατανάλωση μιας μεγάλης μονάδας (π.χ. −3 MWh την ώρα) να μη μετράει ως φόρτιση.</li>
                 <li><strong class="text-slate-200">Ύποπτες ημέρες δεδομένων:</strong> ημέρες με κολλημένη μέτρηση (≥ 6 συνεχόμενες ώρες με ακριβώς την ίδια τιμή, τουλάχιστον 20% της μέγιστης ισχύος της μονάδας), με πάνω από 2,2 κύκλους μέσα σε μία ημέρα, ή με ώρα πάνω από 1,25 φορές το 99ο εκατοστημόριο της ίδιας της μονάδας. Πιθανό σφάλμα SCADA, όχι βλάβη. Αγνοούνται στις εκτιμήσεις (θεωρούνται ότι λείπουν) και φαίνονται στην καρτέλα της μονάδας.</li>
                 <li><strong class="text-slate-200">Χωρίς δραστηριότητα:</strong> μονάδα που δούλευε (τουλάχιστον 5 ενεργές ημέρες στις 14 πριν) και δεν έχει καμία ώρα πάνω από το όριο αδράνειας για 7 ημέρες ή περισσότερο. Φαίνεται με κεχριμπαρί χρώμα στη λίστα, στα KPI και στο tab «Αλλαγές &amp; παρακολούθηση», και σε μονάδα που είναι σε commissioning. Δεν είναι μείωση: το μέγιστο δεν αλλάζει, και δεν ξεχωρίζουμε αδράνεια από βλάβη. Αν το ISP είχε προγραμματίσει 0 MWh όλη την ημέρα, το γράφουμε· δεν γράφουμε ποτέ τι «δεν εκτελέστηκε», γιατί μια ροή εκτός ISP (ενδοημερήσια αγορά, aFRR, mFRR) θα φαινόταν στο SCADA.</li>
                     <li><strong class="text-slate-200">KPI και στόλος:</strong> τα KPI αθροίζουν τις μονάδες που έχουν περάσει το commissioning (οι άλλες φαίνονται ως «+N σε commissioning»). Το γράφημα στόλου αθροίζει, για κάθε εβδομάδα, τα μέγιστα που είχε δείξει κάθε μονάδα μέχρι τότε και περιλαμβάνει το commissioning, άρα το τελευταίο σημείο είναι λίγο πάνω από τα KPI. Δεν μειώνεται ποτέ.</li>
-                    <li><strong class="text-slate-200">Καταστάσεις και σειρά:</strong> «Σταθερή»: έχει περάσει το commissioning και έχει βάση 14 ημερών και 8 κύκλων. «Λίγα δεδομένα»: έχει περάσει το commissioning αλλά όχι ακόμα τη βάση (προσωρινή κατηγορία). «Commissioning»: οι πρώτες 40 ημέρες. Η λίστα ταξινομείται κατά μέγιστη ενέργεια, με τις μονάδες χωρίς τιμή στο τέλος.</li>
+                    <li><strong class="text-slate-200">Καταστάσεις και σειρά:</strong> «Σταθερή»: έχει περάσει το commissioning και έχει βάση 14 ημερών και 8 κύκλων. «Λίγα δεδομένα»: έχει περάσει το commissioning αλλά όχι ακόμα τη βάση (προσωρινή κατηγορία). «Commissioning»: οι πρώτες 40 ενεργές ημέρες. Η λίστα δείχνει πρώτα τις μονάδες που έχουν περάσει το commissioning, κατά μέγιστη ενέργεια, και μετά αυτές που είναι σε commissioning.</li>
                 </ul>
 
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="changes" style="scroll-margin-top:8px">Αλλαγές και παρακολούθηση</h3>
@@ -248,7 +248,7 @@ const i18n = {
         tipShowAll: "Εμφάνιση όλων των μονάδων",
         tabCapacity: "Χωρητικότητα & διάρκεια",
         capTitle: "Μέγιστη ισχύς, ενέργεια και διάρκεια ανά μονάδα",
-        capSub: "Μέγιστη ισχύς και μέγιστη ενέργεια ενός κύκλου από τα ωριαία SCADA (έως {d}), χωρίς τις πρώτες 40 ημέρες κάθε μονάδας. Ξαναϋπολογίζεται κάθε μέρα. Δεν είναι η ονομαστική χωρητικότητα.",
+        capSub: "Μέγιστη ισχύς και μέγιστη ενέργεια ενός κύκλου από τα ωριαία SCADA (έως {d}), χωρίς τις πρώτες 40 ενεργές ημέρες κάθε μονάδας. Ξαναϋπολογίζεται κάθε μέρα. Δεν είναι η ονομαστική χωρητικότητα.",
         capEmpty: "Δεν υπάρχουν ακόμα εκτιμήσεις χωρητικότητας.",
         capKpiPower: "Ισχύς μονάδων ΑΔΜΗΕ",
         capKpiPowerSub: "{n} μονάδες{c}",
@@ -265,15 +265,15 @@ const i18n = {
         dqOnNote: "Εμφανίζονται χωρίς αυτές.",
         dqSwitchTip: "Χωρίς ύποπτες μετρήσεις. Κλειστός: τα επίσημα νούμερα του ΑΔΜΗΕ. Ανοιχτός: χωρίς τις μονάδες-ημέρες με ύποπτη μέτρηση.",
         capStatusCommissioning: "Commissioning",
-        capStatusTipCommissioning: "Οι πρώτες 40 ημέρες δεν μετράνε για το μέγιστο: η μονάδα ανεβάζει ισχύ και χωρητικότητα. Τα νούμερα είναι όσα φάνηκαν ως τώρα και δεν έχουν κατηγορία.",
-        capTagCommissioning: "commissioning, ημέρα {n} από {t}",
+        capStatusTipCommissioning: "Οι πρώτες 40 ενεργές ημέρες δεν μετράνε για το μέγιστο: η μονάδα ανεβάζει ισχύ και χωρητικότητα. Τα νούμερα είναι όσα φάνηκαν ως τώρα και δεν έχουν κατηγορία.",
+        capTagCommissioning: "commissioning, ενεργές ημέρες {n} από {t}",
         capTagPendingMax: "νέο μέγιστο προς επιβεβαίωση ({n} από 3 ημέρες)",
         capTagUpgrade: "αναβάθμιση {d}",
         capTagIdle: "χωρίς δραστηριότητα {n} ημέρες",
         capMaxPower: "Μέγιστη ισχύς",
         capMaxEnergy: "Μέγιστη ενέργεια κύκλου",
         capSince: "από {d}",
-        capCommInfo: "Commissioning: ημέρα {n} από {t}. Τα νούμερα είναι όσα φάνηκαν ως τώρα και δεν μετράνε για το μέγιστο.",
+        capCommInfo: "Commissioning: ενεργές ημέρες {n} από {t} (ημέρες με δραστηριότητα· η ακινησία δεν μετράει). Τα νούμερα είναι όσα φάνηκαν ως τώρα και δεν μετράνε για το μέγιστο.",
         capPendingLine: "Νέο μέγιστο προς επιβεβαίωση: {v} {u}, {n} από 3 ημέρες",
         capIdleLine: "Χωρίς δραστηριότητα {n} ημέρες, από {f} (τελευταία δραστηριότητα: {l}). Το μέγιστο δεν αλλάζει.",
         capIdleIspAll: "Το ISP προγραμμάτισε 0 MWh όλες αυτές τις ημέρες.",
@@ -316,7 +316,7 @@ const i18n = {
         chgHow1: "Ύποπτο δεδομένο: κολλημένη μέτρηση, ή 1–2 ημέρες με φυσικά αδύνατες ή πολύ ασυνήθιστες τιμές. Αγνοείται και φαίνεται στην καρτέλα της μονάδας.",
         chgHow2: "Προς επιβεβαίωση: 1 ή 2 από τις τελευταίες 14 ημέρες δείχνουν νέο μέγιστο πάνω από 12%. Επιβεβαιώνεται όταν το ίδιο φανεί σε 3 διαφορετικές ημέρες.",
         chgHow3: "Επιβεβαιωμένη αναβάθμιση: το μέγιστο ανέβηκε πάνω από 12% και φάνηκε σε 3 διαφορετικές ημέρες. Η ημερομηνία είναι η πρώτη από αυτές.",
-        chgHow4: "Commissioning: οι πρώτες 40 ημέρες κάθε μονάδας δεν μετράνε για το μέγιστο. Μετά χρειάζεται βάση 14 ημερών και 8 έγκυρων κύκλων.",
+        chgHow4: "Commissioning: οι πρώτες 40 ενεργές ημέρες κάθε μονάδας (ημέρες με δραστηριότητα) δεν μετράνε για το μέγιστο. Μετά χρειάζεται βάση 14 ημερών και 8 έγκυρων κύκλων.",
         chgHow5: "Πιθανό σφάλμα αρχείου: η ίδια αναβάθμιση σε 3 ή περισσότερες μονάδες μέσα σε 2 ημέρες.",
         capKpiEnergy: "Ενέργεια μονάδων ΑΔΜΗΕ",
         capKpiEnergySub: "ανά κύκλο",
@@ -332,7 +332,7 @@ const i18n = {
         capStatusFew: "Λίγα δεδομένα",
         capStatusTipStable: "Έχει ολοκληρώσει το commissioning και έχει βάση 14 ημερών και 8 κύκλων.",
         capStatusTipFew: "Έχει περάσει το commissioning αλλά δεν έχει ακόμα βάση 14 ημερών και 8 έγκυρων κύκλων. Η κατηγορία είναι προσωρινή.",
-        capFootnote: "Μέγιστα από τρεις διαφορετικές ημέρες, μετά τις πρώτες 40 ημέρες λειτουργίας. Δεν μειώνονται ποτέ: λιγότερη χρήση είναι επιλογή. Η κατηγορία είναι το ακέραιο μέρος της διάρκειας (ενέργεια ÷ ισχύς). Είναι κάτω όριο: μια μονάδα που δεν έχει εκφορτιστεί πλήρως φαίνεται μικρότερη.",
+        capFootnote: "Μέγιστα από τρεις διαφορετικές ημέρες, μετά τις πρώτες 40 ενεργές ημέρες λειτουργίας. Δεν μειώνονται ποτέ: λιγότερη χρήση είναι επιλογή. Η κατηγορία είναι το ακέραιο μέρος της διάρκειας (ενέργεια ÷ ισχύς). Είναι κάτω όριο: μια μονάδα που δεν έχει εκφορτιστεί πλήρως φαίνεται μικρότερη.",
         capMeasured: "Από τα δεδομένα",
         capFirstSeen: "Πρώτη λειτουργία",
         capCycles: "Έγκυροι κύκλοι (μετά το commissioning)",
@@ -430,9 +430,9 @@ const i18n = {
 
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="capacity" style="scroll-margin-top:8px">Capacity and duration</h3>
             <ul class="list-disc pl-5 space-y-2 text-slate-400">
-                <li><strong class="text-slate-200">Maxima from SCADA:</strong> the maximum power (MW) and the maximum energy of one cycle (MWh) of each unit are calculated from the hourly values of its history, without the first 40 days of operation (commissioning), and recalculated every day. <em>They never decrease</em>: using less is a choice. They are not the nameplate capacity.</li>
+                <li><strong class="text-slate-200">Maxima from SCADA:</strong> the maximum power (MW) and the maximum energy of one cycle (MWh) of each unit are calculated from the hourly values of its history, without the first 40 active days of operation (commissioning), and recalculated every day. <em>They never decrease</em>: using less is a choice. They are not the nameplate capacity.</li>
                 <li><strong class="text-slate-200">Class:</strong> 2h, 3h, 4h from the maximum energy of a cycle ÷ the maximum power. Units in commissioning have no class.</li>
-                <li><strong class="text-slate-200">Marks:</strong> grey "commissioning" (the first 40 days); orange "to be confirmed" (a new maximum on 1–2 days); amber "no activity" (7+ days); ⚠ suspect reading.</li>
+                <li><strong class="text-slate-200">Marks:</strong> grey "commissioning" (the first 40 active days); orange "to be confirmed" (a new maximum on 1–2 days); amber "no activity" (7+ days); ⚠ suspect reading.</li>
             </ul>
 
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="changes" style="scroll-margin-top:8px">Changes and monitoring</h3>
@@ -487,14 +487,14 @@ const i18n = {
                 <li><strong class="text-slate-200">Cycles:</strong> the hours are split into charging and discharging phases, so that double cycles in a day, or a cycle that crosses midnight, are counted correctly. A cycle is valid when its discharge is 70–100% of its charge.</li>
                 <li><strong class="text-slate-200">Maxima:</strong> the maximum power is the 3rd highest of the peaks of three <em>different days</em>, and the maximum energy of a cycle the 3rd highest of the valid cycles, from the whole history after commissioning. So a SCADA error of one or two days does not become the "maximum" for ever, and the maximum cannot decrease when days are added.</li>
                 <li><strong class="text-slate-200">They never decrease:</strong> if a unit charges or discharges with less power, or does not work for days, it does not mean its power or capacity became smaller; it is a choice of use. The maximum only rises when a new, larger one shows.</li>
-                <li><strong class="text-slate-200">Commissioning:</strong> the first 40 days of each unit do not count, because then it is raising power and capacity and the SCADA figures may be false. The period shows as "what has shown so far", without a class. A unit that was already working when our SCADA began (18 Jun 2026) counts from that day. After the 40 days it needs a base of 14 days and 8 valid cycles, otherwise "little data" with a provisional class.</li>
+                <li><strong class="text-slate-200">Commissioning:</strong> the first 40 <em>active</em> days of each unit (days with activity, not calendar days: idleness does not count) do not count, because then it is raising power and capacity and the SCADA figures may be false. The period shows as "what has shown so far", without a class. A unit that was already working when our SCADA began (18 Jun 2026) counts from that day. After the 40 active days it needs a base of 14 days and 8 valid cycles, otherwise "little data" with a provisional class.</li>
                 <li><strong class="text-slate-200">Power and energy:</strong> power is the average of each hour (MWh per hour = MW); the instantaneous peak can be a little higher. Energy is the discharge at the meter (AC) per cycle and is about 10% below the nameplate because of losses.</li>
                 <li><strong class="text-slate-200">Class:</strong> the whole-hour part of the duration (maximum energy of a cycle ÷ maximum power), with a tolerance of 0.1 hour: 2.4 → 2h, 3.1 → 3h, 4.0 → 4h, 2.6 → 2h. A unit that has never run a full cycle looks smaller than it is: the estimate is a lower bound.</li>
                 <li><strong class="text-slate-200">Idle threshold:</strong> each unit has its own, the larger of 2.5 MWh and 1.5% of its maximum power, so that the self-consumption of a large unit (e.g. −3 MWh per hour) is not counted as charging.</li>
                 <li><strong class="text-slate-200">Suspect data days:</strong> days with a frozen reading (6 or more hours in a row with exactly the same value, at least 20% of the maximum power of the unit), with more than 2.2 cycles in one day, or with an hour above 1.25 times the 99th percentile of the unit itself. A likely SCADA error, not a failure. They are ignored in the estimates (treated as missing) and are shown on the card of the unit.</li>
                 <li><strong class="text-slate-200">No activity:</strong> a unit that was working (at least 5 active days in the 14 before) and has no hour above the idle threshold for 7 days or more. It shows in amber in the list, in the KPIs and in the tab "Changes &amp; monitoring", also for a unit in commissioning. It is not a decrease: the maximum does not change, and we cannot tell idleness from a failure. If the ISP had scheduled 0 MWh for the whole day we say so; we never write what "was not executed", because a flow outside the ISP (intraday market, aFRR, mFRR) would show in the SCADA.</li>
                     <li><strong class="text-slate-200">KPIs and fleet:</strong> the KPIs add up the units that are past commissioning (the others show as "+N in commissioning"). The fleet chart adds up, for each week, the maxima each unit had shown by then and includes commissioning, so its last point is a little above the KPIs. It never decreases.</li>
-                    <li><strong class="text-slate-200">Statuses and order:</strong> "Stable": past commissioning, with a base of 14 days and 8 cycles. "Little data": past commissioning but not yet the base (provisional class). "Commissioning": the first 40 days. The list is ordered by maximum energy, with the units without a value at the end.</li>
+                    <li><strong class="text-slate-200">Statuses and order:</strong> "Stable": past commissioning, with a base of 14 days and 8 cycles. "Little data": past commissioning but not yet the base (provisional class). "Commissioning": the first 40 active days. The list shows first the units that are past commissioning, by maximum energy, and then those in commissioning.</li>
                 </ul>
 
             <h3 class="mt-4 mb-2 text-xs font-bold text-acc-400" data-sec="changes" style="scroll-margin-top:8px">Changes and monitoring</h3>
@@ -581,7 +581,7 @@ const i18n = {
         tipShowAll: "Show all units",
         tabCapacity: "Capacity & duration",
         capTitle: "Maximum power, energy and duration per unit",
-        capSub: "Maximum power and maximum energy of one cycle from the hourly SCADA (to {d}), without the first 40 days of each unit. Recalculated every day. It is not the nameplate capacity.",
+        capSub: "Maximum power and maximum energy of one cycle from the hourly SCADA (to {d}), without the first 40 active days of each unit. Recalculated every day. It is not the nameplate capacity.",
         capEmpty: "There are no capacity estimates yet.",
         capKpiPower: "Power of IPTO units",
         capKpiPowerSub: "{n} units{c}",
@@ -598,15 +598,15 @@ const i18n = {
         dqOnNote: "Shown without them.",
         dqSwitchTip: "Without suspect readings. Off: the official IPTO figures. On: without the unit-days with a suspect reading.",
         capStatusCommissioning: "Commissioning",
-        capStatusTipCommissioning: "The first 40 days do not count for the maximum: the unit is raising power and capacity. The figures are what has shown so far and have no class.",
-        capTagCommissioning: "commissioning, day {n} of {t}",
+        capStatusTipCommissioning: "The first 40 active days do not count for the maximum: the unit is raising power and capacity. The figures are what has shown so far and have no class.",
+        capTagCommissioning: "commissioning, active days {n} of {t}",
         capTagPendingMax: "new maximum to be confirmed ({n} of 3 days)",
         capTagUpgrade: "upgrade {d}",
         capTagIdle: "no activity for {n} days",
         capMaxPower: "Maximum power",
         capMaxEnergy: "Maximum energy of a cycle",
         capSince: "since {d}",
-        capCommInfo: "Commissioning: day {n} of {t}. The figures are what has shown so far and do not count for the maximum.",
+        capCommInfo: "Commissioning: active days {n} of {t} (days with activity; idleness does not count). The figures are what has shown so far and do not count for the maximum.",
         capPendingLine: "New maximum to be confirmed: {v} {u}, {n} of 3 days",
         capIdleLine: "No activity for {n} days, since {f} (last activity: {l}). The maximum does not change.",
         capIdleIspAll: "The ISP scheduled 0 MWh on all these days.",
@@ -649,7 +649,7 @@ const i18n = {
         chgHow1: "Suspect data: a frozen reading, or 1–2 days with physically impossible or very unusual values. Ignored, and shown on the card of the unit.",
         chgHow2: "To be confirmed: 1 or 2 of the last 14 days show a new maximum more than 12% higher. It is confirmed when the same shows on 3 different days.",
         chgHow3: "Confirmed upgrade: the maximum rose by more than 12% and showed on 3 different days. The date is the first of them.",
-        chgHow4: "Commissioning: the first 40 days of each unit do not count for the maximum. After that it needs a base of 14 days and 8 valid cycles.",
+        chgHow4: "Commissioning: the first 40 active days of each unit (days with activity) do not count for the maximum. After that it needs a base of 14 days and 8 valid cycles.",
         chgHow5: "Likely file error: the same upgrade on 3 or more units within 2 days.",
         capKpiEnergy: "Energy of IPTO units",
         capKpiEnergySub: "per cycle",
@@ -665,7 +665,7 @@ const i18n = {
         capStatusFew: "Little data",
         capStatusTipStable: "Commissioning is over and it has a base of 14 days and 8 cycles.",
         capStatusTipFew: "Commissioning is over but it does not yet have a base of 14 days and 8 valid cycles. The class is provisional.",
-        capFootnote: "Maxima from three different days, after the first 40 days of operation. They never decrease: using less is a choice. The class is the whole-hour part of the duration (energy ÷ power). It is a lower bound: a unit that has not discharged fully looks smaller.",
+        capFootnote: "Maxima from three different days, after the first 40 active days of operation. They never decrease: using less is a choice. The class is the whole-hour part of the duration (energy ÷ power). It is a lower bound: a unit that has not discharged fully looks smaller.",
         capMeasured: "From the data",
         capFirstSeen: "First operation",
         capCycles: "Valid cycles (after commissioning)",

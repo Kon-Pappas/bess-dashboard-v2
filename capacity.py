@@ -9,8 +9,8 @@
   • Μόνο SCADA (bessHourly). Το ISP είναι πρόγραμμα και δεν χρησιμοποιείται.
   • Η ισχύς και η ενέργεια κύκλου είναι ΙΣΤΟΡΙΚΑ ΜΕΓΙΣΤΑ που ΔΕΝ ΜΕΙΩΝΟΝΤΑΙ ΠΟΤΕ. Μικρότερη ισχύς ή φόρτιση σε μια ημέρα είναι επιλογή
     χρήσης, όχι μείωση. Άρα δεν υπάρχουν γεγονότα «πτώσης», μόνο αναβαθμίσεις.
-  • Οι πρώτες 40 ημέρες λειτουργίας κάθε μονάδας (commissioning) δεν μετράνε για το μέγιστο· τα νούμερα εκείνης της περιόδου φαίνονται
-    ως «όσα φάνηκαν ως τώρα», χωρίς κατηγορία. Μονάδα που δούλευε ήδη όταν ξεκίνησε το SCADA μας μετράει από την πρώτη ημέρα του SCADA.
+  • Οι πρώτες 40 ΕΝΕΡΓΕΣ ημέρες κάθε μονάδας (commissioning· ημέρα με δραστηριότητα, όχι ημερολογιακή: η ακινησία δεν μετράει, D97) δεν μετράνε για το μέγιστο· τα νούμερα
+    εκείνης της περιόδου φαίνονται ως «όσα φάνηκαν ως τώρα», χωρίς κατηγορία. Μονάδα που δούλευε ήδη όταν ξεκίνησε το SCADA μας μετράει από την πρώτη ημέρα του SCADA.
   • Μετά τις 40 ημέρες χρειάζεται βάση 14 ημερών και 8 έγκυρων κύκλων, αλλιώς «λίγα δεδομένα» (προσωρινή κατηγορία).
   • Εξασφαλισμένη τιμή = η 3η υψηλότερη από ΤΡΕΙΣ ΔΙΑΦΟΡΕΤΙΚΕΣ ΗΜΕΡΕΣ (για την ισχύ: μέγιστο κάθε ημέρας· για την ενέργεια: έγκυρος κύκλος
     με απόδοση 70–100%). Έτσι ένα λάθος SCADA 1–2 ημερών δεν γίνεται «μέγιστο» για πάντα, και το μέγιστο δεν μειώνεται όταν προστίθενται ημέρες.
@@ -34,7 +34,7 @@ TAU = 2.5               # MWh/h: κάτω από αυτό η ώρα είναι �
 GAP = 2                 # ώρες αδράνειας που γεφυρώνονται μέσα σε μία φάση
 ASSURED_N = 3           # «εξασφαλισμένο» = επιτεύχθηκε σε τουλάχιστον 3 διαφορετικές ημέρες
 RTE_MIN, RTE_MAX = 0.70, 1.00   # έγκυρος κύκλος
-COMMISSIONING_DAYS = 40         # ημέρες εξαίρεσης από την πρώτη δραστηριότητα
+COMMISSIONING_DAYS = 40         # ΕΝΕΡΓΕΣ ημέρες εξαίρεσης (ημέρες με δραστηριότητα) από την πρώτη δραστηριότητα
 BASELINE_DAYS = 14              # ημέρες μετά την εξαίρεση πριν συγκρίνουμε για αναβαθμίσεις
 BASELINE_CYCLES = 8             # έγκυροι κύκλοι μετά την εξαίρεση πριν συγκρίνουμε
 UPGRADE = 0.12                  # αύξηση ≥ 12% του μεγίστου = αναβάθμιση
@@ -163,7 +163,9 @@ def scan_unit(days, as_of, tau=TAU):
     active = [k for k in ks if any(abs(x) >= tau for x in days[k])]
     if not active:
         return None
-    first = _d(active[0]); cutoff = first + timedelta(days=COMMISSIONING_DAYS)
+    first = _d(active[0])
+    # το commissioning τελειώνει την επόμενη ημέρα μετά την 40ή ΕΝΕΡΓΗ ημέρα· μέχρι τότε (cutoff = None) η μονάδα είναι σε commissioning, όσες ημερολογιακές ημέρες κι αν περάσουν
+    cutoff = _d(active[COMMISSIONING_DAYS - 1]) + timedelta(days=1) if len(active) >= COMMISSIONING_DAYS else None
     peaks = {k: max(abs(x) for x in days[k]) for k in ks if days[k]}
     cyc = defaultdict(list)
     for c in cycles_of(phases_of(days, tau)):
@@ -175,7 +177,7 @@ def scan_unit(days, as_of, tau=TAU):
     n_post_cycles, level, raw, since_p, since_e, prev_p, prev_e = 0, None, [], None, None, None, None
     baseline_ok = False
     for i in range(n_dates):
-        t = first + timedelta(days=i); k = t.isoformat(); post = t >= cutoff
+        t = first + timedelta(days=i); k = t.isoformat(); post = cutoff is not None and t >= cutoff
         if k in peaks and peaks[k] >= tau:
             pv_all.append((peaks[k], k))
             if post:
@@ -207,7 +209,7 @@ def scan_unit(days, as_of, tau=TAU):
             raw.append({"date": k, "kind": "energy", "confirmed": True, "before": (level[0], level[1]), "after": (level[0], e), "since": min(e3)})
             level[1] = e
     # τρέχουσες τιμές
-    in_comm = as_of < cutoff
+    in_comm = cutoff is None or as_of < cutoff
     p_now, _ = third(pv_post); e_now, _ = third(ev_post)
     po, _ = third(pv_all); eo, _ = third(ev_all)
     P, E = (po, eo) if in_comm else (p_now, e_now)
@@ -225,11 +227,11 @@ def scan_unit(days, as_of, tau=TAU):
     duration = (E / P) if (E and P) else None
     status = "commissioning" if in_comm else ("few_data" if not baseline_ok else "stable")
     return {
-        "first": first, "cutoff": cutoff, "status": status, "baseline_ok": baseline_ok, "pending": pending,
+        "first": first, "cutoff": cutoff, "n_active": len(active), "status": status, "baseline_ok": baseline_ok, "pending": pending,
         "power": P, "energy": E, "duration": duration, "class_h": None if in_comm else class_of(duration),
         "power_since": since_p if not in_comm else None, "energy_since": since_e if not in_comm else None,
         "changes": merge_upgrades(raw), "n_post_cycles": n_post_cycles, "all_p": obs_p, "all_e": obs_e,
-        "series": {"start": first.isoformat(), "cutoff": (cutoff - first).days, "p_obs": obs_p, "e_obs": obs_e, "p": post_p, "e": post_e},
+        "series": {"start": first.isoformat(), "cutoff": (cutoff - first).days if cutoff else n_dates, "p_obs": obs_p, "e_obs": obs_e, "p": post_p, "e": post_e},
     }
 
 
@@ -356,7 +358,7 @@ def mark_shared(units):
 def fleet_changes(units, limit=60):
     """Όλες οι αναβαθμίσεις όλων των μονάδων, νεότερες πρώτα (για την καρτέλα «Αλλαγές & παρακολούθηση»)."""
     ev = [dict(c, unit=u["unit"]) for u in units for c in u["changes"]]
-    ev.sort(key=lambda c: (c["date"], c["unit"]), reverse=True)
+    ev.sort(key=lambda c: (c.get("since") or c["date"], c["unit"]), reverse=True)   # με τη σειρά της ημερομηνίας που εμφανίζεται (since)
     return {"latest": ev[:limit], "total": len(ev), "pending": sum(1 for c in ev if not c["confirmed"]), "shared": sum(1 for c in ev if c.get("shared"))}
 
 
@@ -384,7 +386,7 @@ def build(hist, now=None):
         isp_zero, isp_all = isp_zero_context(isp, u, streak, as_of)
         units.append({
             "unit": u, "site": u.split("_")[0], "first_seen": sc["first"].isoformat(), "age_days": age,
-            "commissioning_end": sc["cutoff"].isoformat(), "commissioning_day": min(age, COMMISSIONING_DAYS),
+            "commissioning_end": sc["cutoff"].isoformat() if sc["cutoff"] else None, "commissioning_day": min(sc["n_active"], COMMISSIONING_DAYS), "active_days": sc["n_active"],
             "power_mw": round(sc["power"]) if sc["power"] else None, "energy_mwh": round(sc["energy"]) if sc["energy"] else None,
             "duration_h": round(sc["duration"], 2) if sc["duration"] else None, "class_h": sc["class_h"],
             "provisional": sc["status"] != "stable", "power_since": sc["power_since"], "energy_since": sc["energy_since"],

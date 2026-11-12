@@ -273,6 +273,30 @@ u = idle_unit(7, lambda i: (0.0, 0.0) if i >= 100 else (200.0, 176.0))
 check("7 ημέρες είναι ακινησία", u["idle_days"] == 7 and u["idle_isp_all"] is True, (u["idle_days"], u["idle_isp_all"]))
 check("όνομα μονάδας ISP", C.isp_name("ENE_01SB") == "ENE_BZ1_01_SB" and C.isp_name("STO_03SP") == "STO_BZ1_03_SP")
 
+
+# ---- 21. το commissioning μετράει 40 ΕΝΕΡΓΕΣ ημέρες (D97): η ακινησία δεν μετράει
+def alternating(n):
+    """ενεργή ημέρα παρά ημέρα: n ημερολογιακές ημέρες, οι μισές ενεργές"""
+    return {ds(i): (cycle_day(50, 4, 4) if i % 2 == 0 else [0.0] * 24) for i in range(n)}
+u = run({"AL_01SB": alternating(60)})["AL_01SB"]
+check("60 ημερολογιακές ημέρες αλλά μόνο 30 ενεργές: ακόμα σε commissioning (ενεργές ημέρες 30), χωρίς κατηγορία", u["status"] == "commissioning" and u["commissioning_day"] == 30 and u["active_days"] == 30 and u["class_h"] is None and u["commissioning_end"] is None, (u["status"], u["commissioning_day"], u["active_days"], u["commissioning_end"]))
+u = run({"AL_02SB": alternating(100)})["AL_02SB"]
+check("100 ημερολογιακές ημέρες, 50 ενεργές: το commissioning τελείωσε την επόμενη της 40ής ενεργής (ημέρα 79), τώρα stable", u["commissioning_end"] == ds(79) and u["status"] == "stable" and u["class_h"] == 3, (u["commissioning_end"], u["status"], u["class_h"]))
+u = run({"AL_03SB": steady(45)})["AL_03SB"]
+check("45 συνεχόμενες ενεργές ημέρες: commissioning τέλος την ημέρα 40, λίγα δεδομένα (δεν υπάρχει ακόμα βάση)", u["commissioning_end"] == ds(40) and u["status"] == "few_data", (u["commissioning_end"], u["status"]))
+days = alternating(60); days.update({ds(i): [0.0] * 24 for i in range(60, 62)})
+u = run({"AL_04SB": days})["AL_04SB"]
+check("η μονάδα σε commissioning δεν έχει «ακινησία» αν δεν πέρασαν 7 ημέρες· 7+ ημέρες ακινησίας φαίνονται και σε commissioning", u["idle_days"] == 0, u["idle_days"])
+days = steady(30); days.update({ds(i): [0.0] * 24 for i in range(30, 38)})
+u = run({"AL_05SB": days})["AL_05SB"]
+check("commissioning με 8 ημέρες ακινησίας στο τέλος: idle_days 8 και παραμένει σε commissioning (30 ενεργές ημέρες)", u["idle_days"] == 8 and u["status"] == "commissioning" and u["commissioning_day"] == 30, (u["idle_days"], u["status"], u["commissioning_day"]))
+
+# ---- 22. το χρονολόγιο ταξινομείται με την ημερομηνία που ΕΜΦΑΝΙΖΕΤΑΙ (since), όχι με την ημερομηνία ανίχνευσης
+units = [{"unit": "A_01SB", "changes": [{"date": "2026-10-05", "since": "2026-09-20", "confirmed": True, "kind": "up"}]},
+         {"unit": "B_01SB", "changes": [{"date": "2026-10-01", "since": "2026-09-25", "confirmed": True, "kind": "up"}]}]
+order = [e["unit"] for e in C.fleet_changes(units)["latest"]]
+check("χρονολόγιο: πρώτα η αναβάθμιση με την πιο πρόσφατη ημερομηνία «από» (B, 25/9) και μετά η A (20/9), παρότι η A ανιχνεύτηκε αργότερα", order == ["B_01SB", "A_01SB"], order)
+
 # ---- 16. στόλος: το άθροισμα των μεγίστων δεν μειώνεται ποτέ
 days = steady(100)
 for i in range(80, 100): days[ds(i)] = cycle_day(20, 2, 2)

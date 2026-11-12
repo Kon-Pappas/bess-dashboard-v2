@@ -1722,11 +1722,12 @@ const capColour = (unit) => { const reg = getUnitRegistry(); return reg.unitMode
 const STATUS_TEXT_CLASS = { stable: 'text-lime-400', few_data: 'text-slate-400', commissioning: 'text-slate-400' };
 const statusText = (st) => { const T = TT(); return st === 'stable' ? T.capStatusStable : st === 'commissioning' ? T.capStatusCommissioning : T.capStatusFew; };
 const statusTip = (st) => { const T = TT(); return st === 'stable' ? T.capStatusTipStable : st === 'commissioning' ? T.capStatusTipCommissioning : T.capStatusTipFew; };
-const capSortedUnits = () => [...capacityData.units].sort((a, b) => (b.energy_mwh || -1) - (a.energy_mwh || -1) || a.unit.localeCompare(b.unit));
+// D99: πρώτα οι μονάδες που έχουν περάσει το commissioning (κατά μέγιστη ενέργεια), μετά οι μονάδες σε commissioning (με προσωρινά νούμερα)
+const capSortedUnits = () => [...capacityData.units].sort((a, b) => ((a.status === 'commissioning') - (b.status === 'commissioning')) || (b.energy_mwh || -1) - (a.energy_mwh || -1) || a.unit.localeCompare(b.unit));
 const weekEnd = (w) => { const d = new Date(w + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + 6); return d.toISOString().substring(0, 10); };
 const weekLabel = (w) => { const d = new Date(w + 'T00:00:00Z'); return pad2(d.getUTCDate()) + '/' + pad2(d.getUTCMonth() + 1); };
 const capYear = () => String((capacityData && capacityData.as_of) || '').substring(0, 4);
-const capDay = (iso) => fmtDay(iso, iso.substring(0, 4) === capYear());
+const capDay = (iso) => iso ? fmtDay(iso, iso.substring(0, 4) === capYear()) : '–';   // ένα πεδίο που λείπει δεν πρέπει να ρίχνει τη σελίδα (D98)
 const daysBefore = (iso) => (new Date(capacityData.as_of + 'T00:00:00Z').getTime() - new Date(iso + 'T00:00:00Z').getTime()) / 86400000;
 const CHANGE_CLASS = { up: 'text-lime-400' };
 const changeKindText = (k) => TT().capChangeUp;   // μόνο αναβαθμίσεις: δεν υπάρχουν μειώσεις
@@ -2081,8 +2082,9 @@ async function boot() {
         await loadStep(3, async () => { updateMonthlyDashboard(); });
         await loadStep(4, async () => { updateSurplusDashboard(); });
         await loadStep(5, async () => { renderArbitrageTab(); });
-        await loadStep(6, async () => { renderCapacityTab(); });
-        await loadStep(7, async () => { renderChangesTab(); });
+        // D98: ένα πρόβλημα στα δεδομένα χωρητικότητας δεν σταματά ολόκληρο το dashboard· οι δύο καρτέλες δείχνουν τότε «δεν υπάρχουν δεδομένα»
+        await loadStep(6, async () => { try { renderCapacityTab(); } catch (e) { console.error('capacity tab', e); capacityData = null; try { renderCapacityTab(); } catch (e2) { /* σιωπηλά */ } } });
+        await loadStep(7, async () => { try { renderChangesTab(); } catch (e) { console.error('changes tab', e); } });
 
         document.getElementById('mainSpinner').classList.add('hidden');
         document.getElementById('loadRowFinal').classList.remove('opacity-0', 'translate-y-2');
